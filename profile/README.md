@@ -1,6 +1,6 @@
 # AI Crypto On-Ramp
 
-Crypto on-ramp monorepo index — microservices architecture for fiat-to-crypto conversion.
+AI-generated crypto on-ramp monorepo index — microservices architecture for fiat-to-crypto conversion.
 
 ## Repositories
 
