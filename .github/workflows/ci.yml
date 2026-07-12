@@ -1,3 +1,4 @@
+---
 name: CI
 
 on: [push, pull_request]
@@ -32,3 +33,12 @@ jobs:
             exit 1
           fi
           echo "$files" | xargs hurlfmt --check
+
+  yamllint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install yamllint
+        run: pipx install yamllint
+      - name: Lint YAML files
+        run: yamllint --strict --no-warnings .
