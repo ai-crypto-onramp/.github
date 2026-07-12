@@ -83,24 +83,24 @@ Solid arrows = synchronous request/response on the transaction path.
 
 ```mermaid
 flowchart LR
-    Client([Client])
-    GW[API Gateway]
-    AUTH[Identity & Auth]
-    KYC[Onboarding / KYC]
-    PRICE[Pricing / Quote]
-    ORCH[Transaction Orchestrator]
-    POLICY[Policy / Risk Engine]
-    FRAUD[Fraud Detection]
-    KYT[AML / KYT Screening]
-    PAY[Payment Orchestration]
-    RAILS[Rail Connectors]
-    FX[FX & Hedging]
-    MPC[MPC Signing]
-    WALLET[Wallet Management]
-    CHAIN[Blockchain Gateway]
-    LEDGER[Ledger]
-    LIQ[Liquidity Routing]
-    EXCH[Exchange Connectors]
+    Client([🧑‍💻 Client])
+    GW[🌐 API Gateway]
+    AUTH[🔐 Identity & Auth]
+    KYC[🪪 Onboarding / KYC]
+    PRICE[💱 Pricing / Quote]
+    ORCH[🔀 Transaction Orchestrator]
+    POLICY[🛡️ Policy / Risk Engine]
+    FRAUD[🚨 Fraud Detection]
+    KYT[🔍 AML / KYT Screening]
+    PAY[💳 Payment Orchestration]
+    RAILS[🏦 Rail Connectors]
+    FX[📈 FX & Hedging]
+    MPC[✍️ MPC Signing]
+    WALLET[👛 Wallet Management]
+    CHAIN[⛓️ Blockchain Gateway]
+    LEDGER[📖 Ledger]
+    LIQ[🔄 Liquidity Routing]
+    EXCH[🏬 Exchange Connectors]
 
     Client --> GW
     GW --> AUTH
@@ -132,21 +132,21 @@ Notification and Audit consume the event bus.
 
 ```mermaid
 flowchart LR
-    ORCH[Transaction Orchestrator]
-    TREAS[Treasury Orchestration]
-    LIQ[Liquidity Routing]
-    WALLET[Wallet Management]
-    FX[FX & Hedging]
-    LEDGER[Ledger]
-    RECON[Reconciliation]
-    EXCH[Exchange Connectors]
-    RAILS[Rail Connectors]
-    CHAIN[Blockchain Gateway]
-    NOTIF[Notification]
-    AUDIT[Audit / Event Log]
-    PAY[Payment Orchestration]
-    MPC[MPC Signing]
-    POLICY[Policy / Risk Engine]
+    ORCH[🔀 Transaction Orchestrator]
+    TREAS[💰 Treasury Orchestration]
+    LIQ[🔄 Liquidity Routing]
+    WALLET[👛 Wallet Management]
+    FX[📈 FX & Hedging]
+    LEDGER[📖 Ledger]
+    RECON[🧮 Reconciliation]
+    EXCH[🏬 Exchange Connectors]
+    RAILS[🏦 Rail Connectors]
+    CHAIN[⛓️ Blockchain Gateway]
+    NOTIF[🔔 Notification]
+    AUDIT[📜 Audit / Event Log]
+    PAY[💳 Payment Orchestration]
+    MPC[✍️ MPC Signing]
+    POLICY[🛡️ Policy / Risk Engine]
 
     ORCH -.-> TREAS
     TREAS -.-> LIQ
