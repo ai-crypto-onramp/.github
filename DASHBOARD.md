@@ -1,18 +1,16 @@
-# Monitoring Dashboard Setup Guide
+# Dashboard Setup Guide
 
-This guide lists all 21 microservices with metadata for seeding into Kener, Uptime Kuma, Cachet, and Healthchecks.
+This guide lists all 21 microservices with metadata for monitoring with Gatus.
 
 All services expose `GET /healthz` returning `{"status":"ok"}` on port `8080` (inside the compose network).
 
-## Port assignments
+## Dashboard
 
-| Dashboard tool | Host port | URL |
+| Tool | Host port | URL |
 |---|---|---|
 | Gatus | 8090 | http://localhost:8090 |
-| Kener | 8200 | http://localhost:8200 |
-| Uptime Kuma | 8300 | http://localhost:8300 |
-| Healthchecks | 8400 | http://localhost:8400 |
-| Cachet | 8500 | http://localhost:8500 |
+
+Gatus is the single status dashboard. It is configured declaratively via `gatus.yml`, which is mounted into the container at `/config/config.yaml`. No manual seeding or UI setup is required — bring up the stack and open http://localhost:8090.
 
 ## Service catalog
 
@@ -42,35 +40,19 @@ Each row: name, group, lang, description, health URL (compose internal).
 | treasury-orchestration | treasury | Go | Batches orders into aggregate buys; manages T+0 vs T+2/3 float, hot wallet funding. | http://treasury-orchestration:8080/healthz |
 | wallet-management | chain | Go | Hot/warm wallet inventory, address derivation/rotation, per-chain balances. | http://wallet-management:8080/healthz |
 
-## Auto-seeding (no manual UI required)
+## Running
 
-All four tools can be pre-configured programmatically. The seed files are in this directory.
+```bash
+docker compose -f .github/docker-compose.yml up -d --build
+```
 
-### Kener (:8200) — auto-seeded on first start
-- `kener-seed.ts` is mounted into the container at `/app/src/lib/server/db/seedMonitorData.ts`
-- Kener's Knex migrations run on first DB creation and insert all 21 monitors automatically
-- No API key needed — the seed runs during DB initialization
-- After first run, open http://localhost:8200 and create your admin account
-- All 21 monitors will already be present with descriptions, categories, and health checks
+Then open http://localhost:8090. Gatus polls each `/healthz` endpoint every 30s and renders the status page from `gatus.yml`. To add or change monitors, edit `gatus.yml` and restart the `gatus` container.
 
-### Uptime Kuma (:8300) — seeded via Socket.io sidecar
-- `uptime-kuma-seed` init container runs `seed-uptime-kuma.js` after Kuma starts
-- **First**: open http://localhost:8300 and create admin account (user: admin, pass: admin)
-- **Then**: `docker compose up -d uptime-kuma-seed` to run the seed
-- Creates 21 HTTP-keyword monitors checking for `"status":"ok"` in response body
-- After seeding, create a Status Page in the UI and assign all 21 monitors
+## Gatus configuration
 
-### Healthchecks (:8400) — seeded via Management API sidecar
-- `healthchecks-seed` init container runs `seed-healthchecks.sh`
-- **First**: open http://localhost:8400, create admin account, create a Project, generate a Read-Write API key in Project Settings
-- **Then**: `HC_API_KEY=<your-key> docker compose up -d healthchecks-seed` to run the seed
-- Creates 21 checks with descriptions, tags, and upsert semantics (idempotent)
-- Healthchecks is push-based: each service must `curl http://healthchecks:8000/ping/<slug>` periodically
+Monitors are defined in `gatus.yml`. Each endpoint block sets:
 
-### Cachet (:8500) — seeded via REST API sidecar
-- `cachet-seed` init container runs `seed-cachet.sh`
-- **First**: open http://localhost:8500, complete first-run setup, generate an API key in Settings → API Keys
-- **Then**: `CACHET_TOKEN=<your-token> docker compose up -d cachet-seed` to run the seed
-- Creates 7 component groups (Core, Edge, Chain, Liquidity, Risk, Treasury, Fiat) + 21 components
-- Each component has name, description, GitHub link, group, and order
-- Cachet has no built-in prober — run a sidecar that curls `/healthz` and updates component status via API
+- `name`, `group` — shown on the dashboard
+- `url` — the in-compose health URL (`http://<service>:8080/healthz`)
+- `interval` — probe interval (default 30s)
+- `conditions` — `[STATUS] == 200` and `[BODY].status == ok`
