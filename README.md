@@ -1,5 +1,7 @@
 # Crypto On-Ramp — Microservices Architecture
 
+[![CI](https://github.com/ai-crypto-onramp/.github/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-crypto-onramp/.github/actions/workflows/ci.yml)
+
 Service breakdown to launch a crypto on-ramp end-to-end, mapped to the five-layer
 architecture plus the treasury/ledger and platform plumbing.
 

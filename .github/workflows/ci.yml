@@ -1,0 +1,25 @@
+name: CI
+
+on: [push, pull_request]
+
+env:
+  HURL_VERSION: 8.0.1
+
+jobs:
+  hurlfmt:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Install hurl
+        run: |
+          curl -sSL -o /tmp/hurl.deb \
+            "https://github.com/Orange-OpenSource/hurl/releases/download/${HURL_VERSION}/hurl_${HURL_VERSION}_amd64.deb"
+          sudo dpkg -i /tmp/hurl.deb
+      - name: Check hurl files formatting
+        run: |
+          files=$(find tests -name '*.hurl')
+          if [ -z "$files" ]; then
+            echo "No .hurl files found"
+            exit 1
+          fi
+          echo "$files" | xargs hurlfmt --check
