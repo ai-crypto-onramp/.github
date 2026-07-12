@@ -42,4 +42,4 @@ jobs:
       - name: Install yamllint
         run: pipx install yamllint
       - name: Lint YAML files
-        run: yamllint --strict --no-warnings .
+        run: yamllint --strict .
