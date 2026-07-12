@@ -3,8 +3,6 @@ AI Crypto On-Ramp project repositories index — microservices architecture for 
 - 👀 See also [README.md](https://github.com/ai-crypto-onramp/.github/blob/main/README.md) with high-level project overview & status, architecture diagrams & running instructions.
 - 🗿 Based on [How Crypto On-Ramps Work: The Custody Architecture Behind the 'Buy Crypto' Button](https://fystack.io/blog/how-crypto-on-ramps-work)
 
-## Repositories
-
 | Repository | Lang | CI | Coverage |
 |---|---|---|---|
 | 🔍 [aml-kyt-screening](https://github.com/ai-crypto-onramp/aml-kyt-screening) | Go | [![CI](https://github.com/ai-crypto-onramp/aml-kyt-screening/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-crypto-onramp/aml-kyt-screening/actions/workflows/ci.yml) | [![codecov](https://codecov.io/gh/ai-crypto-onramp/aml-kyt-screening/branch/main/graph/badge.svg)](https://codecov.io/gh/ai-crypto-onramp/aml-kyt-screening) |
