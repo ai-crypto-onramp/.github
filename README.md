@@ -14,6 +14,8 @@ architecture plus the treasury/ledger and platform plumbing.
 - [Architecture](#architecture)
   - [Reading the diagram](#reading-the-diagram)
 - [Dashboard](#dashboard)
+  - [Running](#running)
+  - [Gatus configuration](#gatus-configuration)
 
 ## Language philosophy
 
