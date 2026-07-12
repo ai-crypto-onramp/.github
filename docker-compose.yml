@@ -109,30 +109,8 @@ services:
     ports:
       - "8090:8080"
     volumes:
-      - ../gatus.yml:/config/gatus.yml:ro
+      - ./gatus.yml:/config/config.yaml:ro
       - gatus-data:/data/
-    depends_on:
-      - aml-kyt-screening
-      - api-gateway
-      - audit-event-log
-      - blockchain-gateway
-      - exchange-connectors
-      - fraud-detection
-      - fx-hedging
-      - identity-auth
-      - ledger-accounting
-      - liquidity-routing
-      - mpc-signing-service
-      - notification
-      - onboarding-kyc
-      - payment-orchestration
-      - policy-risk-engine
-      - pricing-quote
-      - rail-connectors
-      - reconciliation
-      - transaction-orchestrator
-      - treasury-orchestration
-      - wallet-management
 
 volumes:
   gatus-data:
