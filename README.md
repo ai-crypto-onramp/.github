@@ -3,6 +3,46 @@
 Service breakdown to launch a crypto on-ramp end-to-end, mapped to the five-layer
 architecture plus the treasury/ledger and platform plumbing.
 
+## Table of Contents
+
+- [Dashboard](#dashboard)
+- [Language philosophy](#language-philosophy)
+- [Core Microservices](#core-microservices)
+- [Fiat, Pricing & Liquidity](#fiat-pricing--liquidity)
+- [Custody & On-Chain](#custody--on-chain)
+- [Treasury, Ledger & Platform](#treasury-ledger--platform)
+- [Architecture](#architecture)
+- [Reading the diagram](#reading-the-diagram)
+
+## Dashboard
+
+All 21 services expose `GET /healthz` returning `{"status":"ok"}` on port `8080`
+(inside the compose network). Gatus is the single status dashboard — configured
+declaratively via `gatus.yml`, no manual UI setup required.
+
+| Tool | Host port | URL |
+|---|---|---|
+| Gatus | 8090 | http://localhost:8090 |
+
+### Running
+
+```bash
+docker compose -f .github/docker-compose.yml up -d --build
+```
+
+Then open http://localhost:8090. Gatus polls each `/healthz` endpoint every 30s
+and renders the status page from `gatus.yml`. To add or change monitors, edit
+`gatus.yml` and restart the `gatus` container.
+
+### Gatus configuration
+
+Monitors are defined in `gatus.yml`. Each endpoint block sets:
+
+- `name`, `group` — shown on the dashboard
+- `url` — the in-compose health URL (`http://<service>:8080/healthz`)
+- `interval` — probe interval (default 30s)
+- `conditions` — `[STATUS] == 200` and `[BODY].status == ok`
+
 ## Language philosophy
 
 Minimize language sprawl. Standardize on:
