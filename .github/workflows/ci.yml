@@ -13,7 +13,7 @@ jobs:
       - name: Install checkmake
         run: go install github.com/checkmake/checkmake/cmd/checkmake@latest
       - name: Lint Makefile
-        run: "$(go env GOPATH)/bin/checkmake" Makefile
+        run: "$(go env GOPATH)/bin/checkmake Makefile"
 
   hurlfmt:
     runs-on: ubuntu-latest
