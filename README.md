@@ -84,7 +84,7 @@ Solid arrows = synchronous request/response on the transaction path.
 ```mermaid
 flowchart LR
     Client([Client])
-    GW[API Gateway<br/>TypeScript]
+    GW[API Gateway]
     AUTH[Identity & Auth]
     KYC[Onboarding / KYC]
     PRICE[Pricing / Quote]
@@ -95,10 +95,10 @@ flowchart LR
     PAY[Payment Orchestration]
     RAILS[Rail Connectors]
     FX[FX & Hedging]
-    MPC[MPC Signing<br/>Rust]
+    MPC[MPC Signing]
     WALLET[Wallet Management]
-    CHAIN[Blockchain Gateway<br/>Go]
-    LEDGER[Ledger<br/>Rust]
+    CHAIN[Blockchain Gateway]
+    LEDGER[Ledger]
     LIQ[Liquidity Routing]
     EXCH[Exchange Connectors]
 
@@ -138,12 +138,12 @@ flowchart LR
     WALLET[Wallet Management]
     FX[FX & Hedging]
     LEDGER[Ledger]
-    RECON[Reconciliation<br/>Python]
+    RECON[Reconciliation]
     EXCH[Exchange Connectors]
     RAILS[Rail Connectors]
     CHAIN[Blockchain Gateway]
-    NOTIF[Notification<br/>TypeScript]
-    AUDIT[Audit / Event Log<br/>Go]
+    NOTIF[Notification]
+    AUDIT[Audit / Event Log]
     PAY[Payment Orchestration]
     MPC[MPC Signing]
     POLICY[Policy / Risk Engine]
