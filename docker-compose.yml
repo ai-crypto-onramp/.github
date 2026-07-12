@@ -113,7 +113,7 @@ services:
       - gatus-data:/data/
 
   # ── Kener — status page with per-monitor description/tags/severity ──
-  # UI-managed (admin panel at :8200). Add 21 monitors via UI or POST /api/monitors.
+  # Auto-seeds 21 monitors on first start via mounted seed file.
   kener:
     image: rajnandan1/kener:latest
     ports:
@@ -124,6 +124,7 @@ services:
       REDIS_URL: redis://kener-redis:6379
     volumes:
       - kener-data:/app/database
+      - ./kener-seed.ts:/app/src/lib/server/db/seedMonitorData.ts:ro
     depends_on:
       - kener-redis
       - aml-kyt-screening
@@ -134,7 +135,8 @@ services:
       - kener-redis-data:/data
 
   # ── Uptime Kuma — status page with tags, JSON-query health checks ──
-  # UI-managed (admin panel at :8300). Add 21 HTTP-JSON monitors via UI.
+  # Auto-seeds 21 monitors via Socket.io init sidecar.
+  # First run: set KUMA_USER/KUMA_PASS, then run seed-uptime-kuma sidecar.
   uptime-kuma:
     image: louislam/uptime-kuma:2
     ports:
@@ -142,9 +144,22 @@ services:
     volumes:
       - uptime-kuma-data:/app/data
 
+  uptime-kuma-seed:
+    image: node:20-slim
+    depends_on:
+      - uptime-kuma
+    environment:
+      KUMA_URL: http://uptime-kuma:3001
+      KUMA_USER: admin
+      KUMA_PASS: admin
+    volumes:
+      - ./seed-uptime-kuma.js:/seed.js:ro
+    entrypoint: ["node", "/seed.js"]
+    restart: "no"
+
   # ── Healthchecks.io — heartbeat/push monitoring with description+tags ──
-  # Push paradigm: services must ping http://healthchecks:8000/ping/<uuid>
-  # UI-managed (admin panel at :8400). Create 21 checks via UI or API.
+  # Auto-seeds 21 checks via Management API init sidecar.
+  # Requires HC_API_KEY from the admin UI (Settings → API Keys).
   healthchecks:
     image: healthchecks/healthchecks:latest
     ports:
@@ -172,9 +187,22 @@ services:
       timeout: 3s
       retries: 5
 
+  healthchecks-seed:
+    image: curlimages/curl:latest
+    depends_on:
+      healthchecks:
+        condition: service_started
+    environment:
+      HC_URL: http://healthchecks:8000
+      HC_API_KEY: "${HC_API_KEY:-}"
+    volumes:
+      - ./seed-healthchecks.sh:/seed.sh:ro
+    entrypoint: ["sh", "/seed.sh"]
+    restart: "no"
+
   # ── Cachet — status page with component description/link/group ──
-  # Push paradigm: no built-in prober. Set component status via API.
-  # UI-managed (admin panel at :8500). Create 21 components via UI or API.
+  # Auto-seeds 21 components + 7 groups via API init sidecar.
+  # Requires CACHET_TOKEN from the admin UI (Settings → API Keys).
   cachet:
     image: cachethq/docker:latest
     ports:
@@ -212,6 +240,19 @@ services:
 
   cachet-redis:
     image: redis:7-alpine
+
+  cachet-seed:
+    image: curlimages/curl:latest
+    depends_on:
+      cachet:
+        condition: service_started
+    environment:
+      CACHET_URL: http://cachet:8000
+      CACHET_TOKEN: "${CACHET_TOKEN:-}"
+    volumes:
+      - ./seed-cachet.sh:/seed.sh:ro
+    entrypoint: ["sh", "/seed.sh"]
+    restart: "no"
 
 volumes:
   gatus-data:

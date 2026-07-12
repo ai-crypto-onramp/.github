@@ -42,51 +42,35 @@ Each row: name, group, lang, description, health URL (compose internal).
 | treasury-orchestration | treasury | Go | Batches orders into aggregate buys; manages T+0 vs T+2/3 float, hot wallet funding. | http://treasury-orchestration:8080/healthz |
 | wallet-management | chain | Go | Hot/warm wallet inventory, address derivation/rotation, per-chain balances. | http://wallet-management:8080/healthz |
 
-## Setup instructions per tool
+## Auto-seeding (no manual UI required)
 
-### Kener (:8200)
-1. Open http://localhost:8200 — first-run setup creates admin account.
-2. Add each service as an API monitor:
-   - Monitor type: API
-   - URL: `<health URL from table above>`
-   - Method: GET
-   - Eval: custom JS — `return responseRaw.includes('"status":"ok"') ? "UP" : "DOWN"`
-   - Name: `<service name>`
-   - Description: `<description from table>`
-   - Tags: `lang:Go`, `group:core`, etc.
-   - Severity: critical / moderate / minor (assign per service)
-3. Group monitors on the status page by the `group` tag.
+All four tools can be pre-configured programmatically. The seed files are in this directory.
 
-### Uptime Kuma (:8300)
-1. Open http://localhost:8300 — first-run creates admin account.
-2. Add each service as an HTTP(s)-JsonQuery monitor:
-   - Monitor type: HTTP(s)-JsonQuery
-   - URL: `<health URL from table above>`
-   - JSON Query: `$.status` == `ok`
-   - Name: `<service name>`
-   - Tags: `lang=Go`, `group=core`, etc.
-3. Create a Status Page, assign all 21 monitors, set friendly names/descriptions.
+### Kener (:8200) — auto-seeded on first start
+- `kener-seed.ts` is mounted into the container at `/app/src/lib/server/db/seedMonitorData.ts`
+- Kener's Knex migrations run on first DB creation and insert all 21 monitors automatically
+- No API key needed — the seed runs during DB initialization
+- After first run, open http://localhost:8200 and create your admin account
+- All 21 monitors will already be present with descriptions, categories, and health checks
 
-### Healthchecks (:8400)
-1. Open http://localhost:8400 — create admin account.
-2. Create a Project (e.g. "AI Crypto On-Ramp").
-3. Add 21 checks — one per service:
-   - Name: `<service name>`
-   - Description: `<description from table>`
-   - Tags: `Go core` (space-separated)
-   - Schedule: every 1 min
-4. Each check gets a ping URL. Add a `curl <ping_url>` cron or sidecar to each service.
-   Note: Healthchecks is push-based — it does not probe `/healthz` directly.
+### Uptime Kuma (:8300) — seeded via Socket.io sidecar
+- `uptime-kuma-seed` init container runs `seed-uptime-kuma.js` after Kuma starts
+- **First**: open http://localhost:8300 and create admin account (user: admin, pass: admin)
+- **Then**: `docker compose up -d uptime-kuma-seed` to run the seed
+- Creates 21 HTTP-keyword monitors checking for `"status":"ok"` in response body
+- After seeding, create a Status Page in the UI and assign all 21 monitors
 
-### Cachet (:8500)
-1. Open http://localhost:8500 — first-run setup (mail, user, etc.).
-2. Create Component Groups: core, edge, chain, liquidity, risk, treasury, fiat.
-3. Add each service as a Component:
-   - Name: `<service name>`
-   - Description: `<description from table>`
-   - Link: `https://github.com/ai-crypto-onramp/<service>`
-   - Group: `<group from table>`
-   - Status: Operational (1)
-4. Cachet has no built-in prober. Use the API to update component status:
-   `PATCH /api/v1/components/<id>` with `{"status": 1}` (operational) or `{"status": 4}` (major outage).
-   Write a small sidecar script that curls each `/healthz` and updates Cachet.
+### Healthchecks (:8400) — seeded via Management API sidecar
+- `healthchecks-seed` init container runs `seed-healthchecks.sh`
+- **First**: open http://localhost:8400, create admin account, create a Project, generate a Read-Write API key in Project Settings
+- **Then**: `HC_API_KEY=<your-key> docker compose up -d healthchecks-seed` to run the seed
+- Creates 21 checks with descriptions, tags, and upsert semantics (idempotent)
+- Healthchecks is push-based: each service must `curl http://healthchecks:8000/ping/<slug>` periodically
+
+### Cachet (:8500) — seeded via REST API sidecar
+- `cachet-seed` init container runs `seed-cachet.sh`
+- **First**: open http://localhost:8500, complete first-run setup, generate an API key in Settings → API Keys
+- **Then**: `CACHET_TOKEN=<your-token> docker compose up -d cachet-seed` to run the seed
+- Creates 7 component groups (Core, Edge, Chain, Liquidity, Risk, Treasury, Fiat) + 21 components
+- Each component has name, description, GitHub link, group, and order
+- Cachet has no built-in prober — run a sidecar that curls `/healthz` and updates component status via API
