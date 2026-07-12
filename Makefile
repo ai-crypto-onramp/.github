@@ -8,22 +8,18 @@
 #   make logs          tail logs for all services
 #   make build         (re)build all service images
 #   make rebuild       rebuild all service images without cache
-#   make pull          pull the postgres/redis/gatus base images
+#   make pull          pull base images
 #   make dashboard     open the Gatus health dashboard in the browser
-#   make test          run all Hurl integration suites (HTML report in reports/)
-#   make up-<svc>      start one service:            make up-kyc, make up-identity-auth
-#   make logs-<svc>    tail logs for one service:    make logs-policy
-#   make test-<svc>    run one service's test suite: make test-pricing
-#   make health        one-shot: show /healthz for every service that exposes it
+#   make test          run all Hurl integration suites (HTML report in `reports/`)
+#   make up-<svc>      start one service:            `make up-kyc`, `make up-identity-auth`
+#   make logs-<svc>    tail logs for one service:    `make logs-policy`
+#   make test-<svc>    run one service's test suite: `make test-pricing`
 #   make psql          psql into the shared postgres container
 #   make redis-cli     redis-cli into the shared redis container
-#   make nuke          down -v --rmi local (wipe containers, volumes, built images)
-#   make fresh         nuke + up (full clean rebuild)
 
 COMPOSE := docker compose
 
-.PHONY: up down restart ps logs build rebuild pull test dashboard \
-        health psql redis-cli nuke fresh
+.PHONY: up down restart ps logs build rebuild pull test dashboard psql redis-cli
 
 # Default target: start the whole stack
 up:
@@ -45,7 +41,7 @@ rebuild:
 	$(COMPOSE) build --no-cache
 
 pull:
-	$(COMPOSE) pull --ignore-pull-failures postgres redis gatus
+	$(COMPOSE) pull
 
 logs:
 	$(COMPOSE) logs -f --tail=200
@@ -99,33 +95,9 @@ logs-%:
 test-%:
 	hurl --test tests/$(or $($*),$*)/*.hurl
 
-# Services that expose /healthz on :8080 inside the container.
-HEALTH_SVC := aml-kyt-screening api-gateway audit-event-log blockchain-gateway \
-              exchange-connectors fraud-detection fx-hedging identity-auth \
-              ledger-accounting liquidity-routing mpc-signing-service notification \
-              onboarding-kyc payment-orchestration policy-risk-engine pricing-quote \
-              rail-connectors reconciliation transaction-orchestrator \
-              treasury-orchestration wallet-management
-
-health:
-	@for svc in $(HEALTH_SVC); do \
-		port=$$(docker compose port $$svc 8080 2>/dev/null | cut -d: -f2); \
-		if [ -n "$$port" ]; then \
-			status=$$(curl -fsS -m 2 http://localhost:$$port/healthz 2>/dev/null || echo "UNREACHABLE"); \
-			printf "%-28s %s\n" "$$svc" "$$status"; \
-		else \
-			printf "%-28s %s\n" "$$svc" "not-running"; \
-		fi; \
-	done
-
+# One-shot / interactive tools
 psql:
 	docker compose exec postgres psql -U postgres
 
 redis-cli:
 	docker compose exec redis redis-cli
-
-nuke:
-	$(COMPOSE) down -v --rmi local
-
-fresh: nuke
-	$(COMPOSE) up -d
