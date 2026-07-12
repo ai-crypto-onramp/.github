@@ -1,0 +1,181 @@
+storage:
+  type: sqlite
+  path: /data/data.db
+
+ui:
+  title: AI Crypto On-Ramp — Health
+  header: AI Crypto On-Ramp Status
+
+alerting:
+  slack: {}
+
+metrics: true
+
+endpoints:
+  - name: aml-kyt-screening
+    group: core
+    url: http://aml-kyt-screening:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: api-gateway
+    group: edge
+    url: http://api-gateway:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: audit-event-log
+    group: core
+    url: http://audit-event-log:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: blockchain-gateway
+    group: chain
+    url: http://blockchain-gateway:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: exchange-connectors
+    group: liquidity
+    url: http://exchange-connectors:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: fraud-detection
+    group: risk
+    url: http://fraud-detection:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: fx-hedging
+    group: treasury
+    url: http://fx-hedging:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: identity-auth
+    group: core
+    url: http://identity-auth:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: ledger-accounting
+    group: core
+    url: http://ledger-accounting:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: liquidity-routing
+    group: liquidity
+    url: http://liquidity-routing:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: mpc-signing-service
+    group: chain
+    url: http://mpc-signing-service:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: notification
+    group: core
+    url: http://notification:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: onboarding-kyc
+    group: core
+    url: http://onboarding-kyc:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: payment-orchestration
+    group: fiat
+    url: http://payment-orchestration:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: policy-risk-engine
+    group: risk
+    url: http://policy-risk-engine:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: pricing-quote
+    group: core
+    url: http://pricing-quote:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: rail-connectors
+    group: fiat
+    url: http://rail-connectors:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: reconciliation
+    group: core
+    url: http://reconciliation:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: transaction-orchestrator
+    group: core
+    url: http://transaction-orchestrator:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: treasury-orchestration
+    group: treasury
+    url: http://treasury-orchestration:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: wallet-management
+    group: chain
+    url: http://wallet-management:8080/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"

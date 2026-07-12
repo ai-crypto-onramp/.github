@@ -1,0 +1,138 @@
+services:
+  aml-kyt-screening:
+    build: ../aml-kyt-screening
+    ports:
+      - "8081:8080"
+
+  api-gateway:
+    build: ../api-gateway
+    ports:
+      - "8080:8080"
+
+  audit-event-log:
+    build: ../audit-event-log
+    ports:
+      - "8082:8080"
+
+  blockchain-gateway:
+    build: ../blockchain-gateway
+    ports:
+      - "8083:8080"
+
+  exchange-connectors:
+    build: ../exchange-connectors
+    ports:
+      - "8084:8080"
+
+  fraud-detection:
+    build: ../fraud-detection
+    ports:
+      - "8085:8080"
+
+  fx-hedging:
+    build: ../fx-hedging
+    ports:
+      - "8086:8080"
+
+  identity-auth:
+    build: ../identity-auth
+    ports:
+      - "8087:8080"
+
+  ledger-accounting:
+    build: ../ledger-accounting
+    ports:
+      - "8088:8080"
+
+  liquidity-routing:
+    build: ../liquidity-routing
+    ports:
+      - "8089:8080"
+
+  mpc-signing-service:
+    build: ../mpc-signing-service
+    ports:
+      - "8091:8080"
+
+  notification:
+    build: ../notification
+    ports:
+      - "8092:8080"
+
+  onboarding-kyc:
+    build: ../onboarding-kyc
+    ports:
+      - "8093:8080"
+
+  payment-orchestration:
+    build: ../payment-orchestration
+    ports:
+      - "8094:8080"
+
+  policy-risk-engine:
+    build: ../policy-risk-engine
+    ports:
+      - "8095:8080"
+
+  pricing-quote:
+    build: ../pricing-quote
+    ports:
+      - "8096:8080"
+
+  rail-connectors:
+    build: ../rail-connectors
+    ports:
+      - "8097:8080"
+
+  reconciliation:
+    build: ../reconciliation
+    ports:
+      - "8098:8080"
+
+  transaction-orchestrator:
+    build: ../transaction-orchestrator
+    ports:
+      - "8099:8080"
+
+  treasury-orchestration:
+    build: ../treasury-orchestration
+    ports:
+      - "8100:8080"
+
+  wallet-management:
+    build: ../wallet-management
+    ports:
+      - "8101:8080"
+
+  gatus:
+    image: twinproduction/gatus:latest
+    ports:
+      - "8090:8080"
+    volumes:
+      - ../gatus.yml:/config/gatus.yml:ro
+      - gatus-data:/data/
+    depends_on:
+      - aml-kyt-screening
+      - api-gateway
+      - audit-event-log
+      - blockchain-gateway
+      - exchange-connectors
+      - fraud-detection
+      - fx-hedging
+      - identity-auth
+      - ledger-accounting
+      - liquidity-routing
+      - mpc-signing-service
+      - notification
+      - onboarding-kyc
+      - payment-orchestration
+      - policy-risk-engine
+      - pricing-quote
+      - rail-connectors
+      - reconciliation
+      - transaction-orchestrator
+      - treasury-orchestration
+      - wallet-management
+
+volumes:
+  gatus-data:
