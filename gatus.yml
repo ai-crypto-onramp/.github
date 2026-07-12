@@ -12,6 +12,13 @@ alerting:
 metrics: true
 
 endpoints:
+  - name: postgres
+    group: infra
+    url: tcp://postgres:5432
+    interval: 30s
+    conditions:
+      - "[CONNECTED] == true"
+
   - name: aml-kyt-screening
     group: core
     url: http://aml-kyt-screening:8080/healthz

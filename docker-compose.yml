@@ -1,4 +1,40 @@
 services:
+  postgres:
+    image: postgres:16-alpine
+    environment:
+      - POSTGRES_USER=postgres
+      - POSTGRES_PASSWORD=postgres
+    ports:
+      - "5432:5432"
+    volumes:
+      - pg-data:/var/lib/postgresql/data
+      - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 5s
+      timeout: 5s
+      retries: 10
+
+  # One-shot: applies identity-auth migrations, then exits.
+  identity-auth-migrate:
+    build: ../identity-auth
+    entrypoint: ["/migrate", "--up"]
+    environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/identity_auth?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # One-shot: applies onboarding-kyc migrations, then exits.
+  onboarding-kyc-migrate:
+    build: ../onboarding-kyc
+    entrypoint: ["/migrate", "--up"]
+    environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/onboarding_kyc?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   aml-kyt-screening:
     build: ../aml-kyt-screening
     ports:
@@ -38,6 +74,11 @@ services:
     build: ../identity-auth
     ports:
       - "8087:8080"
+    environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/identity_auth?sslmode=disable
+    depends_on:
+      identity-auth-migrate:
+        condition: service_completed_successfully
 
   ledger-accounting:
     build: ../ledger-accounting
@@ -63,6 +104,11 @@ services:
     build: ../onboarding-kyc
     ports:
       - "8093:8080"
+    environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/onboarding_kyc?sslmode=disable
+    depends_on:
+      onboarding-kyc-migrate:
+        condition: service_completed_successfully
 
   payment-orchestration:
     build: ../payment-orchestration
@@ -115,3 +161,4 @@ services:
 
 volumes:
   gatus-data:
+  pg-data:
