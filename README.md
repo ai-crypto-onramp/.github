@@ -5,43 +5,15 @@ architecture plus the treasury/ledger and platform plumbing.
 
 ## Table of Contents
 
-- [Dashboard](#dashboard)
 - [Language philosophy](#language-philosophy)
-- [Core Microservices](#core-microservices)
-- [Fiat, Pricing & Liquidity](#fiat-pricing--liquidity)
-- [Custody & On-Chain](#custody--on-chain)
-- [Treasury, Ledger & Platform](#treasury-ledger--platform)
+- [Service Groups](#service-groups)
+  - [Core Microservices](#core-microservices)
+  - [Fiat, Pricing & Liquidity](#fiat-pricing--liquidity)
+  - [Custody & On-Chain](#custody--on-chain)
+  - [Treasury, Ledger & Platform](#treasury-ledger--platform)
 - [Architecture](#architecture)
-- [Reading the diagram](#reading-the-diagram)
-
-## Dashboard
-
-All 21 services expose `GET /healthz` returning `{"status":"ok"}` on port `8080`
-(inside the compose network). Gatus is the single status dashboard — configured
-declaratively via `gatus.yml`, no manual UI setup required.
-
-| Tool | Host port | URL |
-|---|---|---|
-| Gatus | 8090 | http://localhost:8090 |
-
-### Running
-
-```bash
-docker compose -f .github/docker-compose.yml up -d --build
-```
-
-Then open http://localhost:8090. Gatus polls each `/healthz` endpoint every 30s
-and renders the status page from `gatus.yml`. To add or change monitors, edit
-`gatus.yml` and restart the `gatus` container.
-
-### Gatus configuration
-
-Monitors are defined in `gatus.yml`. Each endpoint block sets:
-
-- `name`, `group` — shown on the dashboard
-- `url` — the in-compose health URL (`http://<service>:8080/healthz`)
-- `interval` — probe interval (default 30s)
-- `conditions` — `[STATUS] == 200` and `[BODY].status == ok`
+  - [Reading the diagram](#reading-the-diagram)
+- [Dashboard](#dashboard)
 
 ## Language philosophy
 
@@ -52,7 +24,9 @@ Minimize language sprawl. Standardize on:
 - **TypeScript** — edge / BFF
 - **Python** — where ML/data genuinely wins (fraud, risk)
 
-## Core Microservices
+## Service Groups
+
+### Core Microservices
 
 | Service | Status | Language | Description |
 |---|---|---|---|
@@ -63,7 +37,7 @@ Minimize language sprawl. Standardize on:
 | [**Policy / Risk Engine**](https://github.com/ai-crypto-onramp/policy-risk-engine) | ✅ | Go | Per-tx caps, velocity limits, whitelisting, source auth. Auto-approves or routes to manual review. The gatekeeper before signing. |
 | [**Fraud Detection**](https://github.com/ai-crypto-onramp/fraud-detection) | ⏳ | Python | ML scoring on payment + behavioral signals (chargeback/velocity models); feeds the policy engine. |
 
-## Fiat, Pricing & Liquidity
+### Fiat, Pricing & Liquidity
 
 | Service | Status | Language | Description |
 |---|---|---|---|
@@ -74,7 +48,7 @@ Minimize language sprawl. Standardize on:
 | [**Liquidity Routing**](https://github.com/ai-crypto-onramp/liquidity-routing) | ⏳ | Go | Smart order routing + TWAP execution across exchanges/OTC desks; splits large orders. |
 | [**Exchange Connectors**](https://github.com/ai-crypto-onramp/exchange-connectors) | ⏳ | Go | Venue-specific adapters (Binance, Kraken, OTC) — order placement, fills, balances. |
 
-## Custody & On-Chain
+### Custody & On-Chain
 
 | Service | Status | Language | Description |
 |---|---|---|---|
@@ -82,7 +56,7 @@ Minimize language sprawl. Standardize on:
 | [**Wallet Management**](https://github.com/ai-crypto-onramp/wallet-management) | ⏳ | Go | Hot/warm wallet inventory, address derivation/rotation, balance tracking per chain. |
 | [**Blockchain Gateway**](https://github.com/ai-crypto-onramp/blockchain-gateway) | ⏳ | Go | Per-chain broadcast, gas prepayment/estimation, confirmation tracking, reorg handling, mempool monitoring. |
 
-## Treasury, Ledger & Platform
+### Treasury, Ledger & Platform
 
 | Service | Status | Language | Description |
 |---|---|---|---|
@@ -204,3 +178,32 @@ flowchart TB
 - **Async layer (dashed):** Treasury batches orders into aggregate buys via Liquidity
   Routing (handling the T+0 vs T+2/3 float); Reconciliation matches Ledger against
   bank, exchange, and on-chain state; Notification and Audit consume the event bus.
+
+## Dashboard
+
+All 21 services expose `GET /healthz` returning `{"status":"ok"}` on port `8080`
+(inside the compose network). Gatus is the single status dashboard — configured
+declaratively via `gatus.yml`, no manual UI setup required.
+
+| Tool | Host port | URL |
+|---|---|---|
+| Gatus | 8090 | http://localhost:8090 |
+
+### Running
+
+```bash
+docker compose -f .github/docker-compose.yml up -d --build
+```
+
+Then open http://localhost:8090. Gatus polls each `/healthz` endpoint every 30s
+and renders the status page from `gatus.yml`. To add or change monitors, edit
+`gatus.yml` and restart the `gatus` container.
+
+### Gatus configuration
+
+Monitors are defined in `gatus.yml`. Each endpoint block sets:
+
+- `name`, `group` — shown on the dashboard
+- `url` — the in-compose health URL (`http://<service>:8080/healthz`)
+- `interval` — probe interval (default 30s)
+- `conditions` — `[STATUS] == 200` and `[BODY].status == ok`
