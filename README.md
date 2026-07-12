@@ -12,7 +12,9 @@ architecture plus the treasury/ledger and platform plumbing.
   - [Custody & On-Chain](#custody--on-chain)
   - [Treasury, Ledger & Platform](#treasury-ledger--platform)
 - [Architecture](#architecture)
-  - [Reading the diagram](#reading-the-diagram)
+  - [Transaction path](#transaction-path)
+  - [Async layer](#async-layer)
+  - [Reading the diagrams](#reading-the-diagrams)
 - [Dashboard](#dashboard)
   - [Running](#running)
   - [Gatus configuration](#gatus-configuration)
@@ -71,96 +73,88 @@ Minimize language sprawl. Standardize on:
 
 ## Architecture
 
-End-to-end service topology. Solid arrows = synchronous request/response on the
-transaction path. Dashed arrows = asynchronous events (event bus / webhooks).
+End-to-end service topology, split into two diagrams for readability:
+**Transaction path** (synchronous request/response) and **Async layer**
+(events, webhooks, reconciliation).
+
+### Transaction path
+
+Solid arrows = synchronous request/response on the transaction path.
 
 ```mermaid
-flowchart TB
-    Client([Web / Mobile / Partner SDK])
+flowchart LR
+    Client([Client])
+    GW[API Gateway<br/>TypeScript]
+    AUTH[Identity & Auth]
+    KYC[Onboarding / KYC]
+    PRICE[Pricing / Quote]
+    ORCH[Transaction Orchestrator]
+    POLICY[Policy / Risk Engine]
+    FRAUD[Fraud Detection]
+    KYT[AML / KYT Screening]
+    PAY[Payment Orchestration]
+    RAILS[Rail Connectors]
+    FX[FX & Hedging]
+    MPC[MPC Signing<br/>Rust]
+    WALLET[Wallet Management]
+    CHAIN[Blockchain Gateway<br/>Go]
+    LEDGER[Ledger<br/>Rust]
+    LIQ[Liquidity Routing]
+    EXCH[Exchange Connectors]
 
-    subgraph Edge["Edge & Identity"]
-        GW[API Gateway / BFF<br/>TypeScript]
-        AUTH[Identity & Auth<br/>Go]
-    end
-
-    subgraph Compliance["Compliance & Risk"]
-        KYC[Onboarding / KYC<br/>Go]
-        KYT[AML / KYT Screening<br/>Go]
-        POLICY[Policy / Risk Engine<br/>Go]
-        FRAUD[Fraud Detection<br/>Python]
-    end
-
-    subgraph Fiat["Fiat, Pricing & Liquidity"]
-        PAY[Payment Orchestration<br/>Go]
-        RAILS[Rail Connectors<br/>Go]
-        PRICE[Pricing / Quote<br/>Go]
-        FX[FX & Hedging<br/>Go]
-        LIQ[Liquidity Routing<br/>Go]
-        EXCH[Exchange Connectors<br/>Go]
-    end
-
-    subgraph Custody["Custody & On-Chain"]
-        MPC[MPC Signing Service<br/>Rust]
-        WALLET[Wallet Management<br/>Go]
-        CHAIN[Blockchain Gateway<br/>Go]
-    end
-
-    subgraph Platform["Treasury, Ledger & Platform"]
-        ORCH[Transaction Orchestrator<br/>Go]
-        LEDGER[Ledger / Accounting<br/>Rust]
-        TREAS[Treasury Orchestration<br/>Go]
-        RECON[Reconciliation<br/>Python]
-        NOTIF[Notification<br/>TypeScript]
-        AUDIT[Audit / Event Log<br/>Go]
-    end
-
-    %% Client entry
     Client --> GW
     GW --> AUTH
     GW --> KYC
     GW --> PRICE
     GW --> ORCH
-
-    %% Compliance wiring
     KYC --> POLICY
     FRAUD --> POLICY
     KYT --> POLICY
-
-    %% Orchestrator saga (transaction path)
     ORCH --> POLICY
     ORCH --> PAY
     ORCH --> KYT
     ORCH --> MPC
     ORCH --> CHAIN
     ORCH --> LEDGER
-
-    %% Fiat rails
     PAY --> RAILS
     PAY --> FRAUD
-
-    %% Pricing & FX
     PRICE --> FX
-
-    %% Liquidity
     LIQ --> EXCH
-
-    %% Custody & on-chain
     MPC --> WALLET
     CHAIN --> WALLET
+```
 
-    %% Treasury (async aggregation)
+### Async layer
+
+Dashed arrows = asynchronous events (event bus / webhooks). Treasury batches orders
+into aggregate buys; Reconciliation matches the Ledger against external state;
+Notification and Audit consume the event bus.
+
+```mermaid
+flowchart LR
+    ORCH[Transaction Orchestrator]
+    TREAS[Treasury Orchestration]
+    LIQ[Liquidity Routing]
+    WALLET[Wallet Management]
+    FX[FX & Hedging]
+    LEDGER[Ledger]
+    RECON[Reconciliation<br/>Python]
+    EXCH[Exchange Connectors]
+    RAILS[Rail Connectors]
+    CHAIN[Blockchain Gateway]
+    NOTIF[Notification<br/>TypeScript]
+    AUDIT[Audit / Event Log<br/>Go]
+    PAY[Payment Orchestration]
+    MPC[MPC Signing]
+    POLICY[Policy / Risk Engine]
+
     ORCH -.-> TREAS
     TREAS -.-> LIQ
     TREAS -.-> WALLET
-    TREAS --> FX
-
-    %% Reconciliation inputs
     LEDGER -.-> RECON
     EXCH -.-> RECON
     RAILS -.-> RECON
     CHAIN -.-> RECON
-
-    %% Cross-cutting async
     ORCH -.-> NOTIF
     CHAIN -.-> NOTIF
     ORCH -.-> AUDIT
@@ -170,14 +164,14 @@ flowchart TB
     LEDGER -.-> AUDIT
 ```
 
-### Reading the diagram
+### Reading the diagrams
 
-- **Transaction path (solid):** `Client → API Gateway → Transaction Orchestrator`,
+- **Transaction path:** `Client → API Gateway → Transaction Orchestrator`,
   which drives the saga: Policy check → Payment capture → KYT screen → MPC sign →
   Blockchain broadcast → Ledger posting.
 - **Compliance gate:** KYC (signup), Fraud, and KYT all feed the **Policy Engine**,
   the single gatekeeper before signing.
-- **Async layer (dashed):** Treasury batches orders into aggregate buys via Liquidity
+- **Async layer:** Treasury batches orders into aggregate buys via Liquidity
   Routing (handling the T+0 vs T+2/3 float); Reconciliation matches Ledger against
   bank, exchange, and on-chain state; Notification and Audit consume the event bus.
 
