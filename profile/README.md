@@ -4,6 +4,8 @@ AI Crypto On-Ramp project repositories index — microservices architecture for 
 
 Based on https://fystack.io/blog/how-crypto-on-ramps-work
 
+See also [README.md](https://github.com/ai-crypto-onramp/.github/blob/main/README.md) with high-level project overview & status, architecture diagrams & running instructions.
+
 ## Repositories
 
 | Repository | Lang | CI | Coverage | Description |
