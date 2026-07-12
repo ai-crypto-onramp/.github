@@ -38,7 +38,7 @@ services:
   # One-shot: applies policy-risk-engine migrations, then exits.
   policy-risk-engine-migrate:
     build: ../policy-risk-engine
-    entrypoint: ["/migrate", "up", "migrations"]
+    entrypoint: ["/migrate", "up", "/migrations"]
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/policy_engine?sslmode=disable
     depends_on:
