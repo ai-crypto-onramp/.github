@@ -19,6 +19,13 @@ endpoints:
     conditions:
       - "[CONNECTED] == true"
 
+  - name: redis
+    group: infra
+    url: tcp://redis:6379
+    interval: 30s
+    conditions:
+      - "[CONNECTED] == true"
+
   - name: aml-kyt-screening
     group: core
     url: http://aml-kyt-screening:8080/healthz

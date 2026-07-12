@@ -35,10 +35,45 @@ services:
       postgres:
         condition: service_healthy
 
+  # One-shot: applies policy-risk-engine migrations, then exits.
+  policy-risk-engine-migrate:
+    build: ../policy-risk-engine
+    entrypoint: ["/migrate", "up", "migrations"]
+    environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/policy_engine?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  # Shared Redis for velocity counters (policy-risk-engine) and the
+  # address-risk cache (aml-kyt-screening).
+  redis:
+    image: redis:7-alpine
+    ports:
+      - "6379:6379"
+    healthcheck:
+      test: ["CMD", "redis-cli", "ping"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+
+  # aml-kyt-screening auto-applies migrations on startup via store.Open, so no
+  # separate migrate container is needed.
   aml-kyt-screening:
     build: ../aml-kyt-screening
     ports:
       - "8081:8080"
+    environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/aml_kyt?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - PORT=8080
+      - CHAINALYSIS_WEBHOOK_SECRET=dev-secret-chainalysis
+      - TRM_WEBHOOK_SECRET=dev-secret-trm
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   api-gateway:
     build: ../api-gateway
@@ -119,6 +154,18 @@ services:
     build: ../policy-risk-engine
     ports:
       - "8095:8080"
+    environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/policy_engine?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - POLICIES_DIR=/policies
+      - PORT=8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      policy-risk-engine-migrate:
+        condition: service_completed_successfully
 
   pricing-quote:
     build: ../pricing-quote
