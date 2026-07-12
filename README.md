@@ -53,22 +53,6 @@ Minimize language sprawl. Standardize on:
 | [**Notification**](https://github.com/ai-crypto-onramp/notification) | ⏳ | TypeScript | Email/SMS/push + partner webhooks for tx status. |
 | [**Audit / Event Log**](https://github.com/ai-crypto-onramp/audit-event-log) | ⏳ | Go | Append-only audit trail for compliance and incident forensics; consumes the event bus. |
 
-## Launch sequencing
-
-You don't build 24 services on day one. MVP cut (single region, cards + one instant
-rail, one or two chains):
-
-- **Must-have for v1:** API Gateway, Auth, KYC, KYT, Policy Engine, Payment
-  Orchestration, Pricing, Transaction Orchestrator, MPC Signing (**buy this**),
-  Wallet Mgmt, Blockchain Gateway, Ledger, Notification.
-- **Fast-follow:** FX/Hedging, Liquidity Routing, Treasury batching, Reconciliation,
-  Fraud ML.
-
-**Key recommendation:** In-house custody is ~$5–10M and 18–24 months. Do **not**
-build MPC Signing in-house for v1 — integrate a custody provider
-(Fireblocks/Dfns/Turnkey) behind our own Wallet Management + Policy interfaces,
-keeping the boundary clean so we can bring it in-house later.
-
 ## Architecture
 
 End-to-end service topology. Solid arrows = synchronous request/response on the
