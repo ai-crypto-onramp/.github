@@ -4,10 +4,10 @@
   <img src="assets/ai-crypto-onramp-logo-blueprint.jpeg" alt="AI Crypto On-Ramp" width="600">
 </p>
 
-[![CI](https://github.com/ai-crypto-onramp/.github/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-crypto-onramp/.github/actions/workflows/ci.yml)
-
 Service breakdown to launch a crypto on-ramp end-to-end, mapped to the five-layer
 architecture plus the treasury/ledger and platform plumbing.
+
+[![CI](https://github.com/ai-crypto-onramp/.github/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-crypto-onramp/.github/actions/workflows/ci.yml)
 
 ## Table of Contents
 
