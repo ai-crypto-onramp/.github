@@ -211,6 +211,11 @@ services:
     build: ../pricing-quote
     ports:
       - "8096:8080"
+    environment:
+      - REDIS_URL=redis://redis:6379
+    depends_on:
+      redis:
+        condition: service_healthy
 
   rail-connectors:
     build: ../rail-connectors
@@ -221,6 +226,13 @@ services:
     build: ../reconciliation
     ports:
       - "8098:8080"
+    environment:
+      - DB_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/reconciliation
+      - KAFKA_BROKERS=
+      - ENABLE_KAFKA=false
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   transaction-orchestrator:
     build: ../transaction-orchestrator
@@ -231,6 +243,19 @@ services:
     build: ../treasury-orchestration
     ports:
       - "8100:8080"
+    environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/treasury?sslmode=disable
+      - REDIS_URL=redis://redis:6379/0
+      - LIQUIDITY_ROUTING_URL=http://liquidity-routing:8080
+      - FX_HEDGING_URL=http://fx-hedging:8080
+      - WALLET_MGMT_URL=http://wallet-management:8080
+      - LEDGER_URL=http://ledger-accounting:8080
+      - AUDIT_LOG_URL=http://audit-event-log:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   # Migrations are applied by the wallet-management-migrate one-shot above;
   # the wallet_management database itself must exist (see postgres-init.sql).

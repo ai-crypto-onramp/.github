@@ -49,7 +49,7 @@ Minimize language sprawl. Standardize on:
 |---|---|---|---|
 | [**Payment Orchestration**](https://github.com/ai-crypto-onramp/payment-orchestration) | ⏳ | Go | Fiat ingress. Normalizes across rails; manages 3DS, auth/capture, settlement webhooks, chargebacks. |
 | [**Rail Connectors**](https://github.com/ai-crypto-onramp/rail-connectors) | ⏳ | Go | Adapter services per rail (card networks, ACH/SEPA/PIX/UPI). One deployable per rail family, common interface. |
-| [**Pricing / Quote**](https://github.com/ai-crypto-onramp/pricing-quote) | ⏳ | Go | Real-time rate quotes with the ~30s rate-lock window; sources spreads and marks up fees. |
+| [**Pricing / Quote**](https://github.com/ai-crypto-onramp/pricing-quote) | ✅ | Go | Real-time rate quotes with the ~30s rate-lock window; sources spreads and marks up fees. |
 | [**FX & Hedging**](https://github.com/ai-crypto-onramp/fx-hedging) | ⏳ | Go | Manages currency exposure across daily flows, executes hedges, tracks slippage. |
 | [**Liquidity Routing**](https://github.com/ai-crypto-onramp/liquidity-routing) | ⏳ | Go | Smart order routing + TWAP execution across exchanges/OTC desks; splits large orders. |
 | [**Exchange Connectors**](https://github.com/ai-crypto-onramp/exchange-connectors) | ⏳ | Go | Venue-specific adapters (Binance, Kraken, OTC) — order placement, fills, balances. |
@@ -68,8 +68,8 @@ Minimize language sprawl. Standardize on:
 |---|---|---|---|
 | [**Transaction Orchestrator**](https://github.com/ai-crypto-onramp/transaction-orchestrator) | ⏳ | Go | The saga engine tying payment → policy → sign → deliver into one atomic, recoverable flow with compensation. |
 | [**Ledger / Accounting**](https://github.com/ai-crypto-onramp/ledger-accounting) | ⏳ | Rust | Immutable double-entry ledger — the single source of financial truth. Correctness over everything. |
-| [**Treasury Orchestration**](https://github.com/ai-crypto-onramp/treasury-orchestration) | ⏳ | Go | Batches user orders into aggregate buys, manages the T+0 vs T+2/3 float, funding of hot wallets. |
-| [**Reconciliation**](https://github.com/ai-crypto-onramp/reconciliation) | ⏳ | Python | Continuously matches internal ledger vs bank/exchange/on-chain state; flags breaks (a top-4 failure mode). |
+| [**Treasury Orchestration**](https://github.com/ai-crypto-onramp/treasury-orchestration) | ✅ | Go | Batches user orders into aggregate buys, manages the T+0 vs T+2/3 float, funding of hot wallets. |
+| [**Reconciliation**](https://github.com/ai-crypto-onramp/reconciliation) | ✅ | Python | Continuously matches internal ledger vs bank/exchange/on-chain state; flags breaks (a top-4 failure mode). |
 | [**Notification**](https://github.com/ai-crypto-onramp/notification) | ⏳ | TypeScript | Email/SMS/push + partner webhooks for tx status. |
 | [**Audit / Event Log**](https://github.com/ai-crypto-onramp/audit-event-log) | ⏳ | Go | Append-only audit trail for compliance and incident forensics; consumes the event bus. |
 
