@@ -58,7 +58,7 @@ Minimize language sprawl. Standardize on:
 
 | Service | Status | Language | Description |
 |---|---|---|---|
-| [**MPC Signing Service**](https://github.com/ai-crypto-onramp/mpc-signing-service) | ⏳ | Rust | Threshold-signature (t-of-n) signing across distributed nodes. No single key. The most security-critical component. |
+| [**MPC Signing Service**](https://github.com/ai-crypto-onramp/mpc-signing-service) | ✅ | Rust | Threshold-signature (t-of-n) signing across distributed nodes. No single key. The most security-critical component. |
 | [**Wallet Management**](https://github.com/ai-crypto-onramp/wallet-management) | ✅ | Go | Hot/warm wallet inventory, address derivation/rotation, balance tracking per chain. |
 | [**Blockchain Gateway**](https://github.com/ai-crypto-onramp/blockchain-gateway) | ✅ | Go | Per-chain broadcast, gas prepayment/estimation, confirmation tracking, reorg handling, mempool monitoring. |
 
