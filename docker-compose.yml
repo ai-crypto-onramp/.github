@@ -266,6 +266,8 @@ services:
     build: ../transaction-orchestrator
     ports:
       - "8099:8080"
+    environment:
+      - EVENT_BUS_URL=nats://localhost:4222
 
   treasury-orchestration:
     build: ../treasury-orchestration
