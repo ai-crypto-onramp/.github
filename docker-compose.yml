@@ -277,8 +277,6 @@ services:
       - LIQUIDITY_ROUTING_URL=http://liquidity-routing:8080
       - FX_HEDGING_URL=http://fx-hedging:8080
       - WALLET_MGMT_URL=http://wallet-management:8080
-      - LEDGER_URL=http://ledger-accounting:8080
-      - AUDIT_LOG_URL=http://audit-event-log:8080
     depends_on:
       postgres:
         condition: service_healthy
