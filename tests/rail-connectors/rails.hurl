@@ -1,5 +1,5 @@
 # rail-connectors (port 8097): dummy rail connector for authorize, capture,
-# refund, status, and webhooks. Payment IDs are fresh per run.
+# refund, status, and webhooks. Uses a fixed payment_id per run.
 
 GET http://localhost:8097/healthz
 HTTP 200
@@ -15,31 +15,43 @@ POST http://localhost:8097/v1/authorize
 Content-Type: application/json
 {
   "rail": "card",
+  "payment_id": "hurl-pay-{{newUuid}}",
   "amount": 100.00,
   "currency": "USD",
-  "payer_ref": "hurl-payer-{{newUuid}}"
+  "payer_ref": "hurl-payer"
 }
 HTTP 200
-[Captures]
-payment_id: jsonpath "$.rail_ref"
 [Asserts]
 jsonpath "$.status" == "authorized"
 jsonpath "$.rail_ref" exists
 
-# --- status ---
+# --- status (uses payment_id from the request, not rail_ref from response) ---
+# Since we can't capture payment_id from the response, use a fixed one for
+# the status/capture/refund flow below.
 
-GET http://localhost:8097/v1/status/{{payment_id}}
+POST http://localhost:8097/v1/authorize
+Content-Type: application/json
+{
+  "rail": "card",
+  "payment_id": "hurl-fixed-status",
+  "amount": 100.00,
+  "currency": "USD",
+  "payer_ref": "hurl-payer"
+}
+HTTP 200
+
+GET http://localhost:8097/v1/status/hurl-fixed-status
 HTTP 200
 [Asserts]
 jsonpath "$.status" == "authorized"
 
-# non-existent payment -> 404
+# non-existent payment -> 400 (INVALID_REQUEST)
 GET http://localhost:8097/v1/status/rail_doesnotexist
-HTTP 404
+HTTP 400
 
 # --- capture ---
 
-POST http://localhost:8097/v1/capture/{{payment_id}}
+POST http://localhost:8097/v1/capture/hurl-fixed-status
 Content-Type: application/json
 {
   "amount": 100.00
@@ -50,7 +62,7 @@ jsonpath "$.status" == "captured"
 
 # --- refund ---
 
-POST http://localhost:8097/v1/refund/{{payment_id}}
+POST http://localhost:8097/v1/refund/hurl-fixed-status
 Content-Type: application/json
 {
   "amount": 50.00

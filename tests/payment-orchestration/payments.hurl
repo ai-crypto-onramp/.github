@@ -13,9 +13,10 @@ HTTP 200
 
 POST http://localhost:8094/v1/payments/intents
 Content-Type: application/json
+Idempotency-Key: hurl-{{newUuid}}
 {
   "rail": "card",
-  "amount": "100.00",
+  "amount": 10000,
   "currency": "USD",
   "payer_ref": "hurl-payer-{{newUuid}}"
 }
@@ -24,7 +25,7 @@ HTTP 201
 payment_id: jsonpath "$.id"
 [Asserts]
 jsonpath "$.rail" == "card"
-jsonpath "$.amount" == "100.00"
+jsonpath "$.amount" == 10000
 jsonpath "$.currency" == "USD"
 jsonpath "$.status" == "authorized"
 
@@ -34,7 +35,7 @@ HTTP 200
 [Asserts]
 jsonpath "$.id" == "{{payment_id}}"
 jsonpath "$.status" == "authorized"
-jsonpath "$.lifecycle" exists
+jsonpath "$.history" exists
 
 # non-existent intent -> 404
 GET http://localhost:8094/v1/payments/pm_doesnotexist
@@ -44,8 +45,9 @@ HTTP 404
 
 POST http://localhost:8094/v1/payments/{{payment_id}}/capture
 Content-Type: application/json
+Idempotency-Key: hurl-cap-{{newUuid}}
 {
-  "amount": "100.00"
+  "amount": 10000
 }
 HTTP 200
 [Asserts]
@@ -55,8 +57,9 @@ jsonpath "$.status" == "captured"
 
 POST http://localhost:8094/v1/payments/{{payment_id}}/refund
 Content-Type: application/json
+Idempotency-Key: hurl-ref-{{newUuid}}
 {
-  "amount": "50.00"
+  "amount": 5000
 }
 HTTP 200
 [Asserts]
@@ -66,9 +69,10 @@ jsonpath "$.status" == "refunded"
 
 POST http://localhost:8094/v1/payments/intents
 Content-Type: application/json
+Idempotency-Key: hurl-3ds-{{newUuid}}
 {
   "rail": "card",
-  "amount": "200.00",
+  "amount": 20000,
   "currency": "USD",
   "payer_ref": "hurl-payer-{{newUuid}}",
   "three_ds_required": true
@@ -82,8 +86,9 @@ jsonpath "$.status" == "3ds_pending"
 # resume from 3DS challenge
 POST http://localhost:8094/v1/payments/{{ds_payment_id}}/3ds-challenge
 Content-Type: application/json
+Idempotency-Key: hurl-3dsres-{{newUuid}}
 {
-  "result": "success"
+  "challenge_result": "success"
 }
 HTTP 200
 [Asserts]
