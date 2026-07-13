@@ -150,16 +150,22 @@ services:
     ports:
       - "8089:8080"
 
-  # mpc-signing-service fails closed on SignTx until POLICY_ENGINE_PUBKEY is
-  # configured (the policy engine does not mint decision tokens yet); DKG,
-  # rotation, and key metadata work standalone. gRPC (SignTx etc.) is on
-  # mpc-signing-service:9090 inside the network.
+  # CUSTODY_PROVIDER=in_house runs the threshold engine as a single-process
+  # t-of-n cluster (default t=2,n=3); DKG, rotation, and key metadata work
+  # standalone. SignTx fails closed until POLICY_ENGINE_PUBKEY is configured
+  # (the policy engine does not mint decision tokens yet). gRPC is served
+  # plaintext on mpc-signing-service:9090 inside the network — mTLS (MTLS_*)
+  # is intentionally left off so intra-stack callers need no client certs.
+  # For the full 3-node mTLS cluster see the service repo's
+  # docker-compose.cluster.yml.
   mpc-signing-service:
     build: ../mpc-signing-service
     ports:
       - "8091:8080"
     environment:
       - CUSTODY_PROVIDER=in_house
+      - THRESHOLD_T=2
+      - TOTAL_N=3
       - WALLET_MANAGEMENT_URL=http://wallet-management:9090
       - AUDIT_EVENT_LOG_URL=http://audit-event-log:8080
       - NODE_ID=node-0
