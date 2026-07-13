@@ -5,7 +5,7 @@
 Service breakdown of an experimental end-to-end crypto on-ramp, mapped to the five-layer architecture plus the treasury/ledger and platform plumbing.
 
 <p align="center">
-  <img src="assets/ai-crypto-onramp-logo-blueprint.jpeg" alt="AI Crypto On-Ramp" width="600">
+  <img src="assets/ai-crypto-onramp-logo-blueprint.jpeg" alt="AI Crypto On-Ramp Logo">
 </p>
 
 ## Table of Contents
