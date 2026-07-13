@@ -86,10 +86,23 @@ services:
     ports:
       - "8082:8080"
 
+  # blockchain-gateway runs on in-memory stores (its Postgres store is not
+  # wired into the entrypoint yet), so it needs no database here. Without
+  # CHAINS_SUPPORTED it boots with a stub chain adapter — set it plus
+  # RPC_URLS_<CHAIN> env overrides to point at a real node.
   blockchain-gateway:
     build: ../blockchain-gateway
     ports:
       - "8083:8080"
+    environment:
+      - WALLET_MGMT_URL=http://wallet-management:8080
+      - AUDIT_EVENT_LOG_URL=http://audit-event-log:8080
+      - CHAINS_SUPPORTED=${CHAINS_SUPPORTED:-}
+      - RPC_URLS_ETHEREUM=${RPC_URLS_ETHEREUM:-}
+      - FINALITY_BLOCKS_ETHEREUM=${FINALITY_BLOCKS_ETHEREUM:-64}
+    depends_on:
+      wallet-management:
+        condition: service_healthy
 
   exchange-connectors:
     build: ../exchange-connectors
@@ -193,10 +206,29 @@ services:
     ports:
       - "8100:8080"
 
+  # wallet-management auto-applies migrations on startup (like
+  # aml-kyt-screening), so no separate migrate container is needed — but the
+  # wallet_management database must exist (see postgres-init.sql). The XPUB
+  # values are dev-only public derivation keys (same vectors as its test
+  # suite); production loads them from a secrets store.
   wallet-management:
     build: ../wallet-management
     ports:
-      - "8101:8080"
+      - "8101:8080"  # REST; gRPC (ResolveKeyID, gateway callbacks) is on wallet-management:9090 inside the network
+    environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/wallet_management?sslmode=disable
+      - REDIS_URL=redis://redis:6379/0
+      - TREASURY_ORCHESTRATION_URL=http://treasury-orchestration:8080
+      - POLICY_RISK_ENGINE_URL=http://policy-risk-engine:8080
+      - AUDIT_EVENT_LOG_URL=http://audit-event-log:8080
+      - EVM_XPUB=xpub6CeDpm2b5qtk96oy8yvM572W6cLZSvU5vnpKmKPypbfFwXo86SyT7VtfwWtMZAgZ5eKVMU9NnULt91HBFw9j62wJrcoc1ZRWiNvoorwBRXL
+      - BTC_XPUB=xpub6C1HVMz946r433QEjZGpYYWYcspxXXBPys5PBGkmQboRXE6RLfFiStEkKbWKCZaPgDrzZh9nUEunxuiuy6MNdw23du2Ek7GoKYMJVH8eK5E
+      - SOL_XPUB=11111111111111111111111111111111
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   # ── Gatus — health dashboard, configured via gatus.yml ──
   gatus:
