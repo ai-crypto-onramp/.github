@@ -96,6 +96,14 @@ services:
     build: ../audit-event-log
     ports:
       - "8082:8080"
+    environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/audit?sslmode=disable
+      - KAFKA_BROKERS=
+      - KAFKA_TOPIC=audit.v1
+      - PAYLOAD_BUCKET=
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   # blockchain-gateway runs on in-memory stores (its Postgres store is not
   # wired into the entrypoint yet), so it needs no database here. Without
@@ -149,6 +157,15 @@ services:
     build: ../liquidity-routing
     ports:
       - "8089:8080"
+    environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/liquidity?sslmode=disable
+      - REDIS_URL=redis://redis:6379/0
+      - EXCHANGE_CONNECTORS_TARGET=exchange-connectors:9090
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
 
   # CUSTODY_PROVIDER=in_house runs the threshold engine as a single-process
   # t-of-n cluster (default t=2,n=3); DKG, rotation, and key metadata work
@@ -174,6 +191,8 @@ services:
     build: ../notification
     ports:
       - "8092:8080"
+    environment:
+      - AUDIT_EVENT_LOG_URL=http://audit-event-log:8080
 
   onboarding-kyc:
     build: ../onboarding-kyc

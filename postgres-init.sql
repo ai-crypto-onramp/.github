@@ -5,3 +5,5 @@ CREATE DATABASE policy_engine;
 CREATE DATABASE wallet_management;
 CREATE DATABASE treasury;
 CREATE DATABASE reconciliation;
+CREATE DATABASE liquidity;
+CREATE DATABASE audit;
