@@ -127,6 +127,8 @@ services:
     build: ../exchange-connectors
     ports:
       - "8084:8080"
+    environment:
+      - DUMMY_PRICE=65000
 
   fraud-detection:
     build: ../fraud-detection
@@ -208,6 +210,9 @@ services:
     build: ../payment-orchestration
     ports:
       - "8094:8080"
+    environment:
+      - WEBHOOK_SECRET=dev-secret
+      - RAIL_CONNECTORS_URL=http://rail-connectors:8080
 
   policy-risk-engine:
     build: ../policy-risk-engine
@@ -240,6 +245,8 @@ services:
     build: ../rail-connectors
     ports:
       - "8097:8080"
+    environment:
+      - WEBHOOK_SECRET=dev-secret
 
   reconciliation:
     build: ../reconciliation
