@@ -27,7 +27,9 @@ HTTP 201
 [Asserts]
 jsonpath "$.wallet_id" == "{{wallet_id}}"
 jsonpath "$.address" matches "^0x[0-9a-fA-F]{40}$"
-jsonpath "$.derivation_path" == "m/44'/60'/0'/0/0"
+# The derivation index is allocated per chain (wallets share the chain xpub),
+# so it grows across runs — assert the path shape, not a fixed index.
+jsonpath "$.derivation_path" matches "^m/44'/60'/0'/0/\\d+$"
 jsonpath "$.state" == "active"
 
 GET http://localhost:8101/v1/wallets/{{wallet_id}}/balances
