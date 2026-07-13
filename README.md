@@ -2,8 +2,7 @@
 
 [![CI](https://github.com/ai-crypto-onramp/.github/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-crypto-onramp/.github/actions/workflows/ci.yml)
 
-Service breakdown to launch a crypto on-ramp end-to-end, mapped to the five-layer
-architecture plus the treasury/ledger and platform plumbing.
+Service breakdown of an experimental end-to-end crypto on-ramp, mapped to the five-layer architecture plus the treasury/ledger and platform plumbing.
 
 <p align="center">
   <img src="assets/ai-crypto-onramp-logo-blueprint.jpeg" alt="AI Crypto On-Ramp" width="600">
@@ -27,7 +26,7 @@ architecture plus the treasury/ledger and platform plumbing.
 
 ## Language philosophy
 
-Minimize language sprawl. Standardize on:
+Minimized language sprawl. Standardized on:
 
 - **Go** — transactional backbone (concurrency, latency, ops maturity)
 - **Rust** — the two things where a bug means lost funds (signing + ledger)
