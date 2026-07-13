@@ -47,6 +47,16 @@ services:
       postgres:
         condition: service_healthy
 
+  # One-shot: applies wallet-management migrations, then exits.
+  wallet-management-migrate:
+    build: ../wallet-management
+    entrypoint: ["/migrate", "-direction", "up"]
+    environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/wallet_management?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # Shared Redis for velocity counters (policy-risk-engine) and the
   # address-risk cache (aml-kyt-screening).
   redis:
@@ -207,11 +217,10 @@ services:
     ports:
       - "8100:8080"
 
-  # wallet-management auto-applies migrations on startup (like
-  # aml-kyt-screening), so no separate migrate container is needed — but the
-  # wallet_management database must exist (see postgres-init.sql). The XPUB
-  # values are dev-only public derivation keys (same vectors as its test
-  # suite); production loads them from a secrets store.
+  # Migrations are applied by the wallet-management-migrate one-shot above;
+  # the wallet_management database itself must exist (see postgres-init.sql).
+  # The XPUB values are dev-only public derivation keys (same vectors as its
+  # test suite); production loads them from a secrets store.
   wallet-management:
     build: ../wallet-management
     ports:
@@ -226,10 +235,10 @@ services:
       - BTC_XPUB=xpub6C1HVMz946r433QEjZGpYYWYcspxXXBPys5PBGkmQboRXE6RLfFiStEkKbWKCZaPgDrzZh9nUEunxuiuy6MNdw23du2Ek7GoKYMJVH8eK5E
       - SOL_XPUB=11111111111111111111111111111111
     depends_on:
-      postgres:
-        condition: service_healthy
       redis:
         condition: service_healthy
+      wallet-management-migrate:
+        condition: service_completed_successfully
 
   # ── Gatus — health dashboard, configured via gatus.yml ──
   gatus:
