@@ -36,12 +36,12 @@ Minimize language sprawl. Standardize on:
 
 | Service | Status | Language | Description |
 |---|---|---|---|
-| [**API Gateway / BFF**](https://github.com/ai-crypto-onramp/api-gateway) | ⏳ | TypeScript | Public edge. AuthN/Z, rate limiting, request shaping, aggregates backend calls for web/mobile SDKs. |
+| [**API Gateway / BFF**](https://github.com/ai-crypto-onramp/api-gateway) | ✅ | TypeScript | Public edge. AuthN/Z, rate limiting, request shaping, aggregates backend calls for web/mobile SDKs. |
 | [**Identity & Auth**](https://github.com/ai-crypto-onramp/identity-auth) | ✅ | Go | User accounts, sessions, MFA, API keys for B2B partners, RBAC. |
 | [**Onboarding / KYC**](https://github.com/ai-crypto-onramp/onboarding-kyc) | ✅ | Go | Orchestrates identity verification via vendors (Onfido/Sumsub), document + liveness, sanctions/PEP screening at signup. |
 | [**AML / KYT Screening**](https://github.com/ai-crypto-onramp/aml-kyt-screening) | ✅ | Go | Pre-settlement Know-Your-Transaction checks against destination addresses (Chainalysis/TRM); blocks tainted flows before broadcast. |
 | [**Policy / Risk Engine**](https://github.com/ai-crypto-onramp/policy-risk-engine) | ✅ | Go | Per-tx caps, velocity limits, whitelisting, source auth. Auto-approves or routes to manual review. The gatekeeper before signing. |
-| [**Fraud Detection**](https://github.com/ai-crypto-onramp/fraud-detection) | ⏳ | Python | ML scoring on payment + behavioral signals (chargeback/velocity models); feeds the policy engine. |
+| [**Fraud Detection**](https://github.com/ai-crypto-onramp/fraud-detection) | ✅ | Python | ML scoring on payment + behavioral signals (chargeback/velocity models); feeds the policy engine. |
 
 ### Fiat, Pricing & Liquidity
 
@@ -59,8 +59,8 @@ Minimize language sprawl. Standardize on:
 | Service | Status | Language | Description |
 |---|---|---|---|
 | [**MPC Signing Service**](https://github.com/ai-crypto-onramp/mpc-signing-service) | ⏳ | Rust | Threshold-signature (t-of-n) signing across distributed nodes. No single key. The most security-critical component. |
-| [**Wallet Management**](https://github.com/ai-crypto-onramp/wallet-management) | ⏳ | Go | Hot/warm wallet inventory, address derivation/rotation, balance tracking per chain. |
-| [**Blockchain Gateway**](https://github.com/ai-crypto-onramp/blockchain-gateway) | ⏳ | Go | Per-chain broadcast, gas prepayment/estimation, confirmation tracking, reorg handling, mempool monitoring. |
+| [**Wallet Management**](https://github.com/ai-crypto-onramp/wallet-management) | ✅ | Go | Hot/warm wallet inventory, address derivation/rotation, balance tracking per chain. |
+| [**Blockchain Gateway**](https://github.com/ai-crypto-onramp/blockchain-gateway) | ✅ | Go | Per-chain broadcast, gas prepayment/estimation, confirmation tracking, reorg handling, mempool monitoring. |
 
 ### Treasury, Ledger & Platform
 
