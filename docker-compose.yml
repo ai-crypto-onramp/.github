@@ -423,6 +423,50 @@ services:
       redis:
         condition: service_healthy
 
+  # ── UIs — customer-facing and internal consoles ──
+  # front-office-ui: Next.js (standalone) on :3000; customer-facing app,
+  # talks to the stack through the API Gateway BFF.
+  front-office-ui:
+    build:
+      context: ../front-office-ui
+    ports:
+      - "8102:3000"
+    environment:
+      - NODE_ENV=production
+      - PORT=3000
+      - NEXT_PUBLIC_API_GATEWAY_URL=http://api-gateway:8080
+      - NEXT_PUBLIC_APP_NAME=AI Crypto On-Ramp
+      - NEXT_PUBLIC_AUTH_ISSUER=http://identity-auth:8080
+      - NEXT_PUBLIC_AUTH_CLIENT_ID=front-office
+    depends_on:
+      - api-gateway
+
+  # middle-office-ui: Vite SPA served by nginx on :3000; internal
+  # compliance/ops console, calls backend services directly via REST.
+  middle-office-ui:
+    build:
+      context: ../middle-office-ui
+    ports:
+      - "8103:3000"
+
+  # back-office-ui: Streamlit treasury/finance console on :8501.
+  # Talks to backend services directly via REST.
+  back-office-ui:
+    build:
+      context: ../back-office-ui
+    ports:
+      - "8104:8501"
+    environment:
+      - STREAMLIT_SERVER_PORT=8501
+      - TREASURY_URL=http://treasury-orchestration:8080
+      - LIQUIDITY_URL=http://liquidity-routing:8080
+      - FX_HEDGING_URL=http://fx-hedging:8080
+      - LEDGER_URL=http://ledger-accounting:8080
+      - RECONCILIATION_URL=http://reconciliation:8080
+      - WALLET_URL=http://wallet-management:8080
+      - PAYMENT_URL=http://payment-orchestration:8080
+      - MPC_URL=http://mpc-signing-service:8080
+
   # ── Gatus — health dashboard, configured via gatus.yml ──
   gatus:
     image: twinproduction/gatus:latest

@@ -197,6 +197,31 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
+  # ── UIs — customer-facing and internal consoles ──
+
+  - name: front-office-ui
+    group: ui
+    url: http://front-office-ui:3000/api/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: middle-office-ui
+    group: ui
+    url: http://middle-office-ui:3000/healthz
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+      - "[BODY].status == ok"
+
+  - name: back-office-ui
+    group: ui
+    url: http://back-office-ui:8501/_stcore/health
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+
   # ── PostgREST — read-only DB layers for E2E test assertions ──
 
   - name: postgrest-identity-auth
