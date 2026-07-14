@@ -1,10 +1,3 @@
-## Brief
-
-AI-assisted experiment to build end-to-end microservices architecture for fiat-to-crypto conversion infrastructure.
-
-- ☝🏻 See also [README.md](https://github.com/ai-crypto-onramp/.github/blob/main/README.md) with high-level project overview, architecture diagrams & running instructions.
-- 🗿 Based on [How Crypto On-Ramps Work: The Custody Architecture Behind the 'Buy Crypto' Button](https://fystack.io/blog/how-crypto-on-ramps-work)
-
 ## Progress & Build Status
 
 | Repository | Ready | Progress | Lang | CI | Coverage |

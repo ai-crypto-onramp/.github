@@ -2,7 +2,7 @@
 
 [![CI](https://github.com/ai-crypto-onramp/.github/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-crypto-onramp/.github/actions/workflows/ci.yml)
 
-Service breakdown of an experimental end-to-end crypto on-ramp, mapped to the five-layer architecture plus the treasury/ledger and platform plumbing.
+Service breakdown of an experimental end-to-end crypto on-ramp, mapped to the five-layer architecture plus the treasury/ledger and platform plumbing. Inspired by [How Crypto On-Ramps Work: The Custody Architecture Behind the 'Buy Crypto' Button](https://fystack.io/blog/how-crypto-on-ramps-work)
 
 <p align="center">
   <img src="assets/ai-crypto-onramp-logo-blueprint.jpg" alt="AI Crypto On-Ramp Logo">
