@@ -8,6 +8,7 @@
 | 🔌 [exchange-connectors](https://github.com/ai-crypto-onramp/exchange-connectors) | ⏳ | 14 / 64 (22%) | Go | [![CI](https://github.com/ai-crypto-onramp/exchange-connectors/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-crypto-onramp/exchange-connectors/actions/workflows/ci.yml) | [![codecov](https://codecov.io/gh/ai-crypto-onramp/exchange-connectors/branch/main/graph/badge.svg)](https://codecov.io/gh/ai-crypto-onramp/exchange-connectors) |
 | 🕵️ [fraud-detection](https://github.com/ai-crypto-onramp/fraud-detection) | ✅ | 62 / 62 (100%) | Python | [![CI](https://github.com/ai-crypto-onramp/fraud-detection/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-crypto-onramp/fraud-detection/actions/workflows/ci.yml) | [![codecov](https://codecov.io/gh/ai-crypto-onramp/fraud-detection/branch/main/graph/badge.svg)](https://codecov.io/gh/ai-crypto-onramp/fraud-detection) |
 | 🛡️ [fx-hedging](https://github.com/ai-crypto-onramp/fx-hedging) | ⏳ | 27 / 65 (42%) | Go | [![CI](https://github.com/ai-crypto-onramp/fx-hedging/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-crypto-onramp/fx-hedging/actions/workflows/ci.yml) | [![codecov](https://codecov.io/gh/ai-crypto-onramp/fx-hedging/branch/main/graph/badge.svg)](https://codecov.io/gh/ai-crypto-onramp/fx-hedging) |
+| 🖼️ [front-office-ui](https://github.com/ai-crypto-onramp/front-office-ui) | ⏳ | 0 / 81 (0%) | TS | — | — |
 | 🔐 [identity-auth](https://github.com/ai-crypto-onramp/identity-auth) | ✅ | 74 / 74 (100%) | Go | [![CI](https://github.com/ai-crypto-onramp/identity-auth/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-crypto-onramp/identity-auth/actions/workflows/ci.yml) | [![codecov](https://codecov.io/gh/ai-crypto-onramp/identity-auth/branch/main/graph/badge.svg)](https://codecov.io/gh/ai-crypto-onramp/identity-auth) |
 | 📒 [ledger-accounting](https://github.com/ai-crypto-onramp/ledger-accounting) | ⏳ | 26 / 54 (48%) | Rust | [![CI](https://github.com/ai-crypto-onramp/ledger-accounting/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-crypto-onramp/ledger-accounting/actions/workflows/ci.yml) | [![codecov](https://codecov.io/gh/ai-crypto-onramp/ledger-accounting/branch/main/graph/badge.svg)](https://codecov.io/gh/ai-crypto-onramp/ledger-accounting) |
 | 🌊 [liquidity-routing](https://github.com/ai-crypto-onramp/liquidity-routing) | ✅ | 53 / 54 (98%) | Go | [![CI](https://github.com/ai-crypto-onramp/liquidity-routing/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-crypto-onramp/liquidity-routing/actions/workflows/ci.yml) | [![codecov](https://codecov.io/gh/ai-crypto-onramp/liquidity-routing/branch/main/graph/badge.svg)](https://codecov.io/gh/ai-crypto-onramp/liquidity-routing) |
@@ -23,14 +24,4 @@
 | 🎼 [transaction-orchestrator](https://github.com/ai-crypto-onramp/transaction-orchestrator) | ⏳ | 33 / 46 (72%) | Go | [![CI](https://github.com/ai-crypto-onramp/transaction-orchestrator/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-crypto-onramp/transaction-orchestrator/actions/workflows/ci.yml) | [![codecov](https://codecov.io/gh/ai-crypto-onramp/transaction-orchestrator/branch/main/graph/badge.svg)](https://codecov.io/gh/ai-crypto-onramp/transaction-orchestrator) |
 | 🏦 [treasury-orchestration](https://github.com/ai-crypto-onramp/treasury-orchestration) | ✅ | 58 / 60 (97%) | Go | [![CI](https://github.com/ai-crypto-onramp/treasury-orchestration/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-crypto-onramp/treasury-orchestration/actions/workflows/ci.yml) | [![codecov](https://codecov.io/gh/ai-crypto-onramp/treasury-orchestration/branch/main/graph/badge.svg)](https://codecov.io/gh/ai-crypto-onramp/treasury-orchestration) |
 | 👛 [wallet-management](https://github.com/ai-crypto-onramp/wallet-management) | ✅ | 68 / 68 (100%) | Go | [![CI](https://github.com/ai-crypto-onramp/wallet-management/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-crypto-onramp/wallet-management/actions/workflows/ci.yml) | [![codecov](https://codecov.io/gh/ai-crypto-onramp/wallet-management/branch/main/graph/badge.svg)](https://codecov.io/gh/ai-crypto-onramp/wallet-management) |
-| **Total** | | **1057 / 1303 (81%)** | | | |
-
----
-
-### UI Systems
-
-| Repository | Layer | Lang | Status |
-|---|---|---|---|
-| 🖼️ [front-office-ui](https://github.com/ai-crypto-onramp/front-office-ui) | Customer-facing (Next.js) | TS | ⏳ 0 / 81 (0%) |
-| 🖥️ [middle-office-ui](https://github.com/ai-crypto-onramp/middle-office-ui) | Compliance & ops (React SPA) | TS | ⏳ 0 / 59 (0%) |
-| 🏛️ [back-office-ui](https://github.com/ai-crypto-onramp/back-office-ui) | Treasury & finance (Streamlit) | Python | ⏳ 0 / 55 (0%) |
+| **Total** | | **1057 / 1498 (71%)** | | | |
