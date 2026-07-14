@@ -197,6 +197,9 @@ declaratively via `gatus.yml`, no manual UI setup required.
 | Tool | Host port | URL |
 |---|---|---|
 | Gatus | 8090 | http://localhost:8090 |
+| Front Office UI | 8102 | http://localhost:8102 |
+| Middle Office UI | 8103 | http://localhost:8103 |
+| Back Office UI | 8104 | http://localhost:8104 |
 
 ### Running
 
