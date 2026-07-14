@@ -7,12 +7,12 @@
 #   make ps            list running services
 #   make logs          tail logs for all services
 #   make build         (re)build all service images
-#   make rebuild       rebuild all service images without cache
 #   make pull          pull base images
 #   make dashboard     open the Gatus health dashboard in the browser
 #   make test          run all Hurl integration suites (HTML report in `reports/`)
 #   make up-<svc>      start one service:            `make up-kyc`, `make up-identity-auth`
 #   make down-<svc>    stop & remove one service:    `make down-kyc`, `make down-front-office-ui`
+#   make build-<svc>   rebuild one service image without cache
 #   make logs-<svc>    tail logs for one service:    `make logs-policy`
 #   make test-<svc>    run one service's test suite: `make test-pricing`
 #   make psql          psql into the shared postgres container
@@ -21,7 +21,7 @@
 COMPOSE := docker compose
 REPORTS := reports
 
-.PHONY: all clean up down restart ps logs build rebuild pull test dashboard psql redis-cli up-% down-% logs-% test-%
+.PHONY: all clean up down restart ps logs build pull test dashboard psql redis-cli up-% down-% build-% logs-% test-%
 
 # Default target: start the whole stack
 all: up
@@ -40,9 +40,6 @@ ps:
 
 build:
 	$(COMPOSE) build
-
-rebuild:
-	$(COMPOSE) build --no-cache
 
 pull:
 	$(COMPOSE) pull
@@ -99,6 +96,10 @@ up-%:
 # e.g. make down-kyc or make down-front
 down-%:
 	$(COMPOSE) rm -sf $(or $($*),$*)
+
+# Build one service withour cache: make build-<alias|service>
+build-%:
+	$(COMPOSE) build --no-cache $(or $($*),$*)
 
 # Tail logs for an individual service: make logs-<alias|service>
 logs-%:
