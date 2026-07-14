@@ -139,6 +139,32 @@ services:
       postgres:
         condition: service_healthy
 
+  postgrest-blockchain:
+    image: postgrest/postgrest:v12.2.0
+    ports:
+      - "3010:3000"
+    environment:
+      - PGRST_DB_URI=postgres://postgres:postgres@postgres:5432/blockchain_gateway?sslmode=disable
+      - PGRST_DB_ANON_ROLE=postgres
+      - PGRST_DB_SCHEMA=public
+      - PGRST_OPENAPI_SERVER_PROXY_URI=http://postgrest-blockchain:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  postgrest-transaction-orchestrator:
+    image: postgrest/postgrest:v12.2.0
+    ports:
+      - "3011:3000"
+    environment:
+      - PGRST_DB_URI=postgres://postgres:postgres@postgres:5432/transaction_orchestrator?sslmode=disable
+      - PGRST_DB_ANON_ROLE=postgres
+      - PGRST_DB_SCHEMA=public
+      - PGRST_OPENAPI_SERVER_PROXY_URI=http://postgrest-transaction-orchestrator:3000
+    depends_on:
+      postgres:
+        condition: service_healthy
+
   # Shared Redis for velocity counters (policy-risk-engine) and the
   # address-risk cache (aml-kyt-screening).
   redis:
@@ -195,12 +221,16 @@ services:
     ports:
       - "8083:8080"
     environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/blockchain_gateway?sslmode=disable
+      - REDIS_URL=redis://redis:6379/0
       - WALLET_MGMT_URL=http://wallet-management:8080
       - AUDIT_EVENT_LOG_URL=http://audit-event-log:8080
       - CHAINS_SUPPORTED=${CHAINS_SUPPORTED:-}
       - RPC_URLS_ETHEREUM=${RPC_URLS_ETHEREUM:-}
       - FINALITY_BLOCKS_ETHEREUM=${FINALITY_BLOCKS_ETHEREUM:-64}
     depends_on:
+      postgres:
+        condition: service_healthy
       wallet-management:
         condition: service_healthy
 
@@ -347,7 +377,11 @@ services:
     ports:
       - "8099:8080"
     environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/transaction_orchestrator?sslmode=disable
       - EVENT_BUS_URL=nats://localhost:4222
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   treasury-orchestration:
     build: ../treasury-orchestration

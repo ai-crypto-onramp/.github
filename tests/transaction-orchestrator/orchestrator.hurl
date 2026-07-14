@@ -40,6 +40,31 @@ jsonpath "$.steps" exists
 jsonpath "$.steps[0].step_name" == "policy"
 jsonpath "$.steps[0].status" == "pending"
 
+# Verify the transaction persisted in Postgres via Postgrest (port 3011).
+GET http://localhost:3011/transactions?tx_id=eq.{{tx_id}}
+HTTP 200
+[Asserts]
+jsonpath "$[0].tx_id" == "{{tx_id}}"
+jsonpath "$[0].user_id" == "hurl-user"
+jsonpath "$[0].amount" == "500"
+jsonpath "$[0].asset" == "BTC"
+jsonpath "$[0].status" == "created"
+
+# Verify saga_state row was created.
+GET http://localhost:3011/saga_state?tx_id=eq.{{tx_id}}
+HTTP 200
+[Asserts]
+jsonpath "$[0].tx_id" == "{{tx_id}}"
+jsonpath "$[0].current_step" == "policy"
+
+# Verify transaction_steps rows were created (6 steps).
+GET http://localhost:3011/transaction_steps?tx_id=eq.{{tx_id}}&order=step_name.asc
+HTTP 200
+[Asserts]
+jsonpath "$" count == 6
+jsonpath "$[0].step_name" == "broadcast"
+jsonpath "$[0].status" == "pending"
+
 # non-existent transaction -> 404
 GET http://localhost:8099/v1/transactions/tx_doesnotexist
 HTTP 404

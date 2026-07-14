@@ -259,3 +259,17 @@ endpoints:
     interval: 30s
     conditions:
       - "[STATUS] == 200"
+
+  - name: postgrest-blockchain
+    group: testing
+    url: http://postgrest-blockchain:3000/
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+
+  - name: postgrest-transaction-orchestrator
+    group: testing
+    url: http://postgrest-transaction-orchestrator:3000/
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"

@@ -1,9 +1,11 @@
 CREATE DATABASE aml_kyt;
 CREATE DATABASE audit;
+CREATE DATABASE blockchain_gateway;
 CREATE DATABASE identity_auth;
 CREATE DATABASE liquidity;
 CREATE DATABASE onboarding_kyc;
 CREATE DATABASE policy_engine;
 CREATE DATABASE reconciliation;
+CREATE DATABASE transaction_orchestrator;
 CREATE DATABASE treasury;
 CREATE DATABASE wallet_management;
