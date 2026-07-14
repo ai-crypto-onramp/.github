@@ -18,7 +18,7 @@ Content-Type: application/json
   "pair": "BTC/USD",
   "side": "buy",
   "type": "market",
-  "amount": 1.0
+  "amount": "1.0"
 }
 HTTP 200
 [Captures]
@@ -58,3 +58,16 @@ jsonpath "$.circuit_breaker" == "closed"
 
 POST http://localhost:8084/admin/rotate-credentials
 HTTP 200
+
+# --- order book ---
+
+GET http://localhost:8084/v1/book/BTCUSDT
+HTTP 200
+[Asserts]
+jsonpath "$.Pair" == "BTCUSDT"
+jsonpath "$.Bid" exists
+jsonpath "$.Ask" exists
+
+# non-existent pair -> 404
+GET http://localhost:8084/v1/book/NOPEUSDT
+HTTP 404

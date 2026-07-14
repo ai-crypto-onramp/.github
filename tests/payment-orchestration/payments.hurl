@@ -65,6 +65,36 @@ HTTP 200
 [Asserts]
 jsonpath "$.status" == "refunded"
 
+# --- void (on a fresh intent that hasn't been captured) ---
+
+POST http://localhost:8094/v1/payments/intents
+Content-Type: application/json
+Idempotency-Key: hurl-void-{{newUuid}}
+{
+  "rail": "card",
+  "amount": 30000,
+  "currency": "USD",
+  "payer_ref": "hurl-payer-{{newUuid}}"
+}
+HTTP 201
+[Captures]
+void_payment_id: jsonpath "$.id"
+
+POST http://localhost:8094/v1/payments/{{void_payment_id}}/void
+Content-Type: application/json
+Idempotency-Key: hurl-void-do-{{newUuid}}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "voided"
+
+# --- metrics ---
+
+GET http://localhost:8094/metrics
+HTTP 200
+[Asserts]
+jsonpath "$.transitions" exists
+jsonpath "$.webhook_backlog" exists
+
 # --- 3DS flow: create a card intent requiring 3DS ---
 
 POST http://localhost:8094/v1/payments/intents
