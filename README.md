@@ -76,6 +76,14 @@ Minimized language sprawl. Standardized on:
 | [**Notification**](https://github.com/ai-crypto-onramp/notification) | TypeScript | Email/SMS/push + partner webhooks for tx status. |
 | [**Audit / Event Log**](https://github.com/ai-crypto-onramp/audit-event-log) | Go | Append-only audit trail for compliance and incident forensics; consumes the event bus. |
 
+### UI Systems
+
+| UI | Language | Description |
+|---|---|---|
+| [**Front Office UI**](https://github.com/ai-crypto-onramp/front-office-ui) | TypeScript | Customer-facing web app (Next.js). Signup, KYC, quoting, checkout, transaction dashboard, wallet management. |
+| [**Middle Office UI**](https://github.com/ai-crypto-onramp/middle-office-ui) | TypeScript | Internal compliance & ops console (React SPA). KYC review, AML/KYT alert desk, policy/risk dashboard, user management, audit explorer. |
+| [**Back Office UI**](https://github.com/ai-crypto-onramp/back-office-ui) | Python | Treasury & finance console (Streamlit). Treasury dashboard, liquidity routing, FX hedging, ledger viewer, reconciliation, wallet inventory. |
+
 ## Architecture
 
 End-to-end service topology, split into two diagrams for readability:
