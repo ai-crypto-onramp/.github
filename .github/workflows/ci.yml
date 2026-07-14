@@ -1,7 +1,8 @@
+# yamllint disable rule:line-length
+# yamllint disable rule:truthy
 ---
 name: CI
 
-# yamllint disable-line rule:truthy
 on: [push, pull_request]
 
 env:
