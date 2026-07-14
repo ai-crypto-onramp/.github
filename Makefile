@@ -12,6 +12,7 @@
 #   make dashboard     open the Gatus health dashboard in the browser
 #   make test          run all Hurl integration suites (HTML report in `reports/`)
 #   make up-<svc>      start one service:            `make up-kyc`, `make up-identity-auth`
+#   make down-<svc>    stop & remove one service:    `make down-kyc`, `make down-front-office-ui`
 #   make logs-<svc>    tail logs for one service:    `make logs-policy`
 #   make test-<svc>    run one service's test suite: `make test-pricing`
 #   make psql          psql into the shared postgres container
@@ -20,7 +21,7 @@
 COMPOSE := docker compose
 REPORTS := reports
 
-.PHONY: all clean up down restart ps logs build rebuild pull test dashboard psql redis-cli
+.PHONY: all clean up down restart ps logs build rebuild pull test dashboard psql redis-cli up-% down-% logs-% test-%
 
 # Default target: start the whole stack
 all: up
@@ -86,10 +87,18 @@ recon     := reconciliation
 txo       := transaction-orchestrator
 treasury  := treasury-orchestration
 wallet    := wallet-management
+front     := front-office-ui
+middle    := middle-office-ui
+back      := back-office-ui
 
 # Start an individual service: make up-<alias|service>, e.g. make up-kyc
 up-%:
 	$(COMPOSE) up -d $(or $($*),$*)
+
+# Stop & remove an individual service: make down-<alias|service>,
+# e.g. make down-kyc or make down-front
+down-%:
+	$(COMPOSE) rm -sf $(or $($*),$*)
 
 # Tail logs for an individual service: make logs-<alias|service>
 logs-%:
