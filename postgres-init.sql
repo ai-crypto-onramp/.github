@@ -3,6 +3,7 @@ CREATE DATABASE audit;
 CREATE DATABASE blockchain_gateway;
 CREATE DATABASE fx_hedging;
 CREATE DATABASE identity_auth;
+CREATE DATABASE ledger_accounting;
 CREATE DATABASE liquidity;
 CREATE DATABASE onboarding_kyc;
 CREATE DATABASE policy_engine;

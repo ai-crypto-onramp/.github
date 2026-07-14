@@ -161,3 +161,17 @@ HTTP 200
 [Asserts]
 jsonpath "$.entries" exists
 jsonpath "$.final_balance" exists
+
+# --- chain verification ---
+
+GET http://localhost:8088/v1/chain/verify
+HTTP 200
+[Asserts]
+jsonpath "$.ok" exists
+
+# --- reconciliation: user custodial sum ---
+
+GET http://localhost:8088/v1/reconciliation/user-custodial-sum
+HTTP 200
+[Asserts]
+jsonpath "$.user_custodial_sum" exists
