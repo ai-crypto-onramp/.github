@@ -80,3 +80,8 @@ X-Webhook-Signature: invalid-signature
   "event": "test"
 }
 HTTP 401
+
+# --- metrics ---
+
+GET http://localhost:8097/metrics
+HTTP 200

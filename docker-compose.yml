@@ -253,6 +253,10 @@ services:
       - "8086:8080"
     environment:
       - DUMMY_FX_RATE=1.10
+      - DB_URL=postgres://postgres:postgres@postgres:5432/fx_hedging?sslmode=disable
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   identity-auth:
     build: ../identity-auth

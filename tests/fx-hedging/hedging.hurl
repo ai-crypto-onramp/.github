@@ -82,3 +82,10 @@ HTTP 200
 [Asserts]
 jsonpath "$.pair" == "EUR/USD"
 jsonpath "$.aggregates" exists
+
+# --- settlement ---
+
+GET http://localhost:8086/v1/settlement
+HTTP 200
+[Asserts]
+jsonpath "$" exists

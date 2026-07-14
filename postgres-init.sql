@@ -1,6 +1,7 @@
 CREATE DATABASE aml_kyt;
 CREATE DATABASE audit;
 CREATE DATABASE blockchain_gateway;
+CREATE DATABASE fx_hedging;
 CREATE DATABASE identity_auth;
 CREATE DATABASE liquidity;
 CREATE DATABASE onboarding_kyc;
