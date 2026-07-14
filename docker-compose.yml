@@ -139,46 +139,6 @@ services:
       postgres:
         condition: service_healthy
 
-  # One-shot: applies identity-auth migrations, then exits.
-  identity-auth-migrate:
-    build: ../identity-auth
-    entrypoint: ["/migrate", "--up"]
-    environment:
-      - DB_URL=postgres://postgres:postgres@postgres:5432/identity_auth?sslmode=disable
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  # One-shot: applies onboarding-kyc migrations, then exits.
-  onboarding-kyc-migrate:
-    build: ../onboarding-kyc
-    entrypoint: ["/migrate", "--up"]
-    environment:
-      - DB_URL=postgres://postgres:postgres@postgres:5432/onboarding_kyc?sslmode=disable
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  # One-shot: applies policy-risk-engine migrations, then exits.
-  policy-risk-engine-migrate:
-    build: ../policy-risk-engine
-    entrypoint: ["/migrate", "up", "/migrations"]
-    environment:
-      - DB_URL=postgres://postgres:postgres@postgres:5432/policy_engine?sslmode=disable
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  # One-shot: applies wallet-management migrations, then exits.
-  wallet-management-migrate:
-    build: ../wallet-management
-    entrypoint: ["/migrate", "-direction", "up"]
-    environment:
-      - DB_URL=postgres://postgres:postgres@postgres:5432/wallet_management?sslmode=disable
-    depends_on:
-      postgres:
-        condition: service_healthy
-
   # Shared Redis for velocity counters (policy-risk-engine) and the
   # address-risk cache (aml-kyt-screening).
   redis:
@@ -191,8 +151,7 @@ services:
       timeout: 3s
       retries: 10
 
-  # aml-kyt-screening auto-applies migrations on startup via store.Open, so no
-  # separate migrate container is needed.
+  # aml-kyt-screening auto-applies migrations on startup via store.Open.
   aml-kyt-screening:
     build: ../aml-kyt-screening
     ports:
@@ -271,8 +230,8 @@ services:
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/identity_auth?sslmode=disable
     depends_on:
-      identity-auth-migrate:
-        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
 
   ledger-accounting:
     build: ../ledger-accounting
@@ -327,8 +286,8 @@ services:
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/onboarding_kyc?sslmode=disable
     depends_on:
-      onboarding-kyc-migrate:
-        condition: service_completed_successfully
+      postgres:
+        condition: service_healthy
 
   payment-orchestration:
     build: ../payment-orchestration
@@ -353,8 +312,6 @@ services:
         condition: service_healthy
       redis:
         condition: service_healthy
-      policy-risk-engine-migrate:
-        condition: service_completed_successfully
 
   pricing-quote:
     build: ../pricing-quote
@@ -408,8 +365,8 @@ services:
       redis:
         condition: service_healthy
 
-  # Migrations are applied by the wallet-management-migrate one-shot above;
-  # the wallet_management database itself must exist (see postgres-init.sql).
+  # Migrations are applied automatically at startup; the wallet_management
+  # database itself must exist (see postgres-init.sql).
   # The XPUB values are dev-only public derivation keys (same vectors as its
   # test suite); production loads them from a secrets store.
   wallet-management:
@@ -426,10 +383,10 @@ services:
       - BTC_XPUB=xpub6C1HVMz946r433QEjZGpYYWYcspxXXBPys5PBGkmQboRXE6RLfFiStEkKbWKCZaPgDrzZh9nUEunxuiuy6MNdw23du2Ek7GoKYMJVH8eK5E
       - SOL_XPUB=11111111111111111111111111111111
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
-      wallet-management-migrate:
-        condition: service_completed_successfully
 
   # ── Gatus — health dashboard, configured via gatus.yml ──
   gatus:
