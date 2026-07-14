@@ -29,6 +29,13 @@ endpoints:
     conditions:
       - "[CONNECTED] == true"
 
+  - name: kafka
+    group: infra
+    url: tcp://kafka:9092
+    interval: 30s
+    conditions:
+      - "[CONNECTED] == true"
+
   - name: aml-kyt-screening
     group: core
     url: http://aml-kyt-screening:8080/healthz
