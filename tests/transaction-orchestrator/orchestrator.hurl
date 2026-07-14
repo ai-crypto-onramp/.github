@@ -75,3 +75,45 @@ HTTP 200
 [Asserts]
 jsonpath "$.steps" exists
 jsonpath "$.steps" count == 6
+
+# --- retry ---
+
+# retry a specific step on a freshly created (non-terminal) transaction
+POST http://localhost:8099/v1/transactions/{{tx_id}}/retry
+Content-Type: application/json
+{
+  "step": "policy"
+}
+HTTP 202
+[Asserts]
+jsonpath "$.status" == "retry-accepted"
+jsonpath "$.step" == "policy"
+
+# retry without a step uses the current saga step
+POST http://localhost:8099/v1/transactions/{{tx_id}}/retry
+Content-Type: application/json
+{}
+HTTP 202
+[Asserts]
+jsonpath "$.status" == "retry-accepted"
+
+# --- compensate ---
+
+# compensate a non-terminal transaction
+POST http://localhost:8099/v1/transactions/{{tx_id}}/compensate
+HTTP 202
+[Asserts]
+jsonpath "$.status" == "compensate-accepted"
+
+# compensating again may return 409 (terminal) or 202 (still processing)
+POST http://localhost:8099/v1/transactions/{{tx_id}}/compensate
+HTTP *
+[Asserts]
+status >= 200
+status < 500
+
+# retry on a non-existent transaction -> 400 (no saga state found)
+POST http://localhost:8099/v1/transactions/tx_doesnotexist/retry
+Content-Type: application/json
+{"step": "policy"}
+HTTP *

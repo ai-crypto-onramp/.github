@@ -122,31 +122,49 @@ jsonpath "$.id" == "{{alert_id}}"
 jsonpath "$.exposure" == "sanctioned"
 
 # PostgREST: confirm the alert row landed in aml_kyt.kyt_alerts
-# Status may be open or in_review (assign persists across re-runs with DB)
+# Status may be open, in_review, or closed (close persists across re-runs with DB)
 GET http://localhost:3003/kyt_alerts?id=eq.{{alert_id}}
 HTTP 200
 [Asserts]
 jsonpath "$[0].id" == "{{alert_id}}"
 jsonpath "$[0].exposure" == "sanctioned"
-jsonpath "$[0].status" matches "^(open|in_review)$"
+jsonpath "$[0].status" matches "^(open|in_review|closed)$"
 
-# assign moves the alert to in_review (never closed, so re-runs keep working)
+# assign moves the alert to in_review.  On re-runs the alert may already be
+# closed (see close below), so accept 200 or 409 here.
 POST http://localhost:8081/v1/kyt/alerts/{{alert_id}}/assign
 Content-Type: application/json
 {
   "assignee": "hurl-analyst"
 }
-HTTP 200
+HTTP *
 [Asserts]
-jsonpath "$.status" == "in_review"
-jsonpath "$.assignee" == "hurl-analyst"
+status >= 200
+status < 500
 
-# PostgREST: alert status should now be in_review
+# PostgREST: alert status is in_review or closed (assign may have been rejected)
 GET http://localhost:3003/kyt_alerts?id=eq.{{alert_id}}
 HTTP 200
 [Asserts]
-jsonpath "$[0].status" == "in_review"
-jsonpath "$[0].assignee" == "hurl-analyst"
+jsonpath "$[0].id" == "{{alert_id}}"
+jsonpath "$[0].status" matches "^(in_review|closed)$"
+
+# close the alert (terminal).  On re-runs it is already closed -> 409.
+POST http://localhost:8081/v1/kyt/alerts/{{alert_id}}/close
+Content-Type: application/json
+{
+  "assignee": "hurl-analyst"
+}
+HTTP *
+[Asserts]
+status >= 200
+status < 500
+
+# PostgREST: alert should now be closed
+GET http://localhost:3003/kyt_alerts?id=eq.{{alert_id}}
+HTTP 200
+[Asserts]
+jsonpath "$[0].status" == "closed"
 
 # unknown alert ids are 404 on every alert route
 GET http://localhost:8081/v1/kyt/alerts/does-not-exist

@@ -203,6 +203,54 @@ HTTP 404
 [Asserts]
 jsonpath "$.error.code" == "rule_not_found"
 
+# --- publish new rules (POST /v1/policy/rules) ---
+
+# publishing without activate creates a new staged version
+POST http://localhost:8095/v1/policy/rules
+Content-Type: text/plain
+```
+package onramp.decisions
+default allow := false
+allow if { input.fraud_score < 0.5 }
+```
+HTTP 201
+[Asserts]
+jsonpath "$.version" exists
+jsonpath "$.hash" exists
+jsonpath "$.activate" == false
+
+# publishing with activate=true swaps the active policy
+POST http://localhost:8095/v1/policy/rules?activate=true
+Content-Type: text/plain
+```
+package onramp.decisions
+default allow := false
+allow if { input.fraud_score < 0.5 }
+```
+HTTP 201
+[Asserts]
+jsonpath "$.version" exists
+jsonpath "$.activate" == true
+
+# re-publishing the same source returns the same version (idempotent)
+POST http://localhost:8095/v1/policy/rules?activate=true
+Content-Type: text/plain
+```
+package onramp.decisions
+default allow := false
+allow if { input.fraud_score < 0.5 }
+```
+HTTP 201
+[Asserts]
+jsonpath "$.version" exists
+jsonpath "$.activate" == true
+
+# empty body is rejected
+POST http://localhost:8095/v1/policy/rules
+HTTP 400
+[Asserts]
+jsonpath "$.error.code" == "bad_json"
+
 # --- error branches ---
 
 # verifying a whitelist entry that does not exist
