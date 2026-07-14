@@ -58,6 +58,15 @@ jsonpath "$.asset" == "BTC"
 jsonpath "$.amount" == 1.25
 jsonpath "$.source_venue" == "kraken"
 
+# PostgREST: confirm the funding request landed in treasury.funding_requests
+GET http://localhost:3006/funding_requests?id=eq.{{funding_id}}
+HTTP 200
+[Asserts]
+jsonpath "$[0].id" == {{funding_id}}
+jsonpath "$[0].asset" == "BTC"
+jsonpath "$[0].amount" == 1.25
+jsonpath "$[0].source_venue" == "kraken"
+
 # list funding requests (wallet-management may not be wired in the dev
 # stack, so the request can land as rejected — assert it exists, not the
 # status, which depends on the downstream wallet call)

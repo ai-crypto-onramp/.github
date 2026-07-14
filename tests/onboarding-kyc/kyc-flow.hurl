@@ -28,6 +28,14 @@ kyc_user_id: jsonpath "$.user_id"
 [Asserts]
 jsonpath "$.state" == "started"
 
+# PostgREST: confirm the application row landed in onboarding_kyc.kyc_applications
+GET http://localhost:3002/kyc_applications?id=eq.{{app_id}}
+HTTP 200
+[Asserts]
+jsonpath "$[0].id" == "{{app_id}}"
+jsonpath "$[0].user_id" == "{{kyc_user_id}}"
+jsonpath "$[0].state" == "started"
+
 # one active application per user
 POST http://localhost:8093/v1/kyc/applications
 Content-Type: application/json
@@ -92,6 +100,17 @@ HTTP 200
 jsonpath "$.state" == "documents_uploaded"
 jsonpath "$.documents" count == 2
 
+# PostgREST: state should be documents_uploaded, and 2 document rows exist
+GET http://localhost:3002/kyc_applications?id=eq.{{app_id}}
+HTTP 200
+[Asserts]
+jsonpath "$[0].state" == "documents_uploaded"
+
+GET http://localhost:3002/documents?application_id=eq.{{app_id}}
+HTTP 200
+[Asserts]
+jsonpath "$" count == 2
+
 # liveness check (stub vendor always passes)
 POST http://localhost:8093/v1/kyc/applications/{{app_id}}/liveness
 HTTP 201
@@ -108,6 +127,12 @@ HTTP 200
 [Asserts]
 jsonpath "$.application_id" == "{{app_id}}"
 jsonpath "$.state" == "liveness_passed"
+
+# PostgREST: state should now be liveness_passed
+GET http://localhost:3002/kyc_applications?id=eq.{{app_id}}
+HTTP 200
+[Asserts]
+jsonpath "$[0].state" == "liveness_passed"
 
 # clean name screens with no sanctions hits
 POST http://localhost:8093/v1/kyc/applications/{{app_id}}/screening

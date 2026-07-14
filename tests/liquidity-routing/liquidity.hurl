@@ -33,6 +33,15 @@ jsonpath "$.side" == "buy"
 jsonpath "$.strategy" == "twap"
 jsonpath "$.status" == "pending"
 
+# PostgREST: confirm the parent order landed in liquidity.parent_orders
+GET http://localhost:3008/parent_orders?id=eq.{{order_id}}
+HTTP 200
+[Asserts]
+jsonpath "$[0].id" == "{{order_id}}"
+jsonpath "$[0].asset" == "BTC"
+jsonpath "$[0].side" == "buy"
+jsonpath "$[0].status" == "pending"
+
 # duplicate client_request_id returns the existing order (200, not 201)
 POST http://localhost:8089/v1/parent-orders
 Content-Type: application/json
@@ -107,6 +116,12 @@ POST http://localhost:8089/v1/parent-orders/{{order_id}}/cancel
 HTTP 200
 [Asserts]
 jsonpath "$.id" == "{{order_id}}"
+
+# PostgREST: parent order status should now reflect cancellation
+GET http://localhost:3008/parent_orders?id=eq.{{order_id}}
+HTTP 200
+[Asserts]
+jsonpath "$[0].status" != "pending"
 
 # cancelling a non-existent order -> 404
 POST http://localhost:8089/v1/parent-orders/po_doesnotexist/cancel

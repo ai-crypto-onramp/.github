@@ -30,6 +30,16 @@ HTTP 200
 jsonpath "$.screen_id" exists
 jsonpath "$.decision" == "allow"
 jsonpath "$.exposure" == "clean"
+[Captures]
+screen_id: jsonpath "$.screen_id"
+
+# PostgREST: confirm the screen row landed in aml_kyt.kyt_screens
+GET http://localhost:3003/kyt_screens?screen_id=eq.{{screen_id}}
+HTTP 200
+[Asserts]
+jsonpath "$[0].screen_id" == "{{screen_id}}"
+jsonpath "$[0].decision" == "allow"
+jsonpath "$[0].exposure" == "clean"
 
 # screening the same address again is served from the address-risk cache
 POST http://localhost:8081/v1/kyt/screen
@@ -111,6 +121,15 @@ HTTP 200
 jsonpath "$.id" == "{{alert_id}}"
 jsonpath "$.exposure" == "sanctioned"
 
+# PostgREST: confirm the alert row landed in aml_kyt.kyt_alerts
+# Status may be open or in_review (assign persists across re-runs with DB)
+GET http://localhost:3003/kyt_alerts?id=eq.{{alert_id}}
+HTTP 200
+[Asserts]
+jsonpath "$[0].id" == "{{alert_id}}"
+jsonpath "$[0].exposure" == "sanctioned"
+jsonpath "$[0].status" matches "^(open|in_review)$"
+
 # assign moves the alert to in_review (never closed, so re-runs keep working)
 POST http://localhost:8081/v1/kyt/alerts/{{alert_id}}/assign
 Content-Type: application/json
@@ -121,6 +140,13 @@ HTTP 200
 [Asserts]
 jsonpath "$.status" == "in_review"
 jsonpath "$.assignee" == "hurl-analyst"
+
+# PostgREST: alert status should now be in_review
+GET http://localhost:3003/kyt_alerts?id=eq.{{alert_id}}
+HTTP 200
+[Asserts]
+jsonpath "$[0].status" == "in_review"
+jsonpath "$[0].assignee" == "hurl-analyst"
 
 # unknown alert ids are 404 on every alert route
 GET http://localhost:8081/v1/kyt/alerts/does-not-exist

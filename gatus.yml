@@ -194,3 +194,68 @@ endpoints:
     conditions:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
+
+  # ── PostgREST — read-only DB layers for E2E test assertions ──
+
+  - name: postgrest-identity-auth
+    group: testing
+    url: http://postgrest-identity-auth:3000/
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+
+  - name: postgrest-onboarding-kyc
+    group: testing
+    url: http://postgrest-onboarding-kyc:3000/
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+
+  - name: postgrest-aml-kyt
+    group: testing
+    url: http://postgrest-aml-kyt:3000/
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+
+  - name: postgrest-policy-engine
+    group: testing
+    url: http://postgrest-policy-engine:3000/
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+
+  - name: postgrest-wallet-management
+    group: testing
+    url: http://postgrest-wallet-management:3000/
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+
+  - name: postgrest-treasury
+    group: testing
+    url: http://postgrest-treasury:3000/
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+
+  - name: postgrest-reconciliation
+    group: testing
+    url: http://postgrest-reconciliation:3000/
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+
+  - name: postgrest-liquidity
+    group: testing
+    url: http://postgrest-liquidity:3000/
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"
+
+  - name: postgrest-audit
+    group: testing
+    url: http://postgrest-audit:3000/
+    interval: 30s
+    conditions:
+      - "[STATUS] == 200"

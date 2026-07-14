@@ -24,6 +24,14 @@ verify_token: jsonpath "$.verification_token"
 [Asserts]
 jsonpath "$.status" == "pending"
 
+# PostgREST: confirm the row landed in identity_auth.users with status=pending
+GET http://localhost:3001/users?id=eq.{{user_id}}
+HTTP 200
+[Asserts]
+jsonpath "$[0].id" == "{{user_id}}"
+jsonpath "$[0].email" == "{{email}}"
+jsonpath "$[0].status" == "pending"
+
 # the same email cannot register twice
 POST http://localhost:8087/v1/users
 Content-Type: application/json
@@ -66,6 +74,12 @@ Content-Type: application/json
 HTTP 200
 [Asserts]
 jsonpath "$.status" == "active"
+
+# PostgREST: status should now be active in the DB
+GET http://localhost:3001/users?id=eq.{{user_id}}
+HTTP 200
+[Asserts]
+jsonpath "$[0].status" == "active"
 
 # wrong password is rejected
 POST http://localhost:8087/v1/sessions
@@ -177,6 +191,12 @@ access_token3: jsonpath "$.access_token"
 DELETE http://localhost:8087/v1/users/me
 Authorization: Bearer {{access_token3}}
 HTTP 204
+
+# PostgREST: account should now be closed in the DB
+GET http://localhost:3001/users?id=eq.{{user_id}}
+HTTP 200
+[Asserts]
+jsonpath "$[0].status" == "closed"
 
 # closed accounts cannot log in
 POST http://localhost:8087/v1/sessions
