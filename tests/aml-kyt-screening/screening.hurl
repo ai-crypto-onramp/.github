@@ -26,12 +26,12 @@ Content-Type: application/json
   "amount": "250.00"
 }
 HTTP 200
+[Captures]
+screen_id: jsonpath "$.screen_id"
 [Asserts]
 jsonpath "$.screen_id" exists
 jsonpath "$.decision" == "allow"
 jsonpath "$.exposure" == "clean"
-[Captures]
-screen_id: jsonpath "$.screen_id"
 
 # PostgREST: confirm the screen row landed in aml_kyt.kyt_screens
 GET http://localhost:3003/kyt_screens?screen_id=eq.{{screen_id}}
