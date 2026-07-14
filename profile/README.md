@@ -1,5 +1,3 @@
-## Progress & Build Status
-
 | Repository | Ready | Progress | Lang | CI | Coverage |
 |---|---|---|---|---|---|
 | 🔍 [aml-kyt-screening](https://github.com/ai-crypto-onramp/aml-kyt-screening) | ✅ | 42 / 51 (82%) | Go | [![CI](https://github.com/ai-crypto-onramp/aml-kyt-screening/actions/workflows/ci.yml/badge.svg)](https://github.com/ai-crypto-onramp/aml-kyt-screening/actions/workflows/ci.yml) | [![codecov](https://codecov.io/gh/ai-crypto-onramp/aml-kyt-screening/branch/main/graph/badge.svg)](https://codecov.io/gh/ai-crypto-onramp/aml-kyt-screening) |
