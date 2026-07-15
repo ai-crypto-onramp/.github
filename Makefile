@@ -10,6 +10,8 @@
 #   make pull          pull base images
 #   make dashboard     open the Gatus health dashboard in the browser
 #   make test          run all Hurl integration suites (HTML report in `reports/`)
+#   make seed-db       populate all postgres databases with dummy fixture data
+#   make reset-db      truncate all tables across all postgres databases
 #   make up-<svc>      start one service:            `make up-kyc`, `make up-identity-auth`
 #   make down-<svc>    stop & remove one service:    `make down-kyc`, `make down-front-office-ui`
 #   make build-<svc>   rebuild one service image without cache
@@ -21,7 +23,7 @@
 COMPOSE := docker compose
 REPORTS := reports
 
-.PHONY: all clean up down restart ps logs build pull test dashboard psql redis-cli up-% down-% build-% logs-% test-%
+.PHONY: all clean up down restart ps logs build pull test seed-db reset-db dashboard psql redis-cli up-% down-% build-% logs-% test-%
 
 # Default target: start the whole stack
 all: up
@@ -116,3 +118,17 @@ psql:
 
 redis-cli:
 	$(COMPOSE) exec redis redis-cli
+
+# Populate all databases with dummy fixture data.
+# Requires the postgres container to be running (make up or make up-postgres).
+# Each fixture file uses \c <db> to switch to the correct database.
+seed-db:
+	@for f in fixtures/aml_kyt.sql fixtures/audit.sql fixtures/blockchain_gateway.sql fixtures/fx_hedging.sql fixtures/identity_auth.sql fixtures/ledger_accounting.sql fixtures/liquidity.sql fixtures/onboarding_kyc.sql fixtures/policy_engine.sql fixtures/reconciliation.sql fixtures/transaction_orchestrator.sql fixtures/treasury.sql fixtures/wallet_management.sql; do \
+		$(COMPOSE) exec -T postgres psql -U postgres -v ON_ERROR_STOP=1 < "$$f" || exit 1; \
+	done
+
+# Truncate all data in every service database (tables and migrations preserved).
+# Requires the postgres container to be running with services migrated.
+# Use `make reset-db seed-db` to wipe and repopulate in one shot.
+reset-db:
+	@$(COMPOSE) exec -T postgres psql -U postgres -v ON_ERROR_STOP=1 < fixtures/reset.sql
