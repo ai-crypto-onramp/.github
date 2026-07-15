@@ -344,7 +344,7 @@ services:
       - DB_URL=postgres://postgres:postgres@postgres:5432/liquidity?sslmode=disable
       - REDIS_URL=redis://redis:6379/0
       - EXCHANGE_CONNECTORS_TARGET=exchange-connectors:9090
-      - EVENT_BUS_URL=kafka://kafka:9092?topic=liquidity.events.v1
+      - EVENT_BUS_URL=kafka://kafka:9092?topic=liquidity.fills
     depends_on:
       postgres:
         condition: service_healthy
