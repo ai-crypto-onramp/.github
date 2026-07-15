@@ -208,6 +208,22 @@ services:
       timeout: 5s
       retries: 15
 
+  # Confluent REST Proxy — HTTP bridge over Kafka so Hurl E2E tests can
+  # assert on topic contents the same way the postgrest-* services assert
+  # on DB rows. Published on host port 8105 (internal kafka-rest:8082).
+  kafka-rest:
+    image: confluentinc/cp-kafka-rest:7.7.0
+    ports:
+      - "8105:8082"
+    environment:
+      - KAFKA_REST_BOOTSTRAP_SERVERS=kafka:9092
+      - KAFKA_REST_LISTENERS=http://0.0.0.0:8082
+      - KAFKA_REST_HOST_NAME=kafka-rest
+      - KAFKA_REST_ACCESS_CONTROL_ALLOW_ORIGIN=*
+    depends_on:
+      kafka:
+        condition: service_healthy
+
   # aml-kyt-screening auto-applies migrations on startup via store.Open.
   aml-kyt-screening:
     build: ../aml-kyt-screening

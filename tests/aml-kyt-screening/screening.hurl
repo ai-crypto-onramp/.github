@@ -63,6 +63,15 @@ HTTP 400
 [Asserts]
 jsonpath "$.error.code" == "bad_json"
 
+# Kafka REST Proxy: the topics endpoint is reachable and returns a
+# JSON list, proving the REST proxy can talk to Kafka. The
+# kyt.audit.v1 topic appears once the async audit emitter flushes its
+# first event (lazy connect); we only assert connectivity here.
+GET http://localhost:8105/topics
+HTTP 200
+[Asserts]
+jsonpath "$" exists
+
 # --- vendor webhooks (TRM, HMAC-signed) ---
 
 # signed reclassification is accepted (duplicate on re-runs, still accepted)
