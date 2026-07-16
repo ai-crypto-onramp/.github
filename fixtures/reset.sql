@@ -32,6 +32,15 @@ DO $$ DECLARE r RECORD; BEGIN
   END LOOP;
 END $$;
 
+\c fraud
+DO $$ DECLARE r RECORD; BEGIN
+  FOR r IN (SELECT schemaname, tablename FROM pg_tables
+            WHERE schemaname NOT IN ('pg_catalog','information_schema')
+              AND tablename NOT IN ('schema_migrations','_sqlx_migrations')) LOOP
+    EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.schemaname) || '.' || quote_ident(r.tablename) || ' CASCADE';
+  END LOOP;
+END $$;
+
 \c fx_hedging
 DO $$ DECLARE r RECORD; BEGIN
   FOR r IN (SELECT schemaname, tablename FROM pg_tables
@@ -68,6 +77,15 @@ DO $$ DECLARE r RECORD; BEGIN
   END LOOP;
 END $$;
 
+\c notification
+DO $$ DECLARE r RECORD; BEGIN
+  FOR r IN (SELECT schemaname, tablename FROM pg_tables
+            WHERE schemaname NOT IN ('pg_catalog','information_schema')
+              AND tablename NOT IN ('schema_migrations','_sqlx_migrations')) LOOP
+    EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.schemaname) || '.' || quote_ident(r.tablename) || ' CASCADE';
+  END LOOP;
+END $$;
+
 \c onboarding_kyc
 DO $$ DECLARE r RECORD; BEGIN
   FOR r IN (SELECT schemaname, tablename FROM pg_tables
@@ -78,6 +96,15 @@ DO $$ DECLARE r RECORD; BEGIN
 END $$;
 
 \c policy_engine
+DO $$ DECLARE r RECORD; BEGIN
+  FOR r IN (SELECT schemaname, tablename FROM pg_tables
+            WHERE schemaname NOT IN ('pg_catalog','information_schema')
+              AND tablename NOT IN ('schema_migrations','_sqlx_migrations')) LOOP
+    EXECUTE 'TRUNCATE TABLE ' || quote_ident(r.schemaname) || '.' || quote_ident(r.tablename) || ' CASCADE';
+  END LOOP;
+END $$;
+
+\c pricing_quote
 DO $$ DECLARE r RECORD; BEGIN
   FOR r IN (SELECT schemaname, tablename FROM pg_tables
             WHERE schemaname NOT IN ('pg_catalog','information_schema')

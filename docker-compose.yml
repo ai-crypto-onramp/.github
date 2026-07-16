@@ -306,6 +306,17 @@ services:
     build: ../fraud-detection
     ports:
       - "8085:8080"
+    environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/fraud?sslmode=disable
+      - REDIS_URL=redis://redis:6379
+      - KAFKA_BROKERS=kafka:9092
+    depends_on:
+      postgres:
+        condition: service_healthy
+      redis:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
 
   fx-hedging:
     build: ../fx-hedging
@@ -380,7 +391,11 @@ services:
     ports:
       - "8092:8080"
     environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/notification?sslmode=disable
       - AUDIT_EVENT_LOG_URL=http://audit-event-log:8080
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   onboarding-kyc:
     build: ../onboarding-kyc
@@ -421,8 +436,12 @@ services:
     ports:
       - "8096:8080"
     environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/pricing_quote?sslmode=disable
+      - DATABASE_URL=postgres://postgres:postgres@postgres:5432/pricing_quote?sslmode=disable
       - REDIS_URL=redis://redis:6379
     depends_on:
+      postgres:
+        condition: service_healthy
       redis:
         condition: service_healthy
 
