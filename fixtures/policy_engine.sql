@@ -38,3 +38,10 @@ INSERT INTO review_queue (id, decision_id, tx_id, status, assigned_to, created_a
 VALUES
   (1, 'dec-003', 'tx-005', 'pending', NULL, now() - interval '30 minutes', NULL, NULL),
   (2, 'dec-002', 'tx-004', 'resolved', 'analyst-1', now() - interval '1 hour', now() - interval '40 minutes', 'confirmed_deny');
+
+-- Sync BIGSERIAL sequences to max(id) so service-boot inserts (which rely on
+-- nextval) don't collide with the explicit ids seeded above.
+SELECT setval(pg_get_serial_sequence('policies',          'id'), COALESCE((SELECT max(id) FROM policies),          1), true);
+SELECT setval(pg_get_serial_sequence('policy_versions',   'id'), COALESCE((SELECT max(id) FROM policy_versions),   1), true);
+SELECT setval(pg_get_serial_sequence('whitelist_addresses','id'), COALESCE((SELECT max(id) FROM whitelist_addresses),1), true);
+SELECT setval(pg_get_serial_sequence('review_queue',      'id'), COALESCE((SELECT max(id) FROM review_queue),      1), true);
