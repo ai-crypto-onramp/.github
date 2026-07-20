@@ -6,7 +6,8 @@ info:
     Canonical audit event stream. Every backend service publishes audit events
     to this topic; the audit-event-log service consumes them, computes the
     SHA-256 hash chain, and persists the event index + payload. See
-    .github/contracts/proto/audit/v1/events.proto for the canonical message schema
+    .github/contracts/proto/audit/v1/events.proto for the canonical
+    message schema
     and audit-event-log/internal/event/event.go for the validated envelope.
 servers:
   prod:
@@ -14,7 +15,8 @@ servers:
     protocol: kafka
 channels:
   audit.v1:
-    description: Audit event topic (one partition per source_service is recommended).
+    description: >
+      Audit event topic (one partition per source_service is recommended).
     publish:
       message:
         $ref: '#/components/messages/AuditEvent'
@@ -38,7 +40,15 @@ components:
             type: string
       payload:
         type: object
-        required: [id, ts, source_service, actor_id, action, target_type, target_id, payload_hash]
+        required:
+          - id
+          - ts
+          - source_service
+          - actor_id
+          - action
+          - target_type
+          - target_id
+          - payload_hash
         properties:
           schema_version:
             const: '1'

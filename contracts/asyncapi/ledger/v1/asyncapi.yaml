@@ -40,7 +40,13 @@ components:
             enum: [posting.committed, posting.reversed]
       payload:
         type: object
-        required: [schema_version, event_id, event_type, posting_id, emitted_at, entries]
+        required:
+          - schema_version
+          - event_id
+          - event_type
+          - posting_id
+          - emitted_at
+          - entries
         properties:
           schema_version:
             const: '1'

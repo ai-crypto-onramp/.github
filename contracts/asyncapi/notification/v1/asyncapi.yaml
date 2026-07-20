@@ -7,7 +7,8 @@ info:
     payment-orchestration, blockchain-gateway) publish lifecycle events to
     this topic; the notification service consumes them and dispatches
     channel deliveries (email / sms / push / webhook). See
-    .github/contracts/proto/notification/v1/events.proto and notification/src/consumer.ts
+    .github/contracts/proto/notification/v1/events.proto and
+    notification/src/consumer.ts
     SUBSCRIBED_EVENTS for the canonical event_type values.
 servers:
   prod:
@@ -36,7 +37,14 @@ components:
             const: '1'
           event_type:
             type: string
-            enum: [tx.created, payment.captured, tx.signed, tx.confirmed, tx.failed, tx.refunded, chain.confirmed]
+            enum:
+              - tx.created
+              - payment.captured
+              - tx.signed
+              - tx.confirmed
+              - tx.failed
+              - tx.refunded
+              - chain.confirmed
       payload:
         type: object
         required: [event_id, event_type, user_id, recipient, emitted_at]
@@ -48,7 +56,14 @@ components:
             format: uuid
           event_type:
             type: string
-            enum: [tx.created, payment.captured, tx.signed, tx.confirmed, tx.failed, tx.refunded, chain.confirmed]
+            enum:
+              - tx.created
+              - payment.captured
+              - tx.signed
+              - tx.confirmed
+              - tx.failed
+              - tx.refunded
+              - chain.confirmed
           user_id:
             type: string
           recipient:

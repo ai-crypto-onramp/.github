@@ -6,7 +6,8 @@ info:
     Canonical liquidity routing fill event stream. The liquidity-routing
     service publishes a fill.created event for every child-order fill via its
     outbox; the reconciliation service consumes this topic to match fills
-    against ledger postings. See .github/contracts/proto/liquidity/v1/events.proto
+    against ledger postings. See
+    .github/contracts/proto/liquidity/v1/events.proto
     and liquidity-routing/internal/clients/clients.go (ReconciliationFill).
 servers:
   prod:
@@ -35,7 +36,15 @@ components:
             const: '1'
       payload:
         type: object
-        required: [schema_version, fill_id, parent_order_id, child_order_id, venue_id, price, quantity, executed_at]
+        required:
+          - schema_version
+          - fill_id
+          - parent_order_id
+          - child_order_id
+          - venue_id
+          - price
+          - quantity
+          - executed_at
         properties:
           schema_version:
             const: '1'

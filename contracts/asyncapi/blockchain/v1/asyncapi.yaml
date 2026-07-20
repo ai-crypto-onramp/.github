@@ -6,7 +6,8 @@ info:
     Canonical blockchain transaction lifecycle event stream. The
     blockchain-gateway service publishes broadcast / confirmed / finalized /
     reorg / failed events to this topic; the reconciliation and notification
-    services consume it. See .github/contracts/proto/blockchain/v1/events.proto and
+    services consume it. See
+    .github/contracts/proto/blockchain/v1/events.proto and
     blockchain-gateway/internal/eventbus/bus.go (Event struct) for the
     producer's JSON field shapes.
 servers:
@@ -60,7 +61,13 @@ components:
             type: string
           status:
             type: string
-            enum: [pending, in_mempool, confirmed, finalized, reorged_out, failed]
+            enum:
+              - pending
+              - in_mempool
+              - confirmed
+              - finalized
+              - reorged_out
+              - failed
           block_height:
             type: integer
             format: uint64
