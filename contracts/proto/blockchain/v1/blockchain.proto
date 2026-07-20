@@ -1,0 +1,129 @@
+syntax = "proto3";
+
+package blockchain.v1;
+
+option go_package = "github.com/ai-crypto-onramp/contracts/gen/go/blockchain/v1;blockchainpb";
+
+// Version: v1
+// Breaking-change policy: minor field additions only; bump to v2 for removals/renames.
+
+// BlockchainService is the canonical gRPC contract for blockchain-gateway.
+//
+// STATUS: the blockchain-gateway server is currently REST-only (see
+// blockchain-gateway/internal/api/rest/router.go). This proto defines the
+// canonical gRPC surface translated from the existing REST handler shapes
+// (POST /v1/chains/{chain}/broadcast, GET .../tx/{hash}/status, etc.).
+// Until the server migrates to gRPC, consumers SHOULD continue calling REST,
+// mapping these field names to/from the JSON bodies.
+service BlockchainService {
+  // BroadcastTx corresponds to POST /v1/chains/{chain}/broadcast.
+  rpc BroadcastTx(BroadcastTxRequest) returns (BroadcastTxResponse);
+  // GetTxStatus corresponds to GET /v1/chains/{chain}/tx/{hash}/status.
+  rpc GetTxStatus(GetTxStatusRequest) returns (TxStatus);
+  // GetTx corresponds to GET /v1/chains/{chain}/tx/{hash}.
+  rpc GetTx(GetTxRequest) returns (Tx);
+  // EstimateFee corresponds to POST /v1/chains/{chain}/estimate-fee.
+  rpc EstimateFee(EstimateFeeRequest) returns (FeeEstimate);
+  // GetHeight corresponds to GET /v1/chains/{chain}/height.
+  rpc GetHeight(GetHeightRequest) returns (ChainHeight);
+  // GetBalance corresponds to GET /v1/chains/{chain}/address/{addr}/balance.
+  rpc GetBalance(GetBalanceRequest) returns (Balance);
+}
+
+message BroadcastTxRequest {
+  string chain_id = 1;     // "ethereum", "bitcoin", "solana", ...
+  bytes signed_tx = 2;     // hex- or base64-encoded signed transaction payload
+  string from = 3;
+  string to = 4;
+  string value = 5;        // decimal string in base units
+  uint64 nonce = 6;
+  string submitted_by = 7;
+}
+
+message BroadcastTxResponse {
+  string tx_hash = 1;
+  uint64 nonce = 2;
+}
+
+message GetTxStatusRequest {
+  string chain_id = 1;
+  string tx_hash = 2;
+}
+
+enum TxStatusValue {
+  TX_STATUS_VALUE_UNSPECIFIED = 0;
+  TX_STATUS_VALUE_PENDING = 1;
+  TX_STATUS_VALUE_IN_MEMPOOL = 2;
+  TX_STATUS_VALUE_CONFIRMED = 3;
+  TX_STATUS_VALUE_FINALIZED = 4;
+  TX_STATUS_VALUE_REORGED_OUT = 5;
+  TX_STATUS_VALUE_FAILED = 6;
+}
+
+message TxStatus {
+  string chain_id = 1;
+  string tx_hash = 2;
+  TxStatusValue status = 3;
+  uint64 confirmations = 4;
+  string finalized_at = 5;   // RFC3339, empty when not finalized
+}
+
+message GetTxRequest {
+  string chain_id = 1;
+  string tx_hash = 2;
+}
+
+message Tx {
+  string chain_id = 1;
+  string tx_hash = 2;
+  TxStatusValue status = 3;
+  uint64 block_height = 4;
+  string from = 5;
+  string to = 6;
+  uint64 nonce = 7;
+  string value = 8;          // decimal string in base units
+  string fee = 9;            // decimal string in base units
+  bytes raw = 10;            // raw transaction bytes
+}
+
+message EstimateFeeRequest {
+  string chain_id = 1;
+  string to = 2;
+  string amount = 3;          // decimal string in base units
+  string priority = 4;        // "standard" | "fast" | "instant"
+}
+
+message FeeEstimate {
+  string chain_id = 1;
+  uint64 gas_limit = 2;
+  string priority = 3;
+  string strategy = 4;
+  string total_fee = 5;       // decimal string
+  string max_fee_per_gas = 6;       // decimal string, EVM only
+  string max_priority_fee_per_gas = 7; // decimal string, EVM only
+  string gas_price = 8;       // decimal string, legacy EVM / non-EVM
+}
+
+message GetHeightRequest {
+  string chain_id = 1;
+}
+
+message ChainHeight {
+  string chain_id = 1;
+  uint64 height = 2;
+  string hash = 3;
+  uint64 finalized_height = 4;
+}
+
+message GetBalanceRequest {
+  string chain_id = 1;
+  string address = 2;
+}
+
+message Balance {
+  string chain_id = 1;
+  string address = 2;
+  string balance = 3;        // decimal string in base units
+  int32 decimals = 4;
+  string symbol = 5;
+}

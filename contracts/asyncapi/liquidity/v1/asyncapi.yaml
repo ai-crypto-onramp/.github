@@ -1,0 +1,61 @@
+asyncapi: '2.6.0'
+info:
+  title: Liquidity fill events
+  version: '1.0.0'
+  description: |
+    Canonical liquidity routing fill event stream. The liquidity-routing
+    service publishes a fill.created event for every child-order fill via its
+    outbox; the reconciliation service consumes this topic to match fills
+    against ledger postings. See .github/contracts/proto/liquidity/v1/events.proto
+    and liquidity-routing/internal/clients/clients.go (ReconciliationFill).
+servers:
+  prod:
+    url: kafka://broker:9092
+    protocol: kafka
+channels:
+  liquidity.fills:
+    description: Fill event topic, keyed by parent_order_id.
+    publish:
+      message:
+        $ref: '#/components/messages/FillEvent'
+    subscribe:
+      message:
+        $ref: '#/components/messages/FillEvent'
+components:
+  messages:
+    FillEvent:
+      contentType: application/json
+      name: liquidity.v1.FillEvent
+      schema:
+        $ref: '../../proto/liquidity/v1/events.proto#/FillEvent'
+      headers:
+        type: object
+        properties:
+          schema_version:
+            const: '1'
+      payload:
+        type: object
+        required: [schema_version, fill_id, parent_order_id, child_order_id, venue_id, price, quantity, executed_at]
+        properties:
+          schema_version:
+            const: '1'
+          fill_id:
+            type: string
+          parent_order_id:
+            type: string
+          child_order_id:
+            type: string
+          venue_id:
+            type: string
+          price:
+            type: number
+            format: double
+          quantity:
+            type: number
+            format: double
+          fee:
+            type: number
+            format: double
+          executed_at:
+            type: string
+            format: date-time

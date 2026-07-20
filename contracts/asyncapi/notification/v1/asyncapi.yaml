@@ -1,0 +1,66 @@
+asyncapi: '2.6.0'
+info:
+  title: Notification events
+  version: '1.0.0'
+  description: |
+    Canonical notification event stream. Producers (transaction-orchestrator,
+    payment-orchestration, blockchain-gateway) publish lifecycle events to
+    this topic; the notification service consumes them and dispatches
+    channel deliveries (email / sms / push / webhook). See
+    .github/contracts/proto/notification/v1/events.proto and notification/src/consumer.ts
+    SUBSCRIBED_EVENTS for the canonical event_type values.
+servers:
+  prod:
+    url: kafka://broker:9092
+    protocol: kafka
+channels:
+  notification.v1:
+    description: Notification lifecycle event topic.
+    publish:
+      message:
+        $ref: '#/components/messages/NotificationEvent'
+    subscribe:
+      message:
+        $ref: '#/components/messages/NotificationEvent'
+components:
+  messages:
+    NotificationEvent:
+      contentType: application/json
+      name: notification.v1.NotificationEvent
+      schema:
+        $ref: '../../proto/notification/v1/events.proto#/NotificationEvent'
+      headers:
+        type: object
+        properties:
+          schema_version:
+            const: '1'
+          event_type:
+            type: string
+            enum: [tx.created, payment.captured, tx.signed, tx.confirmed, tx.failed, tx.refunded, chain.confirmed]
+      payload:
+        type: object
+        required: [event_id, event_type, user_id, recipient, emitted_at]
+        properties:
+          schema_version:
+            const: '1'
+          event_id:
+            type: string
+            format: uuid
+          event_type:
+            type: string
+            enum: [tx.created, payment.captured, tx.signed, tx.confirmed, tx.failed, tx.refunded, chain.confirmed]
+          user_id:
+            type: string
+          recipient:
+            type: string
+          emitted_at:
+            type: string
+            format: date-time
+          traffic_class:
+            type: string
+            enum: [TRANSACTIONAL, MARKETING]
+          locale:
+            type: string
+          data:
+            type: object
+            additionalProperties: true

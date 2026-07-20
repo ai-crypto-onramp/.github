@@ -1,0 +1,32 @@
+syntax = "proto3";
+
+package blockchain.v1;
+
+option go_package = "github.com/ai-crypto-onramp/contracts/gen/go/blockchain/v1;blockchainpb";
+
+// Version: v1
+// Breaking-change policy: minor field additions only; bump to v2 for removals/renames.
+
+// BlockchainEvent is the envelope published by blockchain-gateway to the
+// `blockchain.events.v1` Kafka topic. The reconciliation service and the
+// notification service both consume this topic.
+//
+// STATUS: producer implemented in blockchain-gateway/internal/eventbus/bus.go
+// (Event struct). This proto is the canonical schema; the producer's JSON
+// field names match the `json` tags 1:1.
+message BlockchainEvent {
+  string schema_version = 1;   // "1"
+  string type = 2;             // "broadcast" | "confirmed" | "finalized" | "reorg" | "failed"
+  string chain_id = 3;
+  string tx_hash = 4;
+  string from = 5;
+  string to = 6;
+  string value = 7;             // decimal string in base units
+  string fee = 8;               // decimal string in base units
+  string status = 9;            // chain.Status string: "pending" | "in_mempool" | "confirmed" | "finalized" | "reorged_out" | "failed"
+  uint64 block_height = 10;
+  string block_hash = 11;
+  uint64 confirmations = 12;
+  string finalized_at = 13;    // RFC3339, empty when not finalized
+  string emitted_at = 14;      // RFC3339
+}

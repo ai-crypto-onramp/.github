@@ -1,0 +1,14 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "github.com/ai-crypto-onramp/contracts/gen/go/common/v1;commonv1";
+
+// Version: v1
+// Breaking-change policy: minor field additions only; bump to v2 for removals/renames.
+
+message Money {
+  int64 minor_units = 1;   // smallest unit of currency (cents, sats, wei)
+  string currency = 2;     // ISO 4217 or asset code (USD, EUR, BTC, ETH, USDC)
+  int32 scale = 3;         // number of decimal places (USD=2, BTC=8, ETH=18)
+}

@@ -1,0 +1,83 @@
+# yamllint disable rule:line-length
+# yamllint disable rule:truthy
+---
+name: Contracts CI
+
+on:
+  push:
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/contracts-ci.yml'
+  pull_request:
+    paths:
+      - 'contracts/**'
+      - '.github/workflows/contracts-ci.yml'
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+      - name: buf lint
+        working-directory: contracts
+        run: buf lint
+
+  breaking:
+    runs-on: ubuntu-latest
+    if: github.event_name == 'pull_request'
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+      - name: buf breaking (against base branch)
+        working-directory: contracts
+        run: |
+          base_ref="${{ github.base_ref }}"
+          buf breaking --against "https://github.com/${{ github.repository }}.git#ref=${base_ref},subdir=contracts"
+
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+      - name: buf build
+        working-directory: contracts
+        run: buf build
+
+  generate:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: bufbuild/buf-action@v1
+        with:
+          setup_only: true
+      - name: buf generate
+        working-directory: contracts
+        run: buf generate
+      - name: Verify generated tree is clean
+        working-directory: contracts
+        run: |
+          if [ -n "$(find gen -type f)" ]; then
+            echo "buf generate produced output (expected; verifying idempotency)"
+            buf generate
+            if [ -n "$(git status --porcelain gen)" ]; then
+              echo "::error::buf generate output is not deterministic — regenerated files differ"
+              git --no-pager diff --stat gen
+              exit 1
+            fi
+          fi

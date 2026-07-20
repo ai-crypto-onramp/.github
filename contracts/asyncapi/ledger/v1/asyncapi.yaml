@@ -1,0 +1,79 @@
+asyncapi: '2.6.0'
+info:
+  title: Ledger events
+  version: '1.0.0'
+  description: |
+    Canonical ledger posting event stream. The ledger-accounting service
+    publishes a posting.committed event for every balanced double entry; the
+    reconciliation service consumes this topic to match ledger postings
+    against external settlement / fill events. See
+    .github/contracts/proto/ledger/v1/events.proto.
+    STATUS: the producer does not yet exist (see PRODUCTION_READINESS_REPORT.md
+    P0 #8). This is the canonical contract the producer MUST emit.
+servers:
+  prod:
+    url: kafka://broker:9092
+    protocol: kafka
+channels:
+  ledger.events.v1:
+    description: Ledger posting lifecycle event topic.
+    publish:
+      message:
+        $ref: '#/components/messages/LedgerEvent'
+    subscribe:
+      message:
+        $ref: '#/components/messages/LedgerEvent'
+components:
+  messages:
+    LedgerEvent:
+      contentType: application/json
+      name: ledger.v1.LedgerEvent
+      schema:
+        $ref: '../../proto/ledger/v1/events.proto#/LedgerEvent'
+      headers:
+        type: object
+        properties:
+          schema_version:
+            const: '1'
+          event_type:
+            type: string
+            enum: [posting.committed, posting.reversed]
+      payload:
+        type: object
+        required: [schema_version, event_id, event_type, posting_id, emitted_at, entries]
+        properties:
+          schema_version:
+            const: '1'
+          event_id:
+            type: string
+            format: uuid
+          event_type:
+            type: string
+            enum: [posting.committed, posting.reversed]
+          posting_id:
+            type: string
+          ref_tx_id:
+            type: string
+          hash_head:
+            type: string
+          emitted_at:
+            type: string
+            format: date-time
+          entries:
+            type: array
+            items:
+              type: object
+              required: [entry_id, account_id, direction, amount, asset]
+              properties:
+                entry_id:
+                  type: string
+                account_id:
+                  type: string
+                direction:
+                  type: string
+                  enum: [debit, credit]
+                amount:
+                  type: integer
+                  format: uint64
+                asset:
+                  type: string

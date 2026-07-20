@@ -1,0 +1,29 @@
+syntax = "proto3";
+
+package notification.v1;
+
+option go_package = "github.com/ai-crypto-onramp/contracts/gen/go/notification/v1;notificationpb";
+
+// Version: v1
+// Breaking-change policy: minor field additions only; bump to v2 for removals/renames.
+
+// NotificationEvent is the envelope published by upstream services to the
+// `notification.v1` Kafka topic, consumed by the notification service.
+//
+// STATUS: the notification service currently consumes an in-memory event bus
+// (see notification/src/consumer.ts). This is the canonical Kafka envelope
+// the producers (transaction-orchestrator, payment-orchestration,
+// blockchain-gateway) SHOULD emit once the notification consumer is wired to
+// Kafka. The `event_type` values match the SUBSCRIBED_EVENTS list in
+// notification/src/consumer.ts.
+message NotificationEvent {
+  string schema_version = 1;   // "1"
+  string event_id = 2;         // UUID, idempotency key
+  string event_type = 3;       // "tx.created" | "payment.captured" | "tx.signed" | "tx.confirmed" | "tx.failed" | "tx.refunded" | "chain.confirmed"
+  string user_id = 4;
+  string recipient = 5;        // email / phone / push token / webhook url
+  string emitted_at = 6;       // RFC3339
+  string traffic_class = 7;    // "TRANSACTIONAL" | "MARKETING"
+  string locale = 8;           // optional, e.g. "en-US"
+  bytes data = 9;              // optional JSON object with event-specific fields
+}

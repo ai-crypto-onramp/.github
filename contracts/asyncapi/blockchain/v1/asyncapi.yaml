@@ -1,0 +1,77 @@
+asyncapi: '2.6.0'
+info:
+  title: Blockchain events
+  version: '1.0.0'
+  description: |
+    Canonical blockchain transaction lifecycle event stream. The
+    blockchain-gateway service publishes broadcast / confirmed / finalized /
+    reorg / failed events to this topic; the reconciliation and notification
+    services consume it. See .github/contracts/proto/blockchain/v1/events.proto and
+    blockchain-gateway/internal/eventbus/bus.go (Event struct) for the
+    producer's JSON field shapes.
+servers:
+  prod:
+    url: kafka://broker:9092
+    protocol: kafka
+channels:
+  blockchain.events.v1:
+    description: Blockchain tx lifecycle event topic, keyed by tx_hash.
+    publish:
+      message:
+        $ref: '#/components/messages/BlockchainEvent'
+    subscribe:
+      message:
+        $ref: '#/components/messages/BlockchainEvent'
+components:
+  messages:
+    BlockchainEvent:
+      contentType: application/json
+      name: blockchain.v1.BlockchainEvent
+      schema:
+        $ref: '../../proto/blockchain/v1/events.proto#/BlockchainEvent'
+      headers:
+        type: object
+        properties:
+          schema_version:
+            const: '1'
+          type:
+            type: string
+            enum: [broadcast, confirmed, finalized, reorg, failed]
+      payload:
+        type: object
+        required: [schema_version, type, chain_id, tx_hash, status, emitted_at]
+        properties:
+          schema_version:
+            const: '1'
+          type:
+            type: string
+            enum: [broadcast, confirmed, finalized, reorg, failed]
+          chain_id:
+            type: string
+          tx_hash:
+            type: string
+          from:
+            type: string
+          to:
+            type: string
+          value:
+            type: string
+          fee:
+            type: string
+          status:
+            type: string
+            enum: [pending, in_mempool, confirmed, finalized, reorged_out, failed]
+          block_height:
+            type: integer
+            format: uint64
+          block_hash:
+            type: string
+          confirmations:
+            type: integer
+            format: uint64
+          finalized_at:
+            type: string
+            format: date-time
+          emitted_at:
+            type: string
+            format: date-time

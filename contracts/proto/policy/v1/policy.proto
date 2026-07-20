@@ -1,0 +1,51 @@
+syntax = "proto3";
+
+package policy.v1;
+
+option go_package = "github.com/ai-crypto-onramp/contracts/gen/go/policy/v1;policypb";
+
+import "common/v1/money.proto";
+
+// Version: v1
+// Breaking-change policy: minor field additions only; bump to v2 for removals/renames.
+
+// PolicyService is served by policy-risk-engine. The transaction-orchestrator
+// is the primary consumer on the synchronous saga path; the api-gateway may
+// also call Evaluate for pre-flight checks.
+service PolicyService {
+  // Evaluate runs the policy decision path and returns allow / deny /
+  // manual_review together with reasons, applied rules, and a signed
+  // decision_id.
+  rpc Evaluate(EvaluateRequest) returns (EvaluateResponse);
+}
+
+message EvaluateRequest {
+  string user_id = 1;
+  common.v1.Money amount = 2;
+  string asset = 3;
+  string rail = 4;
+  string dest_address = 5;
+  string dest_chain = 6;
+  string kyt_verdict = 7;
+  double fraud_score = 8;
+  string kyc_status = 9;
+  string user_tier = 10;
+  bool session_2fa_passed = 11;
+  double fx_rate_to_usd = 12;
+  string tx_id = 13;   // optional correlation id
+  string quote_id = 14; // optional correlation id
+}
+
+message AppliedRule {
+  string id = 1;
+  string version = 2;
+}
+
+message EvaluateResponse {
+  string decision = 1;      // "allow" | "deny" | "manual_review"
+  repeated string reasons = 2;
+  repeated AppliedRule applied_rules = 3;
+  string policy_version = 4;
+  double score = 5;
+  string decision_id = 6;   // signed audit decision id
+}

@@ -1,6 +1,7 @@
 CREATE DATABASE aml_kyt;
 CREATE DATABASE audit;
 CREATE DATABASE blockchain_gateway;
+CREATE DATABASE exchange_connectors;
 CREATE DATABASE fraud;
 CREATE DATABASE fx_hedging;
 CREATE DATABASE identity_auth;
@@ -8,8 +9,10 @@ CREATE DATABASE ledger_accounting;
 CREATE DATABASE liquidity;
 CREATE DATABASE notification;
 CREATE DATABASE onboarding_kyc;
+CREATE DATABASE payment_orchestration;
 CREATE DATABASE policy_engine;
 CREATE DATABASE pricing_quote;
+CREATE DATABASE rail_connectors;
 CREATE DATABASE reconciliation;
 CREATE DATABASE transaction_orchestrator;
 CREATE DATABASE treasury;

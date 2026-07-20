@@ -231,13 +231,15 @@ services:
     build: ../aml-kyt-screening
     ports:
       - "8081:8080"
+    expose:
+      - "9090"
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/aml_kyt?sslmode=disable
       - REDIS_URL=redis://redis:6379
       - PORT=8080
       - CHAINALYSIS_WEBHOOK_SECRET=dev-secret-chainalysis
       - TRM_WEBHOOK_SECRET=dev-secret-trm
-      - AUDIT_EVENT_BUS_URL=kafka://kafka:9092?topic=kyt.audit.v1
+      - AUDIT_EVENT_BUS_URL=kafka://kafka:9092?topic=audit.v1
     depends_on:
       postgres:
         condition: service_healthy
@@ -266,10 +268,10 @@ services:
       kafka:
         condition: service_healthy
 
-  # blockchain-gateway runs on in-memory stores (its Postgres store is not
-  # wired into the entrypoint yet), so it needs no database here. Without
-  # CHAINS_SUPPORTED it boots with a stub chain adapter — set it plus
-  # RPC_URLS_<CHAIN> env overrides to point at a real node.
+  # blockchain-gateway persists broadcasts, confirmations, fees, reorgs, and
+  # outbox events to Postgres (DB_URL). Without CHAINS_SUPPORTED it boots with
+  # a stub chain adapter — set it plus RPC_URLS_<CHAIN> env overrides to
+  # point at a real node.
   blockchain-gateway:
     build: ../blockchain-gateway
     ports:
@@ -278,7 +280,8 @@ services:
       - DB_URL=postgres://postgres:postgres@postgres:5432/blockchain_gateway?sslmode=disable
       - REDIS_URL=redis://redis:6379/0
       - WALLET_MGMT_URL=http://wallet-management:8080
-      - AUDIT_EVENT_LOG_URL=http://audit-event-log:8080
+      - KAFKA_BROKERS=kafka:9092
+      - DEV_MODE=1
       - EVENT_BUS_URL=kafka://kafka:9092?topic=blockchain.events.v1
       - CHAINS_SUPPORTED=${CHAINS_SUPPORTED:-}
       - RPC_URLS_ETHEREUM=${RPC_URLS_ETHEREUM:-}
@@ -296,9 +299,14 @@ services:
     ports:
       - "8084:8080"
     environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/exchange_connectors?sslmode=disable
       - DUMMY_PRICE=65000
       - EVENT_BUS_URL=kafka://kafka:9092?topic=recon
+      - KAFKA_BROKERS=kafka:9092
+      - DEV_MODE=1
     depends_on:
+      postgres:
+        condition: service_healthy
       kafka:
         condition: service_healthy
 
@@ -325,8 +333,12 @@ services:
     environment:
       - DUMMY_FX_RATE=1.10
       - DB_URL=postgres://postgres:postgres@postgres:5432/fx_hedging?sslmode=disable
+      - KAFKA_BROKERS=kafka:9092
+      - DEV_MODE=1
     depends_on:
       postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
 
   identity-auth:
@@ -343,10 +355,16 @@ services:
     build: ../ledger-accounting
     ports:
       - "8088:8080"
+    expose:
+      - "8081"
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/ledger_accounting?sslmode=disable
+      - KAFKA_BROKERS=kafka:9092
+      - DEV_MODE=1
     depends_on:
       postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
 
   liquidity-routing:
@@ -358,6 +376,8 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - EXCHANGE_CONNECTORS_TARGET=exchange-connectors:9090
       - EVENT_BUS_URL=kafka://kafka:9092?topic=liquidity.fills
+      - KAFKA_BROKERS=kafka:9092
+      - DEV_MODE=1
     depends_on:
       postgres:
         condition: service_healthy
@@ -378,13 +398,18 @@ services:
     build: ../mpc-signing-service
     ports:
       - "8091:8080"
+    expose:
+      - "9090"
     environment:
       - CUSTODY_PROVIDER=in_house
       - THRESHOLD_T=2
       - TOTAL_N=3
       - WALLET_MANAGEMENT_URL=http://wallet-management:9090
-      - AUDIT_EVENT_LOG_URL=http://audit-event-log:8080
+      - KAFKA_BROKERS=kafka:9092
       - NODE_ID=node-0
+    depends_on:
+      kafka:
+        condition: service_healthy
 
   notification:
     build: ../notification
@@ -392,9 +417,12 @@ services:
       - "8092:8080"
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/notification?sslmode=disable
-      - AUDIT_EVENT_LOG_URL=http://audit-event-log:8080
+      - KAFKA_BROKERS=kafka:9092
+      - DEV_MODE=1
     depends_on:
       postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
 
   onboarding-kyc:
@@ -403,8 +431,12 @@ services:
       - "8093:8080"
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/onboarding_kyc?sslmode=disable
+      - KAFKA_BROKERS=kafka:9092
+      - DEV_MODE=1
     depends_on:
       postgres:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
 
   payment-orchestration:
@@ -414,21 +446,32 @@ services:
     environment:
       - WEBHOOK_SECRET=dev-secret
       - RAIL_CONNECTORS_URL=http://rail-connectors:8080
+      - KAFKA_BROKERS=kafka:9092
+      - DEV_MODE=1
+    depends_on:
+      kafka:
+        condition: service_healthy
 
   policy-risk-engine:
     build: ../policy-risk-engine
     ports:
       - "8095:8080"
+    expose:
+      - "9090"
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/policy_engine?sslmode=disable
       - REDIS_URL=redis://redis:6379
       - POLICIES_DIR=/policies
       - MIGRATIONS_DIR=/migrations
       - PORT=8080
+      - KAFKA_BROKERS=kafka:9092
+      - DEV_MODE=1
     depends_on:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
 
   pricing-quote:
@@ -450,7 +493,12 @@ services:
     ports:
       - "8097:8080"
     environment:
+      - DB_URL=postgres://postgres:postgres@postgres:5432/rail_connectors?sslmode=disable
       - WEBHOOK_SECRET=dev-secret
+      - DEV_MODE=1
+    depends_on:
+      postgres:
+        condition: service_healthy
 
   reconciliation:
     build: ../reconciliation
@@ -473,11 +521,30 @@ services:
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/transaction_orchestrator?sslmode=disable
       - EVENT_BUS_URL=kafka://kafka:9092?topic=transactions
+      - POLICY_URL=policy-risk-engine:9090
+      - KYT_URL=aml-kyt-screening:9090
+      - MPC_URL=mpc-signing-service:9090
+      - LEDGER_URL=ledger-accounting:8081
+      - PAYMENT_URL=http://payment-orchestration:8080
+      - BLOCKCHAIN_URL=http://blockchain-gateway:8080
+      - ENABLE_STUB_PARTNERS=0
     depends_on:
       postgres:
         condition: service_healthy
       kafka:
         condition: service_healthy
+      policy-risk-engine:
+        condition: service_started
+      aml-kyt-screening:
+        condition: service_started
+      mpc-signing-service:
+        condition: service_started
+      ledger-accounting:
+        condition: service_started
+      payment-orchestration:
+        condition: service_started
+      blockchain-gateway:
+        condition: service_started
 
   treasury-orchestration:
     build: ../treasury-orchestration
@@ -491,6 +558,8 @@ services:
       - WALLET_MGMT_URL=http://wallet-management:8080
       - EVENT_BUS_URL=kafka://kafka:9092?topic=transactions
       - TX_ORCH_EVENT_TOPIC=transactions
+      - KAFKA_BROKERS=kafka:9092
+      - DEV_MODE=1
     depends_on:
       postgres:
         condition: service_healthy
@@ -512,7 +581,8 @@ services:
       - REDIS_URL=redis://redis:6379/0
       - TREASURY_ORCHESTRATION_URL=http://treasury-orchestration:8080
       - POLICY_RISK_ENGINE_URL=http://policy-risk-engine:8080
-      - AUDIT_EVENT_LOG_URL=http://audit-event-log:8080
+      - KAFKA_BROKERS=kafka:9092
+      - DEV_MODE=1
       - EVM_XPUB=xpub6CeDpm2b5qtk96oy8yvM572W6cLZSvU5vnpKmKPypbfFwXo86SyT7VtfwWtMZAgZ5eKVMU9NnULt91HBFw9j62wJrcoc1ZRWiNvoorwBRXL
       - BTC_XPUB=xpub6C1HVMz946r433QEjZGpYYWYcspxXXBPys5PBGkmQboRXE6RLfFiStEkKbWKCZaPgDrzZh9nUEunxuiuy6MNdw23du2Ek7GoKYMJVH8eK5E
       - SOL_XPUB=11111111111111111111111111111111
@@ -520,6 +590,8 @@ services:
       postgres:
         condition: service_healthy
       redis:
+        condition: service_healthy
+      kafka:
         condition: service_healthy
 
   # ── UIs — customer-facing and internal consoles ──

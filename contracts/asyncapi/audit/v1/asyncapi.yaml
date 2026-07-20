@@ -1,0 +1,68 @@
+asyncapi: '2.6.0'
+info:
+  title: Audit events
+  version: '1.0.0'
+  description: |
+    Canonical audit event stream. Every backend service publishes audit events
+    to this topic; the audit-event-log service consumes them, computes the
+    SHA-256 hash chain, and persists the event index + payload. See
+    .github/contracts/proto/audit/v1/events.proto for the canonical message schema
+    and audit-event-log/internal/event/event.go for the validated envelope.
+servers:
+  prod:
+    url: kafka://broker:9092
+    protocol: kafka
+channels:
+  audit.v1:
+    description: Audit event topic (one partition per source_service is recommended).
+    publish:
+      message:
+        $ref: '#/components/messages/AuditEvent'
+    subscribe:
+      message:
+        $ref: '#/components/messages/AuditEvent'
+components:
+  messages:
+    AuditEvent:
+      contentType: application/json
+      schemaFormat: application/vnd.google.protobuf;proto=message
+      name: audit.v1.AuditEvent
+      schema:
+        $ref: '../../proto/audit/v1/events.proto#/AuditEvent'
+      headers:
+        type: object
+        properties:
+          schema_version:
+            const: '1'
+          source_service:
+            type: string
+      payload:
+        type: object
+        required: [id, ts, source_service, actor_id, action, target_type, target_id, payload_hash]
+        properties:
+          schema_version:
+            const: '1'
+          id:
+            type: string
+            format: uuid
+          ts:
+            type: string
+            format: date-time
+          source_service:
+            type: string
+          actor_id:
+            type: string
+          action:
+            type: string
+          target_type:
+            type: string
+          target_id:
+            type: string
+          payload_hash:
+            type: string
+            pattern: '^sha256:[0-9a-f]{64}$'
+          payload:
+            type: object
+            additionalProperties: true
+          redaction:
+            type: string

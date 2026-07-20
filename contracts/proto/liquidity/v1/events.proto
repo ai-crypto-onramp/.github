@@ -1,0 +1,27 @@
+syntax = "proto3";
+
+package liquidity.v1;
+
+option go_package = "github.com/ai-crypto-onramp/contracts/gen/go/liquidity/v1;liquiditpb";
+
+// Version: v1
+// Breaking-change policy: minor field additions only; bump to v2 for removals/renames.
+
+// FillEvent is the envelope published by liquidity-routing to the
+// `liquidity.fills` Kafka topic. The reconciliation service consumes it to
+// match child-order fills against ledger postings.
+//
+// STATUS: producer implemented in liquidity-routing/internal/clients/clients.go
+// (ReconciliationFill struct) and lifecycle.go (outbox emission). Field names
+// here match the producer's JSON tags 1:1.
+message FillEvent {
+  string schema_version = 1;   // "1"
+  string fill_id = 2;          // idempotency key
+  string parent_order_id = 3;
+  string child_order_id = 4;
+  string venue_id = 5;
+  double price = 6;             // decimal price as a double (producer uses float64)
+  double quantity = 7;          // decimal quantity as a double
+  double fee = 8;               // decimal fee as a double
+  string executed_at = 9;       // RFC3339
+}

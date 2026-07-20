@@ -1,0 +1,30 @@
+syntax = "proto3";
+
+package common.v1;
+
+option go_package = "github.com/ai-crypto-onramp/contracts/gen/go/common/v1;commonv1";
+
+// Version: v1
+// Breaking-change policy: minor field additions only; bump to v2 for removals/renames.
+
+// TransactionId is the UUID assigned by the transaction-orchestrator to a
+// purchase saga. Carried end-to-end through every downstream edge.
+message TransactionId {
+  string value = 1;  // UUID v4 string
+}
+
+message UserId {
+  string value = 1;  // UUID v4 string
+}
+
+message WalletId {
+  string value = 1;  // UUID v4 string
+}
+
+message QuoteId {
+  string value = 1;  // UUID v4 string
+}
+
+message KeyId {
+  string value = 1;  // MPC key identifier
+}

@@ -1,0 +1,111 @@
+syntax = "proto3";
+
+package payment.v1;
+
+option go_package = "github.com/ai-crypto-onramp/contracts/gen/go/payment/v1;paymentpb";
+
+import "common/v1/money.proto";
+
+// Version: v1
+// Breaking-change policy: minor field additions only; bump to v2 for removals/renames.
+
+// PaymentService is the canonical gRPC contract for payment-orchestration.
+//
+// STATUS: the payment-orchestration server is currently REST-only (see
+// payment-orchestration/internal/api/handlers.go). This proto defines the
+// canonical gRPC surface translated from the existing REST handler shapes
+// (POST /v1/payments/intents, /capture, /void, /refund). Migration of the
+// server to gRPC is tracked separately; until then consumers SHOULD continue
+// calling the REST endpoints, but the message field names here are the
+// canonical ones consumers should map to/from the JSON bodies.
+service PaymentService {
+  // CreateIntent corresponds to POST /v1/payments/intents.
+  rpc CreateIntent(CreateIntentRequest) returns (Intent);
+  // GetIntent corresponds to GET /v1/payments/{id}.
+  rpc GetIntent(GetIntentRequest) returns (Intent);
+  // Capture corresponds to POST /v1/payments/{id}/capture.
+  rpc Capture(CaptureRequest) returns (Intent);
+  // Void corresponds to POST /v1/payments/{id}/void.
+  rpc Void(VoidRequest) returns (Intent);
+  // Refund corresponds to POST /v1/payments/{id}/refund.
+  rpc Refund(RefundRequest) returns (Intent);
+}
+
+enum Rail {
+  RAIL_UNSPECIFIED = 0;
+  RAIL_CARD = 1;
+  RAIL_ACH = 2;
+  RAIL_SEPA = 3;
+  RAIL_PIX = 4;
+  RAIL_UPI = 5;
+}
+
+enum IntentStatus {
+  INTENT_STATUS_UNSPECIFIED = 0;
+  INTENT_STATUS_INTENT = 1;
+  INTENT_STATUS_3DS_PENDING = 2;
+  INTENT_STATUS_AUTHORIZED = 3;
+  INTENT_STATUS_CAPTURED = 4;
+  INTENT_STATUS_SETTLED = 5;
+  INTENT_STATUS_VOIDED = 6;
+  INTENT_STATUS_REFUNDING = 7;
+  INTENT_STATUS_REFUNDED = 8;
+  INTENT_STATUS_CHARGED_BACK = 9;
+  INTENT_STATUS_CHARGEBACK_WON = 10;
+  INTENT_STATUS_CHARGEBACK_LOST = 11;
+  INTENT_STATUS_FAILED = 12;
+}
+
+message CreateIntentRequest {
+  Rail rail = 1;
+  common.v1.Money amount = 2;
+  string payer_ref = 3;          // rail-specific payer reference (token, IBAN, CPF, UPI id)
+  bool three_ds_required = 4;   // only valid for RAIL_CARD
+  string idempotency_key = 5;   // maps to the Idempotency-Key header
+}
+
+message GetIntentRequest {
+  string intent_id = 1;
+}
+
+message CaptureRequest {
+  string intent_id = 1;
+  // If unset, captures the remaining authorized amount.
+  common.v1.Money amount = 2;
+  string idempotency_key = 3;
+}
+
+message VoidRequest {
+  string intent_id = 1;
+  string idempotency_key = 2;
+}
+
+message RefundRequest {
+  string intent_id = 1;
+  // If unset, refunds the full captured amount.
+  common.v1.Money amount = 2;
+  string idempotency_key = 3;
+}
+
+message Intent {
+  string id = 1;
+  Rail rail = 2;
+  common.v1.Money amount = 3;
+  string payer_ref = 4;
+  IntentStatus status = 5;
+  common.v1.Money captured_amount = 6;
+  common.v1.Money refunded_amount = 7;
+  common.v1.Money settled_amount = 8;
+  string external_id = 9;        // rail-side identifier
+  bool three_ds_required = 10;
+  string idempotency_key = 11;
+  string created_at = 12;        // RFC3339
+  string updated_at = 13;        // RFC3339
+  repeated IntentEvent history = 14;
+}
+
+message IntentEvent {
+  string type = 1;
+  string at = 2;     // RFC3339
+  string detail = 3;
+}

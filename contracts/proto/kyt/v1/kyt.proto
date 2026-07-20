@@ -1,0 +1,54 @@
+syntax = "proto3";
+
+package kyt.v1;
+
+option go_package = "github.com/ai-crypto-onramp/contracts/gen/go/kyt/v1;kytpb";
+
+import "common/v1/money.proto";
+
+// Version: v1
+// Breaking-change policy: minor field additions only; bump to v2 for removals/renames.
+
+// KytService is served by aml-kyt-screening for the transaction-orchestrator
+// on the synchronous transaction path.
+service KytService {
+  // Screen runs a synchronous KYT screen for a destination address.
+  rpc Screen(ScreenRequest) returns (ScreenResponse);
+  // GetAlert returns the alert with the given id (compliance dashboard).
+  rpc GetAlert(GetAlertRequest) returns (Alert);
+}
+
+message ScreenRequest {
+  string tx_id = 1;
+  string address = 2;          // destination address
+  string source_address = 3;  // optional source address
+  string chain = 4;            // chain identifier (evm, solana, bitcoin, ...)
+  common.v1.Money amount = 5;
+}
+
+message ScreenResponse {
+  string screen_id = 1;
+  int32 risk_score = 2;   // 0..100
+  string exposure = 3;    // exposure amount as a decimal string
+  string decision = 4;    // "clear" | "review" | "reject"
+  string vendor = 5;      // vendor that produced the screen
+  bool cache_hit = 6;
+}
+
+message GetAlertRequest {
+  string id = 1;
+}
+
+message Alert {
+  string id = 1;
+  string screen_id = 2;
+  string tx_id = 3;
+  string address = 4;
+  string chain = 5;
+  string exposure = 6;
+  string severity = 7;
+  string status = 8;
+  string assignee = 9;
+  string created_at = 10;  // RFC3339 timestamp
+  string closed_at = 11;   // RFC3339 timestamp, empty when open
+}

@@ -1,0 +1,36 @@
+syntax = "proto3";
+
+package audit.v1;
+
+option go_package = "github.com/ai-crypto-onramp/contracts/gen/go/audit/v1;auditpb";
+
+// Version: v1
+// Breaking-change policy: minor field additions only; bump to v2 for removals/renames.
+
+// AuditEvent is the canonical envelope published by every service to the
+// `audit.v1` Kafka topic, consumed by audit-event-log.
+//
+// STATUS: the audit-event-log ingest pipeline already decodes this exact
+// shape (see audit-event-log/internal/event/event.go Envelope struct). The
+// `prev_hash` and `this_hash` fields are informational on the wire — the
+// audit service recomputes this_hash and sets prev_hash from the chain head
+// at insert time. Producers SHOULD omit them.
+//
+// `payload` is a free-form JSON object (json.RawMessage on the wire). When
+// present, `payload_hash` MUST be the canonical "sha256:<hex>" of the
+// payload bytes; the audit service verifies this before indexing.
+message AuditEvent {
+  string schema_version = 1;    // "1"
+  string id = 2;                // UUID, idempotency key
+  string ts = 3;                // RFC3339 timestamp
+  string source_service = 4;    // e.g. "transaction-orchestrator", "mpc-signing-service"
+  string actor_id = 5;          // user / service / key id
+  string action = 6;            // e.g. "transaction.created", "mpc.sign"
+  string target_type = 7;       // e.g. "transaction", "wallet", "key"
+  string target_id = 8;
+  string payload_hash = 9;      // "sha256:<hex>" of the payload bytes
+  bytes payload = 10;           // optional JSON-encoded payload body
+  string prev_hash = 11;        // informational; recomputed by the audit service
+  string this_hash = 12;        // informational; recomputed by the audit service
+  string redaction = 13;        // optional redaction policy applied by the producer
+}
