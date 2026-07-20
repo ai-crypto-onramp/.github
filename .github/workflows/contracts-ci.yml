@@ -69,15 +69,15 @@ jobs:
       - name: buf generate
         working-directory: contracts
         run: buf generate
-      - name: Verify generated tree is clean
+      - name: Verify generated tree is idempotent
         working-directory: contracts
         run: |
-          if [ -n "$(find gen -type f)" ]; then
-            echo "buf generate produced output (expected; verifying idempotency)"
-            buf generate
-            if [ -n "$(git status --porcelain gen)" ]; then
-              echo "::error::buf generate output is not deterministic — regenerated files differ"
-              git --no-pager diff --stat gen
-              exit 1
-            fi
+          # gen/ is gitignored; verify two consecutive `buf generate` runs produce
+          # identical output by hashing the tree before and after a re-run.
+          before=$(find gen -type f -exec shasum -a 256 {} + | sort | shasum -a 256 | cut -d' ' -f1)
+          buf generate
+          after=$(find gen -type f -exec shasum -a 256 {} + | sort | shasum -a 256 | cut -d' ' -f1)
+          if [ "$before" != "$after" ]; then
+            echo "::error::buf generate output is not deterministic — regenerated files differ"
+            exit 1
           fi

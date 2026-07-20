@@ -1,4 +1,4 @@
-version: v1
+version: v2
 plugins:
   - remote: buf.build/protocolbuffers/go
     out: gen/go
@@ -17,5 +17,3 @@ plugins:
     out: gen/ts
     opt:
       - target=ts
-  - remote: buf.build/protocolbuffers/rust
-    out: gen/rust
