@@ -12,6 +12,9 @@ services:
     volumes:
       - pg-data:/var/lib/postgresql/data
       - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+    networks:
+      - default
+      - monitoring
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -172,6 +175,9 @@ services:
     image: redis:7-alpine
     ports:
       - "6379:6379"
+    networks:
+      - default
+      - monitoring
     healthcheck:
       test: ["CMD", "redis-cli", "ping"]
       interval: 5s
@@ -204,6 +210,9 @@ services:
       - KAFKA_LOG_RETENTION_HOURS=24
     ports:
       - "9092:9092"
+    networks:
+      - default
+      - monitoring
     healthcheck:
       test: ["CMD-SHELL", "/opt/kafka/bin/kafka-topics.sh --bootstrap-server localhost:9092 --list"]
       interval: 5s
@@ -226,6 +235,78 @@ services:
   #     kafka:
   #       condition: service_healthy
 
+  # ── Observability stack: Prometheus + Grafana + Loki + Tempo + OTel
+  # collector. Services export OTLP traces/metrics/logs to the collector,
+  # which fans out to Tempo (traces), Prometheus (metrics, scraped on
+  # :8888), and Loki (logs). Prometheus also scrapes each service's
+  # /metrics endpoint directly for the legacy Prometheus exposition
+  # format. Grafana is provisioned with all three datasources. ──
+  prometheus:
+    image: prom/prometheus:latest
+    ports:
+      - "9090:9090"
+    networks:
+      - monitoring
+    volumes:
+      - ./monitoring/prometheus/prometheus.yml:/etc/prometheus/prometheus.yml:ro
+      - prometheus-data:/prometheus
+
+  loki:
+    image: grafana/loki:latest
+    ports:
+      - "3100:3100"
+    networks:
+      - monitoring
+    command: -config.file=/etc/loki/local-config.yaml
+    volumes:
+      - loki-data:/loki
+
+  tempo:
+    image: grafana/tempo:latest
+    ports:
+      - "3200:3200"
+      - "4317:4317"
+    networks:
+      - monitoring
+    command: -config.file=/etc/tempo/tempo.yml
+    volumes:
+      - ./monitoring/tempo/tempo.yml:/etc/tempo/tempo.yml:ro
+      - tempo-data:/var/tempo
+
+  otel-collector:
+    image: otel/opentelemetry-collector-contrib:latest
+    ports:
+      - "4317:4317"
+      - "4318:4318"
+      - "8888:8888"
+    networks:
+      - monitoring
+    command: --config=/etc/otelcol/config.yaml
+    volumes:
+      - ./monitoring/otel-collector/config.yaml:/etc/otelcol/config.yaml:ro
+    depends_on:
+      - tempo
+      - loki
+      - prometheus
+
+  grafana:
+    image: grafana/grafana:latest
+    ports:
+      - "3000:3000"
+    networks:
+      - monitoring
+    environment:
+      - GF_AUTH_ANONYMOUS_ENABLED=true
+      - GF_AUTH_ANONYMOUS_ORG_ROLE=Admin
+      - GF_SECURITY_ADMIN_PASSWORD=admin
+    volumes:
+      - ./monitoring/grafana/provisioning:/etc/grafana/provisioning:ro
+      - grafana-data:/var/lib/grafana
+    depends_on:
+      - prometheus
+      - loki
+      - tempo
+
   # aml-kyt-screening auto-applies migrations on startup via store.Open.
   aml-kyt-screening:
     build: ../aml-kyt-screening
@@ -233,6 +314,9 @@ services:
       - "8081:8080"
     expose:
       - "9090"
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/aml_kyt?sslmode=disable
       - REDIS_URL=redis://redis:6379
@@ -240,6 +324,9 @@ services:
       - CHAINALYSIS_WEBHOOK_SECRET=dev-secret-chainalysis
       - TRM_WEBHOOK_SECRET=dev-secret-trm
       - AUDIT_EVENT_BUS_URL=kafka://kafka:9092?topic=audit.v1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=aml-kyt-screening
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -252,16 +339,29 @@ services:
     build: ../api-gateway
     ports:
       - "8080:8080"
+    networks:
+      - default
+      - monitoring
+    environment:
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=api-gateway
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
 
   audit-event-log:
     build: ../audit-event-log
     ports:
       - "8082:8080"
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/audit?sslmode=disable
       - KAFKA_BROKERS=kafka:9092
       - KAFKA_TOPIC=audit.v1
       - PAYLOAD_BUCKET=
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=audit-event-log
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -276,6 +376,9 @@ services:
     build: ../blockchain-gateway
     ports:
       - "8083:8080"
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/blockchain_gateway?sslmode=disable
       - REDIS_URL=redis://redis:6379/0
@@ -286,6 +389,9 @@ services:
       - CHAINS_SUPPORTED=${CHAINS_SUPPORTED:-}
       - RPC_URLS_ETHEREUM=${RPC_URLS_ETHEREUM:-}
       - FINALITY_BLOCKS_ETHEREUM=${FINALITY_BLOCKS_ETHEREUM:-64}
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=blockchain-gateway
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -298,12 +404,18 @@ services:
     build: ../exchange-connectors
     ports:
       - "8084:8080"
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/exchange_connectors?sslmode=disable
       - DUMMY_PRICE=65000
       - EVENT_BUS_URL=kafka://kafka:9092?topic=recon
       - KAFKA_BROKERS=kafka:9092
       - DEV_MODE=1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=exchange-connectors
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -314,10 +426,16 @@ services:
     build: ../fraud-detection
     ports:
       - "8085:8080"
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/fraud?sslmode=disable
       - REDIS_URL=redis://redis:6379
       - KAFKA_BROKERS=kafka:9092
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=fraud-detection
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -330,11 +448,17 @@ services:
     build: ../fx-hedging
     ports:
       - "8086:8080"
+    networks:
+      - default
+      - monitoring
     environment:
       - DUMMY_FX_RATE=1.10
       - DB_URL=postgres://postgres:postgres@postgres:5432/fx_hedging?sslmode=disable
       - KAFKA_BROKERS=kafka:9092
       - DEV_MODE=1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=fx-hedging
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -345,8 +469,14 @@ services:
     build: ../identity-auth
     ports:
       - "8087:8080"
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/identity_auth?sslmode=disable
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=identity-auth
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -357,10 +487,19 @@ services:
       - "8088:8080"
     expose:
       - "8081"
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/ledger_accounting?sslmode=disable
       - KAFKA_BROKERS=kafka:9092
       - DEV_MODE=1
+      # Shared HS256 secret for service-token JWT auth on internal REST
+      # endpoints. Override in real deployments via a secrets mount.
+      - SERVICE_TOKEN_SECRET=dev-internal-shared-secret
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=ledger-accounting
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -371,6 +510,9 @@ services:
     build: ../liquidity-routing
     ports:
       - "8089:8080"
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/liquidity?sslmode=disable
       - REDIS_URL=redis://redis:6379/0
@@ -378,6 +520,9 @@ services:
       - EVENT_BUS_URL=kafka://kafka:9092?topic=liquidity.fills
       - KAFKA_BROKERS=kafka:9092
       - DEV_MODE=1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=liquidity-routing
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -390,8 +535,12 @@ services:
   # t-of-n cluster (default t=2,n=3); DKG, rotation, and key metadata work
   # standalone. SignTx fails closed until POLICY_ENGINE_PUBKEY is configured
   # (the policy engine does not mint decision tokens yet). gRPC is served
-  # plaintext on mpc-signing-service:9090 inside the network — mTLS (MTLS_*)
-  # is intentionally left off so intra-stack callers need no client certs.
+  # with mTLS when /certs is populated (TLS_CERT_FILE/KEY/CA); otherwise it
+  # falls back to plaintext inside the network when DEV_MODE=1.
+  # Operator must provision /certs via a secrets mount or
+  # `mpc-signing-service/scripts/gen-certs.sh`; the compose file does not
+  # generate certs. Uncomment the TLS_* env vars and the volume mount to
+  # enable mTLS.
   # For the full 3-node mTLS cluster see the service repo's
   # docker-compose.cluster.yml.
   mpc-signing-service:
@@ -400,6 +549,9 @@ services:
       - "8091:8080"
     expose:
       - "9090"
+    networks:
+      - default
+      - monitoring
     environment:
       - CUSTODY_PROVIDER=in_house
       - THRESHOLD_T=2
@@ -407,6 +559,18 @@ services:
       - WALLET_MANAGEMENT_URL=http://wallet-management:9090
       - KAFKA_BROKERS=kafka:9092
       - NODE_ID=node-0
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=mpc-signing-service
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
+      # mTLS for the gRPC port. The /certs mount is read-only; provision the
+      # CA + server cert/key out-of-band (e.g. scripts/gen-certs.sh or a
+      # secrets mount). When all three are unset, DEV_MODE=1 allows
+      # plaintext; in prod the service refuses to start without them.
+      # - TLS_CERT_FILE=/certs/mpc-signing-service.crt
+      # - TLS_KEY_FILE=/certs/mpc-signing-service.key
+      # - TLS_CA_FILE=/certs/internal-ca.crt
+    # volumes:
+    #   - internal-certs:/certs:ro
     depends_on:
       kafka:
         condition: service_healthy
@@ -415,10 +579,16 @@ services:
     build: ../notification
     ports:
       - "8092:8080"
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/notification?sslmode=disable
       - KAFKA_BROKERS=kafka:9092
       - DEV_MODE=1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4318
+      - OTEL_SERVICE_NAME=notification
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -429,10 +599,16 @@ services:
     build: ../onboarding-kyc
     ports:
       - "8093:8080"
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/onboarding_kyc?sslmode=disable
       - KAFKA_BROKERS=kafka:9092
       - DEV_MODE=1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=onboarding-kyc
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -443,11 +619,20 @@ services:
     build: ../payment-orchestration
     ports:
       - "8094:8080"
+    networks:
+      - default
+      - monitoring
     environment:
       - WEBHOOK_SECRET=dev-secret
       - RAIL_CONNECTORS_URL=http://rail-connectors:8080
       - KAFKA_BROKERS=kafka:9092
       - DEV_MODE=1
+      # Shared HS256 secret for service-token JWT auth on internal REST
+      # endpoints. Override in real deployments via a secrets mount.
+      - SERVICE_TOKEN_SECRET=dev-internal-shared-secret
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=payment-orchestration
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       kafka:
         condition: service_healthy
@@ -458,6 +643,9 @@ services:
       - "8095:8080"
     expose:
       - "9090"
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/policy_engine?sslmode=disable
       - REDIS_URL=redis://redis:6379
@@ -466,6 +654,9 @@ services:
       - PORT=8080
       - KAFKA_BROKERS=kafka:9092
       - DEV_MODE=1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=policy-risk-engine
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -478,10 +669,16 @@ services:
     build: ../pricing-quote
     ports:
       - "8096:8080"
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/pricing_quote?sslmode=disable
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/pricing_quote?sslmode=disable
       - REDIS_URL=redis://redis:6379
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=pricing-quote
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -492,10 +689,16 @@ services:
     build: ../rail-connectors
     ports:
       - "8097:8080"
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/rail_connectors?sslmode=disable
       - WEBHOOK_SECRET=dev-secret
       - DEV_MODE=1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=rail-connectors
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -504,10 +707,16 @@ services:
     build: ../reconciliation
     ports:
       - "8098:8080"
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/reconciliation
       - KAFKA_BROKERS=kafka:9092
       - ENABLE_KAFKA=true
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=reconciliation
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -518,6 +727,9 @@ services:
     build: ../transaction-orchestrator
     ports:
       - "8099:8080"
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/transaction_orchestrator?sslmode=disable
       - EVENT_BUS_URL=kafka://kafka:9092?topic=transactions
@@ -528,6 +740,20 @@ services:
       - PAYMENT_URL=http://payment-orchestration:8080
       - BLOCKCHAIN_URL=http://blockchain-gateway:8080
       - ENABLE_STUB_PARTNERS=0
+      # Shared HS256 secret for service-token JWT auth on internal REST
+      # endpoints. Override in real deployments via a secrets mount.
+      - SERVICE_TOKEN_SECRET=dev-internal-shared-secret
+      # mTLS material for the txo→partner gRPC dials. When all three are
+      # unset, the dials fall back to plaintext (allowed only with DEV_MODE=1
+      # or ENABLE_STUB_PARTNERS=1). Uncomment and mount /certs to enable.
+      # - TLS_CERT_FILE=/certs/transaction-orchestrator.crt
+      # - TLS_KEY_FILE=/certs/transaction-orchestrator.key
+      # - TLS_CA_FILE=/certs/internal-ca.crt
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=transaction-orchestrator
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
+    # volumes:
+    #   - internal-certs:/certs:ro
     depends_on:
       postgres:
         condition: service_healthy
@@ -550,6 +776,9 @@ services:
     build: ../treasury-orchestration
     ports:
       - "8100:8080"
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/treasury?sslmode=disable
       - REDIS_URL=redis://redis:6379/0
@@ -560,6 +789,9 @@ services:
       - TX_ORCH_EVENT_TOPIC=transactions
       - KAFKA_BROKERS=kafka:9092
       - DEV_MODE=1
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=treasury-orchestration
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -576,6 +808,9 @@ services:
     build: ../wallet-management
     ports:
       - "8101:8080"  # REST; gRPC (ResolveKeyID, gateway callbacks) is on wallet-management:9090 inside the network
+    networks:
+      - default
+      - monitoring
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/wallet_management?sslmode=disable
       - REDIS_URL=redis://redis:6379/0
@@ -586,6 +821,9 @@ services:
       - EVM_XPUB=xpub6CeDpm2b5qtk96oy8yvM572W6cLZSvU5vnpKmKPypbfFwXo86SyT7VtfwWtMZAgZ5eKVMU9NnULt91HBFw9j62wJrcoc1ZRWiNvoorwBRXL
       - BTC_XPUB=xpub6C1HVMz946r433QEjZGpYYWYcspxXXBPys5PBGkmQboRXE6RLfFiStEkKbWKCZaPgDrzZh9nUEunxuiuy6MNdw23du2Ek7GoKYMJVH8eK5E
       - SOL_XPUB=11111111111111111111111111111111
+      - OTEL_EXPORTER_OTLP_ENDPOINT=http://otel-collector:4317
+      - OTEL_SERVICE_NAME=wallet-management
+      - OTEL_RESOURCE_ATTRIBUTES=service.namespace=ai-crypto-onramp,deployment.environment=dev
     depends_on:
       postgres:
         condition: service_healthy
@@ -602,6 +840,8 @@ services:
       context: ../front-office-ui
     ports:
       - "8102:3000"
+    networks:
+      - default
     environment:
       - NODE_ENV=production
       - PORT=3000
@@ -619,6 +859,8 @@ services:
       context: ../middle-office-ui
     ports:
       - "8103:3000"
+    networks:
+      - default
 
   # back-office-ui: Streamlit treasury/finance console on :8501.
   # Talks to backend services directly via REST.
@@ -627,6 +869,8 @@ services:
       context: ../back-office-ui
     ports:
       - "8104:8501"
+    networks:
+      - default
     environment:
       - STREAMLIT_SERVER_PORT=8501
       - TREASURY_URL=http://treasury-orchestration:8080
@@ -643,10 +887,26 @@ services:
     image: twinproduction/gatus:latest
     ports:
       - "8090:8080"
+    networks:
+      - default
+      - monitoring
     volumes:
       - ./gatus.yml:/config/config.yaml:ro
       - gatus-data:/data/
 
+networks:
+  monitoring:
+    driver: bridge
+
 volumes:
   gatus-data:
   pg-data:
+  prometheus-data:
+  loki-data:
+  tempo-data:
+  grafana-data:
+  # Internal mTLS material (CA + per-service cert/key). Populate out-of-band
+  # via a secrets mount or `mpc-signing-service/scripts/gen-certs.sh`; the
+  # compose file does not generate certs. Mount read-only at /certs in the
+  # services that opt into mTLS (mpc-signing-service, transaction-orchestrator).
+  internal-certs:
