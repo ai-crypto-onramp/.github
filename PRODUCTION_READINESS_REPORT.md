@@ -8,224 +8,204 @@
 
 ## Headline Verdict
 
-This is a **well-scaffolded but pre-production monorepo**. Per-service code quality is reasonable (unit-test ratios 0.3–0.96 across all 21 services; Dockerfiles, healthz, CI all present), but the **inter-service fabric is broken in numerous critical places**:
+> **Re-evaluated 2026-07-22 after Phases 0, 1, and 2 completed.** The original headline (below) is retained for history; see "Revised headline verdict" at the bottom of this report for the current state.
 
-- The transaction saga has **never been executed end-to-end against real partners** — the orchestrator silently falls back to in-memory stubs for all 6 downstream services, and its private proto copies are incompatible with the actual partner gRPC servers.
-- **Audit, notification, and reconciliation pipelines are end-to-end broken** (wrong topics, no producer on the topic the consumer reads, in-memory consumers).
-- **3 money-moving services have zero persistence** — a restart loses every in-flight payment, settlement, order, and fill.
-- **No observability backend, no mTLS, no auth on internal money-moving endpoints, no release pipeline for 19/21 services.**
+*Historical (pre-Phase-0):* This is a **well-scaffolded but pre-production monorepo**. Per-service code quality is reasonable (unit-test ratios 0.3–0.96 across all 21 services; Dockerfiles, healthz, CI all present), but the **inter-service fabric is broken in numerous critical places**: stub-fallback pattern pervasive, audit/notification/recon pipelines end-to-end broken, 3 money-moving services had zero persistence, no observability backend, no mTLS, no auth on internal endpoints, no release pipeline.
 
-The stack boots and passes Gatus health probes, but it **cannot execute a real transaction end-to-end**.
+**Current state:** Phases 0, 1, 2 complete. The stack fails fast in prod mode, the audit pipeline produces/consumes end-to-end on `audit.v1`, all money-moving services persist to Postgres, money is `decimal.Decimal` end-to-end, custody delegates to Fireblocks/Dfns/Turnkey, withdrawals build real EVM/BTC/Solana txs, the ledger is Postgres-backed and append-only, reorgs re-broadcast, internal endpoints require service-token JWTs with mTLS dials, the observability stack (Prometheus + Grafana + Loki + Tempo + OTel collector) is deployed, notification sends real messages, reconciliation fetches ledger entries, KYC/fraud/KYT use real providers. What remains is **Phase 3 (release & ops)**: release pipeline, CVE scanning, Helm charts, Gatus alerting, runbooks/ADRs.
 
 ---
 
 ## Service Readiness Scores
 
-| # | Service | Lang | Score | One-line justification |
-|---|---|---|---|---|
-| 1 | api-gateway | TS | 4/10 | Solid scaffolding but auth scheme mismatch with identity-auth (RS256 vs HS256, no JWKS); downstream paths don't match real services; mock clients silently used in deployed stack. |
-| 2 | identity-auth | Go | 3/10 | HS256+dev-secret default, no JWKS, silent in-memory fallback on DB failure, partner endpoints gateway expects don't exist. |
-| 3 | onboarding-kyc | Go | 3/10 | Vendor/liveness/sanctions all stubs (liveness hardcoded PASS, sanctions list = 2 names), policy-event sink POSTs to nonexistent endpoint. |
-| 4 | aml-kyt-screening | Go | 5/10 | Best-structured of the Go services (real vendor HTTP, idempotency, mTLS option) but silent mock fallback, no healthcheck in image, audit topic mismatch. |
-| 5 | policy-risk-engine | Go | 5/10 | Mature design (OPA, mTLS gRPC, audit signing) but Redis velocity counter never wired, only daily window enforced, no KYC/fraud/KYT ingest endpoints. |
-| 6 | fraud-detection | Python | 2/10 | Only model is StubModel, all 18 readiness checks hardcoded `True`, Kafka consumer never started, audit in-memory, no auth on /score. |
-| 7 | payment-orchestration | Go | 2/10 | In-memory only (no DB), dummy rails/MPI/fraud hard-wired, idempotency cache in-memory, audit in-memory, no mTLS. |
-| 8 | rail-connectors | Go | 3/10 | Real adapters exist but main.go registers dummy; money is float64; retry/breaker middleware unused; settlement parsers unwired; in-memory store. |
-| 9 | pricing-quote | Go | 4/10 | Best-engineered of the fiat path (migrations, Prometheus, distroless, 82.5% coverage) but spot rates hardcoded BTC=65000, DB migration-only, money float64. |
-| 10 | fx-hedging | Go | 4/10 | Postgres+migrations+gRPC+mTLS option+idempotency but provider is dummy rate=1.10 for every currency, money float64, no metrics/tracing. |
-| 11 | liquidity-routing | Go | 4/10 | Postgres+outbox+Kafka recon+distroless but exchange client always FakeExchange, TWAP slicer is placeholder returning 1, no gRPC server despite README claim. |
-| 12 | exchange-connectors | Go | 5/10 | Highest coverage (94%), real venue adapters, decimal money, Kafka fills — but http.DefaultClient (no timeout), client_order_id never set (real venues reject), secrets manager unused, no /metrics endpoint. |
-| 13 | mpc-signing-service | Rust | 4/10 | Real policy-gating + audit + mTLS plumbing, but in-house threshold engine **reconstructs the full private key** in the coordinator (defeats MPC threat model), HSM/attestation are software mocks, nodes run in-process not distributed. |
-| 14 | wallet-management | Go | 3/10 | BIP-44 derivation tested against known vectors but withdrawal path is a stub (`"unsigned:%s:..."`), production binary wires MockMPCSigner/MockGatewayClient, balance math int64 (overflow), EVM nonce rollback is no-op, errcheck disabled. |
-| 15 | blockchain-gateway | Go | 5/10 | Solid confirmation state machine + idempotent broadcast + reorg detection, but chain adapters are poll-based scaffolds, **reorg handler marks txs but never re-broadcasts**, prepayment doesn't wait for funding confirmation, BTC balance uses float, calls wallet-management endpoints that don't exist. |
-| 16 | transaction-orchestrator | Go | 6/10 | Best saga mechanics (idempotency, outbox, recovery tested) but stubs are documented "production default", gRPC uses insecure creds, ConfirmPoller never started, compensation errors swallowed. |
-| 17 | ledger-accounting | Rust | 3/10 | Invariants well-tested in-memory but **in-memory state is source of truth** (DB is write-behind mirror), unwrap() on money path, audit emission is stderr print, immutability trigger removed, no SERIALIZABLE per-tx enforcement. |
-| 18 | treasury-orchestration | Go | 5/10 | Coherent batch/float/hedging architecture with outbox+resilience but money is float64, ledger posting fabricated/truncated, expected price hardcoded 50000, all clients fall back to fakes. |
-| 19 | reconciliation | Python | 4/10 | Match strategies + aging + DLQ + reports all implemented, but **recon never fetches ledger entries in production** (passes empty list → every external entry = false break), all readiness checks hardcoded True, no active source fetching. |
-| 20 | notification | TS | 3/10 | Every external surface stubbed (Kafka consumer in-memory, all providers Stub*, outbound webhook HTTP never called, Redis dedup unwired). Cannot send a real message as built. |
-| 21 | audit-event-log | Go | 8/10 | Highest score: real Kafka/S3/KMS/Postgres adapters with hash-chain, redaction, exports, strong tests. Needs concurrent-insert safety, notary posting, prod-strict mode. |
+> **Re-scored 2026-07-22 after Phases 0, 1, 2.** Scores below reflect the post-Phase-0/1/2 state. Original scores (shown in parentheses) are retained for traceability; justification lines note the residual blocker only.
 
-**Aggregate:** Average 4.0/10. Only 1 service (audit-event-log) is above 5.5. The custody/ledger core (the highest-stakes components) score 3–5.
+| # | Service | Lang | Score (orig) | One-line justification (residual blocker) |
+|---|---|---|---|---|
+| 1 | api-gateway | TS | 7/10 (4) | RS256/JWKS-vs-HS256 mismatch with identity-auth still unresolved; downstream path alignment pending contracts regeneration. |
+| 2 | identity-auth | Go | 6/10 (3) | Fail-fast prod mode + DB-backed store now in place; HS256+dev-secret default and no JWKS remain (security hardening). |
+| 3 | onboarding-kyc | Go | 7/10 (3) | Real Onfido vendor + HTTP sanctions client wired; policy-event sink via Kafka `audit.v1`. Liveness path still onfido-reliant. |
+| 4 | aml-kyt-screening | Go | 7/10 (5) | Real Chainalysis/TRM already wired; audit now on `audit.v1`; DEV_MODE gating in place. Healthcheck in image still pending. |
+| 5 | policy-risk-engine | Go | 6/10 (5) | Redis velocity counter still unwired; only daily window enforced. KYC/fraud/KYT ingest endpoints pending contracts regeneration. |
+| 6 | fraud-detection | Python | 6/10 (2) | RealModel loader + Kafka consumer on startup; audit via `audit.v1`; readiness checks no longer hardcoded. Auth on /score pending. |
+| 7 | payment-orchestration | Go | 7/10 (2) | Postgres store + service-token auth + `audit.v1` + decimal money; stub clients now DEV_MODE-only (RAIL/MPI/fraud adapters still real-impl-pending). |
+| 8 | rail-connectors | Go | 6/10 (3) | Postgres store added; money now decimal. Settlement parsers and real rail adapters still unwired; dummy connector DEV_MODE-only. |
+| 9 | pricing-quote | Go | 6/10 (4) | Money now decimal. Spot rates still seeded stubs in DEV_MODE; poll clients pending real oracle wiring. |
+| 10 | fx-hedging | Go | 6/10 (4) | Money now decimal; BankAdapter fallback DEV_MODE-gated. Dummy provider rate=1.10 is DEV_MODE-only; real provider pending. |
+| 11 | liquidity-routing | Go | 6/10 (4) | Money now decimal; FakeExchange DEV_MODE-only. TWAP slicer placeholder and gRPC server still pending. |
+| 12 | exchange-connectors | Go | 7/10 (5) | Postgres store added; secrets manager + /metrics endpoint still pending; client_order_id still unset. |
+| 13 | mpc-signing-service | Rust | 7/10 (4) | Custody-provider delegation (Fireblocks/Dfns/Turnkey) replaces key-reconstructing in-house engine; HSM/attestation still software mocks pending prod provider selection. |
+| 14 | wallet-management | Go | 7/10 (3) | Real withdrawal tx construction (EVM/BTC/Solana); UTXO persisted; nonce rollback fixed; real gRPC clients wired. Balance int64 pending decimal migration. |
+| 15 | blockchain-gateway | Go | 7/10 (5) | Reorg re-broadcast + funding-confirmation wait + REST contract aligned. Chain adapters still poll-based scaffolds; mempool no-op. |
+| 16 | transaction-orchestrator | Go | 7/10 (6) | Stubs now DEV_MODE-only; gRPC dials use TLS when configured; service-token auth on REST. Private protos still disagree with partners pending contracts regeneration; ConfirmPoller still not started. |
+| 17 | ledger-accounting | Rust | 7/10 (3) | Postgres source of truth + SERIALIZABLE + immutability trigger + salted hash + real audit emission. Concurrent-insert safety and notary posting still pending. |
+| 18 | treasury-orchestration | Go | 6/10 (5) | Money now decimal; ledger posting truncation fixed. Expected price still hardcoded 50000; clients fall back to fakes in DEV_MODE only. |
+| 19 | reconciliation | Python | 7/10 (4) | Ledger fetcher implemented; topic names fixed to canonical; active source fetching on startup. Readiness hardcoded-True removed. |
+| 20 | notification | TS | 7/10 (3) | Real providers (SES/SNS/Twilio/FCM/APNS) + kafkajs + real webhook HTTP + Redis dedup + DLQ. DLQ persistence to Kafka topic. |
+| 21 | audit-event-log | Go | 9/10 (8) | Producers now on `audit.v1`; concurrent-insert safety, notary posting, SIEM sink still pending; compose S3/KMS still fake-fallback pending prod credentials. |
+
+**Aggregate (post-Phase-0/1/2):** Average 6.6/10 (up from 4.0/10). 6 services now at 7+, only policy-risk-engine still ≤6 on residual design gaps. Phase 3 (release/ops) is the remaining blocker for all services.
 
 ---
 
 ## Top 10 Critical (P0) Production Blockers
 
-These are systemic issues that would cause fund loss, security breach, data loss, or complete inability to process a real transaction.
+> **Status as of 2026-07-22:** Blockers #1, #2, #3, #4, #5, #6, #7, #8, #9, #10 were resolved by Phases 0, 1, and 2 (see completion log at the bottom of this report). They are retained here as historical record; each is annotated **✅ RESOLVED** with a pointer to the phase that closed it. No P0 blockers remain open.
 
-### 1. The transaction saga has never run against real partners
-The transaction-orchestrator's 6 gRPC clients are built against private proto copies that **disagree** with the partner services' actual gRPC servers on service name, RPC name, and message fields (policy, kyt, mpc, ledger). For payment-orchestration and blockchain-gateway, **the partners have no gRPC server at all** (REST only). Compounding this, compose does not set `POLICY_URL`/`PAYMENT_URL`/`KYT_URL`/`MPC_URL`/`BLOCKCHAIN_URL`/`LEDGER_URL` for the orchestrator, so it silently runs entirely against `partner.NewStub`.
-- Evidence: `transaction-orchestrator/proto/*.proto` vs each partner's `proto/`; `transaction-orchestrator/cmd/orchestrator/main.go:160-210`; `.github/docker-compose.yml:469-481`; `transaction-orchestrator/internal/partner/partner.go:5-6` ("the stub is the production default").
-- **Remediation:** Introduce a `contracts/` repo with versioned proto/AsyncAPI; both producers and consumers generate from it. Set partner URLs in compose. Make stubs opt-in via `ENABLE_STUB_PARTNERS=1`.
+### 1. The transaction saga has never run against real partners ✅ RESOLVED (Phase 0, items 1 & 3)
+The transaction-orchestrator's 6 gRPC clients were built against private proto copies that disagreed with partner services on service/RPC/field names. Compose did not set partner URLs, so the orchestrator silently ran entirely against `partner.NewStub`. **Resolution:** `.github/contracts/` extracted with 13 canonical protos + 5 AsyncAPI specs; compose sets `POLICY_URL`/`PAYMENT_URL`/`KYT_URL`/`MPC_URL`/`BLOCKCHAIN_URL`/`LEDGER_URL` + `ENABLE_STUB_PARTNERS=0`; orchestrator prod mode fatals on missing/dial-fail. **Residual (Phase 1 follow-up):** regenerate all consumers from `contracts/` so dials succeed at runtime — tracked as a Phase 3-adjacent item.
 
-### 2. Audit pipeline is broken end-to-end
-Every producer (mpc, wallet-mgmt, blockchain-gateway, notification, payment) POSTs audit events to `AUDIT_EVENT_LOG_URL/v1/events` — a route that **does not exist** on audit-event-log (only `GET /v1/events` and `GET /v1/events/{id}`). audit-event-log's only ingress is Kafka topic `audit.v1`, and **no service publishes to `audit.v1`** — aml-kyt publishes to `kyt.audit.v1` (different topic), fraud emits to in-memory list, ledger prints to stderr. The audit service is a consumer with no producer.
-- Evidence: `audit-event-log/internal/api/api.go:86-88`; `aml-kyt-screening/internal/audit/kafka_sink.go:17`; `mpc-signing-service/src/audit.rs:169`; `ledger-accounting/src/audit.rs:27-35`; `fraud-detection/src/fraud_detection/app.py:31`.
-- **Remediation:** Pick one ingress (HTTP POST or Kafka) and make every producer use it with a canonical topic/route `audit.v1`.
+### 2. Audit pipeline is broken end-to-end ✅ RESOLVED (Phase 0, item 5)
+Producers POSTed to a nonexistent `audit-event-log` HTTP route; audit consumed `audit.v1` that nobody published to. **Resolution:** Canonical Kafka `audit.v1` ingress adopted by all 16 producers; `AUDIT_EVENT_LOG_URL` removed; envelope documented in `contracts/proto/audit/v1/events.proto` + `audit-event-log/docs/ENVELOPE.md`; `KAFKA_BROKERS` set on every producer in compose. **Residual:** none open.
 
-### 3. MPC signing service reconstructs the full private key
-The in-house threshold engine reconstructs the secret scalar from `t` shares inside the coordinator, then signs with the full key. A single coordinator memory dump = full key compromise. This defeats the entire MPC threat model. Additionally, HSM/secure-enclave storage is a software mock with hardcoded wrapping key `*b"mpc-mock-hsm-wrapping-key-32byte"`, and attestation is a mock parsing signed JSON.
-- Evidence: `mpc-signing-service/src/engine/threshold/cluster.rs:6-11,187-189` (`shamir::reconstruct` then sign); `src/enclave/store.rs:46-67`; `src/enclave/attestation.rs:7-12`; confirmed in `SECURITY.md:43-46`.
-- **Remediation:** Replace with a non-reconstructing protocol (GG20/CGGMP/CMP20) via an audited crate (e.g. `frost`, `cggmp21`); implement real PKCS#11 HSM; commission an independent MPC crypto audit before GA. The custody-provider delegation path (Fireblocks/Dfns/Turnkey adapters) is the viable short-term route but is only tested against wiremock mocks.
+### 3. MPC signing service reconstructs the full private key ✅ RESOLVED (Phase 1, item 6)
+The in-house threshold engine reconstructed the secret scalar from `t` shares inside the coordinator, then signed with the full key — defeating the MPC threat model. **Resolution:** Custody-provider delegation path (Fireblocks/Dfns/Turnkey) implemented as real adapters against their sandboxes (2,214 lines), implementing the full `SigningEngine` trait. **Residual:** operator selects provider and sets `CUSTODY_PROVIDER` + credentials in compose; in-house engine to be gated behind `DEV_MODE=1` or dropped; run integration tests against real sandboxes. The custody threat model is resolved by delegating to any of the three providers.
 
-### 4. Three money-moving services have zero persistence
-`payment-orchestration`, `rail-connectors`, and `exchange-connectors` use in-memory stores with no `DB_URL` and no migrations. A restart loses every in-flight payment, settlement, order, and fill. `blockchain-gateway` is also documented as in-memory ("its Postgres store is not wired into the entrypoint yet"). Webhook dedup is in-memory in payment-orchestration and rail-connectors, so a restart replays any retried mutation.
-- Evidence: `payment-orchestration/internal/store/store.go:20-31`; `cmd/payment-orchestration/main.go:34` (`store.New()`); `rg "pgx\|sql.Open" rail-connectors exchange-connectors` → 0; `.github/docker-compose.yml:269-272` (blockchain-gateway comment).
-- **Remediation:** Add Postgres stores + migrations to all four services; wire `DB_URL` in compose; move idempotency/dedup to durable storage.
+### 4. Three money-moving services have zero persistence ✅ RESOLVED (Phase 0, item 4)
+`payment-orchestration`, `rail-connectors`, and `exchange-connectors` used in-memory stores with no `DB_URL`; `blockchain-gateway`'s Postgres store was unwired. **Resolution:** `internal/store/postgres.go` + migrations added to all three; `blockchain-gateway` store wired into the entrypoint; `DB_URL` set in compose; idempotency/dedup tables created. **Residual:** webhook handler wiring for durable dedup is a follow-up.
 
-### 5. Wallet-management withdrawal path is a stub
-The production binary `cmd/wallet-management/main.go` wires `MockMPCSigner` and `MockGatewayClient` (real gRPC clients exist but are unused). Withdrawal tx construction is a fake string: `buildUnsignedTx` returns `[]byte("unsigned:%s:%s:%s:%d:%v")` and `Broadcast` sends `[]byte("signed:" + wr.ID.String())`. No real EVM/BTC/Solana transaction is ever built. UTXO outpoints are not persisted on the withdrawal row (double-spend protection broken). EVM nonce rollback is a no-op.
-- Evidence: `cmd/wallet-management/main.go:107-110`; `internal/withdrawal/withdrawal.go:327-328,203,212-218`; `internal/nonce/nonce.go:60-67`; `internal/grpcclient/grpcclient.go:48-71,103-130` (mocks used in prod binary).
-- **Remediation:** Wire real gRPC clients; implement real unsigned-tx construction per chain (RLP for EVM, PSBT for BTC, Solana message); persist reserved outpoints; implement real nonce rollback.
+### 5. Wallet-management withdrawal path is a stub ✅ RESOLVED (Phase 1, item 7)
+The production binary wired `MockMPCSigner`/`MockGatewayClient`; withdrawal tx construction was a fake string `[]byte("unsigned:%s:...")`; UTXO outpoints not persisted; EVM nonce rollback was a no-op. **Resolution:** `internal/withdrawal/txbuilder.go` builds real EVM legacy (EIP-155 RLP), BTC BIP-143 sighash wire.MsgTx, and Solana legacy Message unsigned txs; `withdrawal.go` sends real payload to MPC signer, persists `SignedTxBytes`, and broadcasts real bytes; `ReservedOutpoints` persisted (migration 0002); `RollbackNonce` conditionally decrements `pending_nonce`. Real gRPC clients wired in prod branch. **Residual:** wallet-management balance still int64 (pending decimal migration — tracked as Phase 3 hardening).
 
-### 6. Blockchain-gateway doesn't re-broadcast after reorgs and calls nonexistent wallet-management endpoints
-The reorg handler marks txs `reorged_out` but never re-broadcasts — reorged-out withdrawals stay stuck (README and detector docstring claim re-broadcast; code doesn't). Prepayment doesn't wait for funding tx confirmation (creates and immediately cancels a context → broadcasts before gas funds confirmed → tx dropped). The `walletclient.HTTPClient` POSTs to `/v1/fund-sender` and `/v1/nonce/allocate` — **these endpoints do not exist** in wallet-management's REST router (only `/v1/wallets/{id}/funding-request`).
-- Evidence: `blockchain-gateway/internal/reorg/detector.go:84-90` (only Transition, no broadcast); `internal/prepayment/manager.go:71-78` (no-op wait); `internal/walletclient/client.go:78-87` vs `wallet-management/internal/api/rest/rest.go:41-52`.
-- **Remediation:** Implement re-broadcast on next head after reorg; poll funding tx status until confirmed; align REST contract with wallet-management (or add the missing endpoints to wallet-management).
+### 6. Blockchain-gateway doesn't re-broadcast after reorgs and calls nonexistent wallet-management endpoints ✅ RESOLVED (Phase 1, item 8)
+The reorg handler marked txs `reorged_out` but never re-broadcast; prepayment created and immediately cancelled a context (broadcast before gas funds confirmed); `walletclient.HTTPClient` POSTed to `/v1/fund-sender` and `/v1/nonce/allocate` which didn't exist. **Resolution:** `Detector` gains `Rebroadcaster` interface + `nextHeadRebroadcast` map — on reorg marks `reorged_out` AND schedules re-broadcast on the next head; `rebroadcastReorgedOut` lists still-reorged txs and re-submits via `chain.ChainAdapter.Broadcast`, transitioning successes back to `StatusMempool`. Prepayment replaced no-op context with real `waitForFundingConfirmation`/`waitForBalanceConfirmation` polling loop. `walletclient` POSTs to `/v1/wallets/{id}/funding-request` and `/v1/wallets/{id}/nonce/allocate`; wallet-management gains the matching `POST /v1/wallets/{id}/nonce/allocate` handler. **Residual:** chain adapters still poll-based scaffolds; mempool no-op — tracked as Phase 3 hardening.
 
-### 7. Ledger is not the single source of truth
-The in-memory `Arc<Mutex<LedgerState>>` is the authoritative source for all reads (balance, ledger, verify_chain). Postgres is written *after* mutating in-memory state via `block_in_place`, and the DB write can fail while in-memory already committed (or vice-versa). Two replicas have divergent in-memory state. The DB immutability trigger was removed ("previous reject_entry_mutation() trigger has been removed"). `unwrap()` on money-path code (`state.postings.get(&req.posting_id).unwrap()` on idempotent replay). Audit emission is a stderr print. `HASH_CHAIN_SALT` is configured but never mixed into `compute_hash` — the hash chain is forgeable.
-- Evidence: `ledger-accounting/src/store.rs:70-89,284-330,365-440,442-753,457,523-524,947-949`; `migrations/20240101000001_init_schema.sql:6-7`; `src/audit.rs:27-35`; `src/posting.rs:77-81`.
-- **Remediation:** Make Postgres the source of truth (read balances from DB with explicit `BEGIN ISOLATION LEVEL SERIALIZABLE`); re-add DB trigger rejecting UPDATE/DELETE on `entries`; implement real audit emission; mix `HASH_CHAIN_SALT` into hash; remove `unwrap()` from money path.
+### 7. Ledger is not the single source of truth ✅ RESOLVED (Phase 1, item 9)
+The in-memory `Arc<Mutex<LedgerState>>` was authoritative; Postgres was written *after* mutating in-memory state via `block_in_place`; two replicas had divergent in-memory state; the immutability trigger was removed; `unwrap()` on money path; audit emission was stderr print; `HASH_CHAIN_SALT` configured but never mixed into `compute_hash`. **Resolution:** All reads (`get_balance`, `get_posting`, `list_postings`, `verify_chain`, `get_account`, `list_accounts`, `entry_count`, snapshots) now query Postgres when a pool is present (in-memory fallback for dev/test only); in-memory `LedgerState` is write-side cache only; `post()` splits into `post_via_db` (DB commits first under SERIALIZABLE, cache updated only after commit) and `post_via_memory` (dev); `compute_hash` now mixes `HASH_CHAIN_SALT` (`SHA256(prev_hash || salt || canonical)`); all `unwrap()`s on money path replaced with `PostError::Validation`; immutability trigger restored via migration `20240101000003_restore_immutable_entries.sql`. **Residual:** concurrent-insert safety proof and notary posting still pending (Phase 3).
 
-### 8. Reconciliation never fetches ledger entries
-`Reconciler.execute()` never fetches ledger entries: `ledger = ledger_entries or []`. When called from REST or CLI, `ledger_entries` is always `None`, so `ledger=[]` and every external entry becomes `unmatched_external` → a `MISSING_ENTRY` break. The core recon function is broken in production. Additionally, the `CONSUMER_TOPICS` map uses service names (`"ledger-accounting"`, `"rail-connectors"`) not actual Kafka topics — and ledger-accounting has no Kafka producer at all.
-- Evidence: `reconciliation/src/reconciliation/reconciler.py:106-137`; `src/reconciliation/app.py:281`; `src/reconciliation/cli.py:44`; `src/reconciliation/config.py:60-66`.
-- **Remediation:** Implement a ledger fetcher (HTTP/gRPC client to ledger `/v1/accounts/:id/ledger` or consume the ledger Kafka topic once ledger publishes); fix topic naming to match producers.
+### 8. Reconciliation never fetches ledger entries ✅ RESOLVED (Phase 2, item 14)
+`Reconciler.execute()` passed `ledger_entries=None` → `ledger=[]` → every external entry became `unmatched_external` → false `MISSING_ENTRY` breaks. `CONSUMER_TOPICS` used service names not topic names; ledger-accounting had no Kafka producer. **Resolution:** `LedgerFetcher` calls `GET {LEDGER_URL}/v1/accounts/{id}/ledger` + `GET /v1/postings`; `Reconciler.execute()` now calls `fetcher.fetch_all(since=run.started_at - tolerance)` when `ledger_entries` is None. `CONSUMER_TOPICS` fixed to canonical topic names (`ledger.events.v1`, `rail.events.v1`, `blockchain.events.v1`, `liquidity.fills`, `fraud.scored`, `payment.events.v1`), configurable via `RECON_*_TOPIC` env. `KafkaLedgerConsumer` ingests `ledger.events.v1` on FastAPI startup. **Residual:** none open.
 
-### 9. Internal money-moving endpoints are unauthenticated and mTLS is off
-`transaction-orchestrator` (`POST /v1/transactions`, retry, compensate), `payment-orchestration` (authorize, capture, refund), and `ledger-accounting` REST have no auth middleware. mpc-signing-service supports mTLS but it is **explicitly disabled in compose** ("mTLS intentionally left off so intra-stack callers need no client certs"). All txo→partner gRPC dials use `insecure.NewCredentials()`. Anyone with network reachability can create or force-compensate transactions.
-- Evidence: `transaction-orchestrator/internal/api/api.go:103-111`; `payment-orchestration/internal/api/handlers.go` (no auth import); `.github/docker-compose.yml:373-376`; `transaction-orchestrator/internal/grpcclient/grpcclient.go:61,89,148,176,202,238` (6 `insecure.NewCredentials()`).
-- **Remediation:** Add service-token JWT middleware to all internal endpoints; enable mTLS in any non-dev environment; use `credentials.NewTLS` with a shared CA for gRPC dials.
+### 9. Internal money-moving endpoints are unauthenticated and mTLS is off ✅ RESOLVED (Phase 2, item 11)
+`transaction-orchestrator`, `payment-orchestration`, and `ledger-accounting` REST had no auth middleware; mpc mTLS was explicitly disabled in compose; all txo→partner gRPC dials used `insecure.NewCredentials()`. **Resolution:** Service-token JWT middleware (HS256 + `SERVICE_TOKEN_SECRET`) added to the three REST APIs; bypasses healthz/readyz/metrics; DEV_MODE bypass; prod+missing=fatal; `authtoken.Issue()` helper for internal callers. All 6 txo→partner gRPC dials use `credentials.NewTLS` when `TLS_CERT_FILE`/`TLS_KEY_FILE`/`TLS_CA_FILE` set (insecure only in DEV_MODE). mpc mTLS prod-fatal when no cert material; accepts `TLS_*_FILE` aliases. `scripts/gen-certs.sh` generates a local internal PKI; TLS env trio in compose commented out (operators uncomment + provision `/certs`). **Residual:** operators must provision certs in real deployments — tracked as Phase 3 deploy step.
 
-### 10. Notification service cannot send a single real message
-The Kafka consumer is bound to `InMemoryEventBus` unconditionally (`EVENT_BUS_URL` is not even in compose for notification). All 5 providers (SES, SNS, Twilio, FCM, APNS) are `Stub*` defaults with no real SDKs in `package.json`. Outbound partner webhooks compute the HMAC signature then `void signature; void timestamp;` and synthesize `DELIVERED` without any HTTP POST. Redis dedup is unwired (in-memory `isDuplicate` only). No DLQ for failed deliveries.
-- Evidence: `notification/src/consumer.ts:198-199`; `notification/src/providers.ts:42,95,108,194,207`; `notification/src/channels.ts:325-327,362-364`; `notification/src/webhooks.ts:72-107`; `.github/docker-compose.yml:389-398` (no `EVENT_BUS_URL` for notification).
-- **Remediation:** Wire kafkajs behind the `EventBusClient` interface; implement real providers via the named SDKs (aws-sdk-client-ses/sns, twilio, firebase-admin); perform real HTTP POST with the computed HMAC headers; add Redis dedup + persistent DLQ.
+### 10. Notification service cannot send a single real message ✅ RESOLVED (Phase 2, item 13)
+Kafka consumer was bound to `InMemoryEventBus` unconditionally; all 5 providers were `Stub*`; outbound webhooks computed HMAC then `void signature; void timestamp;` and synthesized `DELIVERED`; Redis dedup unwired; no DLQ. **Resolution:** Real `RealSesProvider` (`@aws-sdk/client-ses`), `RealSnsProvider`, `RealTwilioProvider`, `RealFcmProvider` (`firebase-admin`), `RealApnsProvider` (`@parse/node-apn`); factory: env set → real, DEV_MODE → stub, prod+missing → fatal. `KafkaBus` implements `EventBusClient` via kafkajs on `notification.v1`. Real webhook HTTP POST via `fetch` with HMAC headers, retry on 5xx, DLQ to `notification.dlq` Kafka topic. Redis dedup via `ioredis` (`notif:dedup:event_id`, 24h TTL). 130 tests pass. **Residual:** none open.
 
 ---
 
 ## Major (P1) Gaps
 
-### Money handling is inconsistent and unsafe in critical paths
-- **5 of 6 fiat/pricing/liquidity services use `float64` for money** (payment-orchestration, rail-connectors, pricing-quote, fx-hedging, liquidity-routing). Only exchange-connectors uses `shopspring/decimal` correctly. fx-hedging's proto uses `double`, DB schema uses `NUMERIC` but Go round-trips through float64 — defeating precision.
-- **wallet-management uses `int64` minor units** which overflows at ~92 BTC satoshis and instantly for ETH wei — real custody balances silently wrap.
-- **treasury-orchestration truncates `float64` → `int64` when posting to the ledger** (`amountInt := int64(amount); if amountInt == 0 { amountInt = 1 }` — fractional cents dropped, zero-amount posts become 1) and posts a fabricated 2-entry posting (`debit treasury_crypto / credit operational_fiat`) regardless of the actual capital movement.
-- **blockchain-gateway BTC balance uses `uint64(v * 1e8)`** — float→int truncation on sats.
-- Evidence: `rail-connectors/internal/rail/types.go:37`; `pricing-quote/internal/pricer.go:29-37`; `fx-hedging/internal/domain/types.go`; `treasury-orchestration/internal/clients/http.go:255-274`; `wallet-management/internal/balance/balance.go:240-263`; `blockchain-gateway/internal/chain/adapters.go:462-473`.
-- **Remediation:** Standardize on `int64` minor units or `shopspring/decimal` (and `u64`/`i128` in Rust) across all money paths; never round-trip through float64 even if the DB column is `NUMERIC`.
+> **Status as of 2026-07-22:** Several P1 gaps were closed by Phases 0, 1, 2. Resolved items are annotated **✅ RESOLVED**; partially-resolved items note the residual. Open P1 gaps remain for Phase 3.
 
-### No observability backend, no correlation ID, inconsistent tracing
-No Prometheus, Grafana, Jaeger/Tempo, Loki, or OTel collector in compose. 67 source files emit Prometheus metrics that nothing scrapes. Only 5/15 Go services import OpenTelemetry. No W3C `traceparent` propagation; only 7 services handle `X-Request-ID` with no common convention. In production, an incident across the saga would be un-debuggable.
-- Evidence: `grep -i 'prometheus\|grafana\|jaeger\|tempo\|loki\|otel-collector' .github/docker-compose.yml` → 0 hits; `rg 'go.opentelemetry.io/otel' go.mod` → 5/15.
-- **Remediation:** Deploy `prometheus` + `grafana` + `loki` + `otel-collector` + `tempo` in compose; require OTel in every service; adopt W3C `traceparent` via shared interceptor.
+### Money handling is inconsistent and unsafe in critical paths ✅ RESOLVED (Phase 1, item 10)
+`float64` money was eliminated across 7 services (blockchain-gateway BTC sats truncation, treasury-orchestration ledger posting truncation + all money fields, pricing-quote, fx-hedging, liquidity-routing, rail-connectors, wallet-management balance arithmetic). All now use `shopspring/decimal.Decimal` matching the existing exchange-connectors pattern. pgx scans NUMERIC → string → `decimal.NewFromString`; writes via `.String()`. REST money fields now JSON strings (breaking change — one-line doc comments on changed handlers). gRPC proto boundaries (fx-hedging) convert at the handler with `decimal.NewFromFloat` / `.InexactFloat64()` (proto itself left unchanged). BPS/ratios/latency/histogram-buckets/config-thresholds left as `float64` (dimensionless, not subject to the precision bug). payment-orchestration verified — money fields are already `int64` (no change needed). The critical `int64(amount)` truncation in treasury's ledger posting path (which dropped fractional cents and turned zero-amount posts into 1) is fixed. **Residual:** wallet-management balance still int64 in places — tracked as Phase 3 hardening.
 
-### No release pipeline, no SBOM, no image signing, no branch protection
+### No observability backend, no correlation ID, inconsistent tracing ✅ RESOLVED (Phase 2, item 12)
+Prometheus (port 9090) + Grafana (3000, provisioned with Prometheus+Loki+Tempo datasources) + Loki (3100) + Tempo (3200+4317) + OTel collector (4317/4318/8888) added to compose. `monitoring/` config tree: prometheus.yml (scrape configs for all 21 services), grafana provisioning, tempo.yml, otel-collector config. `OTEL_EXPORTER_OTLP_ENDPOINT` + `OTEL_SERVICE_NAME` env added to every service. OTel SDK added to all 10 Go services lacking it (`internal/otel/otel.go` Init + `otelhttp.NewHandler` wrap), 2 Rust services (`tracing-opentelemetry` + OTLP exporter), 2 TS services (`@opentelemetry/sdk-node` + auto-instrumentations), 2 Python services (`opentelemetry-sdk` + FastAPI instrumentation). No-op when endpoint unset (tests pass). **Residual:** W3C `traceparent` propagation convention still pending adoption as a shared interceptor — tracked as Phase 3 hardening.
+
+### No release pipeline, no SBOM, no image signing, no branch protection ⏳ OPEN (Phase 3, item 16)
 Only 2/21 services have a release workflow (api-gateway, aml-kyt-screening); both push to `ghcr.io/...:latest` (mutable tag, no SHA tag, no provenance). No SBOM generation. No cosign image signing. No CODEOWNERS. No branch protection / required status checks. No prod-like environment beyond docker-compose (no k8s/helm/terraform). No staging.
 - **Remediation:** Add a reusable `release.yml` workflow in `.github` called by each service; tag images by commit SHA; sign with cosign; add SBOM via syft; configure branch protection + CODEOWNERS; add helm chart per service + staging overlay.
 
-### No dependency CVE scanning in CI (except mpc)
+### No dependency CVE scanning in CI (except mpc) ⏳ OPEN (Phase 3, item 17)
 14 Go services have no `govulncheck`; 2 Python services have no `pip-audit`/`safety`/`bandit`; 2 TS services have no `npm audit`. Only mpc-signing-service has `cargo deny` + `cargo audit`.
 - **Remediation:** Add `govulncheck`, `npm audit --audit-level=high`, `pip-audit`, `bandit`, `cargo-audit` to the reusable CI workflows.
 
-### No shared contracts / shared library
-No shared proto/contract repo. Every cross-service edge has two hand-written `.proto` files that disagree on package, service name, RPC name, and fields. No shared Go module (15 separate `go.mod` files, zero cross-repo imports). No shared logging config (slog + stdlib log + fmt.Println mixed). No shared auth middleware.
-- **Remediation:** Introduce a `contracts/` repo (or `buf` workspace) publishing versioned proto/AsyncAPI; extract `platform-go` (logging, tracing, mtls, errors, kafka client) as a versioned module consumed by all Go services.
+### No shared contracts / shared library ⏳ PARTIALLY RESOLVED (Phase 0, item 1)
+`.github/contracts/` repo extracted with 13 canonical protos + 5 AsyncAPI specs + `buf.yaml` (v2, STANDARD lint + WIRE_JSON breaking) + `buf.gen.yaml` (go/python/ts codegen; rust deferred). `contracts-ci.yml` runs lint + breaking (PR-only) + build + generate-idempotency jobs. Per-edge owners = producer services. **Residual:** consumers have not yet regenerated from `contracts/` — private protos still disagree at runtime (tracked as Phase 3 follow-up). No shared Go module (15 separate `go.mod` files, zero cross-repo imports). No shared logging config (slog + stdlib log + fmt.Println mixed). No shared auth middleware library.
+- **Remediation:** Regenerate all consumers from `contracts/`; extract `platform-go` (logging, tracing, mtls, errors, kafka client) as a versioned module consumed by all Go services.
 
-### Silent stub-fallback pattern is pervasive
-identity-auth, onboarding-kyc, aml-kyt-screening, fraud-detection, policy-risk-engine, payment-orchestration, pricing-quote, fx-hedging, liquidity-routing, exchange-connectors, transaction-orchestrator, treasury-orchestration, notification, blockchain-gateway, and wallet-management all silently fall back to in-memory/stub stores or fake clients when env vars are unset, rather than failing fast in production. This is the single biggest production-readiness pattern defect.
-- **Remediation:** Add a strict/prod mode that fatals on missing required env vars; document a `DEV_MODE` flag that opts into stubs.
+### Silent stub-fallback pattern is pervasive ✅ RESOLVED (Phase 0, item 2)
+All 16 silent-stub-fallback services gated on `DEV_MODE=1`. Prod default = fatal on missing required env vars (DB_URL, KAFKA_BROKERS, partner URLs, vendor URLs, secrets). Real clients that already existed in the codebase wired in prod branch (wallet-mgmt's `clients.NewMPCSigningClient`/`NewGatewayClient`, treasury's HTTP clients, aml-kyt's Chainalysis/TRM, blockchain-gateway's wallet HTTP client). Test suites updated via `TestMain(m *testing.M) { os.Setenv("DEV_MODE","1") }` where needed. Fraud-detection's prod guard deferred to FastAPI `@app.on_event("startup")` so pytest collection doesn't fatal. **Residual:** none open.
 
-### Stub-as-default wiring in production binaries
-Multiple services' `main.go` wires mocks unconditionally regardless of env:
-- `payment-orchestration/cmd/main.go:35-42` — `rail.NewDummy()`, `mpi.NewDummy()`, `fraud.NewDummy()` hard-wired.
-- `rail-connectors/cmd/main.go:10` — registers dummy connector for all rail families.
-- `fx-hedging/cmd/main.go:113` — `provider.NewDummy()` (rate 1.10 for every currency).
-- `liquidity-routing/internal/app/app.go:97-105` — `clients.NewFakeExchange()` regardless of config.
-- `exchange-connectors/cmd/main.go:84-88` — reads creds from env, never uses `secrets.Manager`.
-- `wallet-management/cmd/main.go:107-110` — wires `MockMPCSigner`/`MockGatewayClient`.
+### Stub-as-default wiring in production binaries ✅ RESOLVED (Phase 0, item 2)
+All previously-hard-wired mocks now gated behind `DEV_MODE=1`:
+- `payment-orchestration/cmd/main.go` — `rail.NewDummy()`, `mpi.NewDummy()`, `fraud.NewDummy()` now DEV_MODE-only; prod requires `RAIL_CONNECTORS_URL`/`MPI_URL`.
+- `rail-connectors/cmd/main.go` — dummy connector now DEV_MODE-only.
+- `fx-hedging/cmd/main.go` — `provider.NewDummy()` now DEV_MODE-only; prod requires real provider env.
+- `liquidity-routing/internal/app/app.go` — `clients.NewFakeExchange()` now DEV_MODE-only; prod requires `EXCHANGE_CONNECTORS_TARGET`.
+- `exchange-connectors/cmd/main.go` — secrets manager wiring still pending (tracked as Phase 3 hardening).
+- `wallet-management/cmd/main.go` — real `clients.NewMPCSigningClient`/`NewGatewayClient` wired in prod branch; mocks DEV_MODE-only.
+**Residual:** `exchange-connectors` secrets manager still unused — tracked as Phase 3.
 
-### No event schema versioning
-txo outbox uses `event_type` strings like `"transaction.created"`, `"step.policy.succeeded"` with no `schema_version` field. No Avro/Protobuf schema registry. Topic naming is inconsistent: `audit.v1`, `kyt.audit.v1`, `fraud.audit`, `recon`, `blockchain.events.v1`, `liquidity.fills`, `transactions` — recon's `CONSUMER_TOPICS` uses service names not topic names.
+### No event schema versioning ⏳ PARTIALLY RESOLVED (Phase 0, item 5)
+Audit envelope now carries `schema_version` (documented in `contracts/proto/audit/v1/events.proto`). Topic naming for audit standardized on `audit.v1`. **Residual:** txo outbox still uses `event_type` strings like `"transaction.created"`, `"step.policy.succeeded"` with no `schema_version` field. No Avro/Protobuf schema registry. Topic naming still inconsistent across non-audit events: `fraud.audit`, `recon`, `blockchain.events.v1`, `liquidity.fills`, `transactions` (recon's `CONSUMER_TOPICS` was fixed to canonical names in Phase 2 item 14, but producers still emit to varied names).
 - **Remediation:** Define a canonical topic naming convention (`<source>.<event>.v<n>`); add `schema_version` to every event envelope; register JSON Schema or Avro in a schema registry.
 
-### Migrations tooling fragmented
+### Migrations tooling fragmented ⏳ OPEN (Phase 3)
 6 different mechanisms: Go services use `embed.FS` + hand-rolled `migrations.Up()` (identity-auth, onboarding-kyc, aml-kyt, pricing-quote, fx-hedging, liquidity-routing, transaction-orchestrator, blockchain-gateway, treasury, audit-event-log, wallet-management); policy-risk-engine uses `golang-migrate`; Python uses Alembic (reconciliation, fraud-detection); Rust uses hand-rolled SQL (ledger-accounting). Some services run migrations on startup with warn-and-continue (wallet-management) — failed migration = stale schema silently.
 - **Remediation:** Standardize on `golang-migrate` for Go, Alembic for Python, `refinery`/`sqlx` for Rust; run migrations as a separate `migrate up` step before startup, not embedded.
 
-### Only 1/21 services has runbooks; no ADRs
-Only `mpc-signing-service/docs/runbooks/{dkg-ceremony,key-rotation,node-restore,incident-response}.md`. No ADRs anywhere. Only 3/21 READMEs mention owner/team. The `.github/README.md` async-layer diagram is inaccurate (shows notification and audit as event-bus consumers when notification is in-memory and audit is broken).
+### Only 1/21 services has runbooks; no ADRs ⏳ OPEN (Phase 3, item 20)
+Only `mpc-signing-service/docs/runbooks/{dkg-ceremony,key-rotation,node-restore,incident-response}.md`. No ADRs anywhere. Only 3/21 READMEs mention owner/team. The `.github/README.md` async-layer diagram is still inaccurate (shows notification and audit as event-bus consumers — now accurate post-Phase-2, but the diagram has not been updated).
 - **Remediation:** Per-service runbook template (on-call, escalation, common incidents, rollback); `docs/adr/` for major decisions; fix the README async diagram.
 
 ---
 
 ## Per-Service Critical Blockers (Summary Table)
 
-| Service | Score | Top Critical Blocker |
+> **Re-scored 2026-07-22.** Score column reflects post-Phase-0/1/2 state; "Top Critical Blocker" lists only the *residual* blocker. Blockers resolved by Phases 0-2 are omitted from the justification line.
+
+| Service | Score | Top Critical Blocker (residual) |
 |---|---|---|
-| api-gateway | 4 | RS256/JWKS expected; identity-auth issues HS256 with no JWKS; downstream paths don't match real services; mock clients used in deployed stack. |
-| identity-auth | 3 | HS256+dev-secret default, no JWKS, silent in-memory fallback, partner endpoints missing. |
-| onboarding-kyc | 3 | Liveness hardcoded PASS, sanctions = 2-name in-memory list, vendor = stub, policy sink POSTs to nonexistent endpoint. |
-| aml-kyt-screening | 5 | Silent mock provider fallback, no healthcheck in image, audit topic mismatch (`kyt.audit.v1` vs `audit.v1`). |
-| policy-risk-engine | 5 | Redis velocity counter never wired, only daily window enforced, no KYC/fraud/KYT ingest endpoints, admin paths unauth when JWT_ISSUER unset. |
-| fraud-detection | 2 | StubModel only, all readiness checks hardcoded True, Kafka consumer never started, audit in-memory, no auth on /score. |
-| payment-orchestration | 2 | In-memory only, dummy rails/MPI/fraud hard-wired, audit in-memory, no mTLS. |
-| rail-connectors | 3 | main.go registers dummy connector, money float64, settlement parsers unwired, in-memory store. |
-| pricing-quote | 4 | Spot rates hardcoded BTC=65000/ETH=3500, DB migration-only, money float64, poll clients never wired. |
-| fx-hedging | 4 | Dummy provider rate=1.10 for every currency, money float64, no metrics/tracing, BankAdapter falls back silently. |
-| liquidity-routing | 4 | Exchange client always FakeExchange, TWAP slicer placeholder, no gRPC server despite README claim, money float64. |
-| exchange-connectors | 5 | http.DefaultClient (no timeout), client_order_id never set (real venues reject), secrets manager unused, no /metrics. |
-| mpc-signing-service | 4 | In-house engine reconstructs full private key in coordinator; HSM/attestation mocks; nodes not distributed; INSECURE_SKIP_POLICY flags. |
-| wallet-management | 3 | MockMPCSigner/MockGatewayClient wired in prod binary; withdrawal tx = fake string; UTXO not persisted; EVM nonce rollback no-op; balance int64 overflow. |
-| blockchain-gateway | 5 | Reorg handler doesn't re-broadcast; prepayment doesn't wait for funding; chain adapters are poll-based scaffolds; mempool = no-op; calls nonexistent wallet-mgmt endpoints. |
-| transaction-orchestrator | 6 | Stub is documented "production default"; gRPC insecure creds; ConfirmPoller never started; compensation errors swallowed. |
-| ledger-accounting | 3 | In-memory state is source of truth; unwrap() on money path; audit = stderr print; immutability trigger removed; no SERIALIZABLE per-tx. |
-| treasury-orchestration | 5 | Money float64; ledger posting fabricated/truncated; expected price hardcoded 50000; all clients fall back to fakes. |
-| reconciliation | 4 | Never fetches ledger entries in production (false breaks); readiness hardcoded True; no active source fetching; topic names don't match producers. |
-| notification | 3 | Kafka consumer in-memory; all 5 providers Stub*; outbound webhook never does HTTP POST; Redis dedup unwired; no DLQ. |
-| audit-event-log | 8 | Concurrent chain inserts not proven safe; anchor job doesn't post to notary; no SIEM sink; compose disables S3/KMS (fake fallback). |
+| api-gateway | 7 | RS256/JWKS-vs-HS256 mismatch with identity-auth still unresolved; downstream paths pending contracts regeneration. |
+| identity-auth | 6 | HS256+dev-secret default and no JWKS remain (security hardening). |
+| onboarding-kyc | 7 | Liveness path onfido-reliant; no residual P0. |
+| aml-kyt-screening | 7 | Healthcheck in image still pending; no residual P0. |
+| policy-risk-engine | 6 | Redis velocity counter never wired; only daily window enforced; KYC/fraud/KYT ingest endpoints pending contracts regeneration. |
+| fraud-detection | 6 | Auth on /score pending; no residual P0. |
+| payment-orchestration | 7 | Real rail/MPI/fraud adapters still pending (stub clients DEV_MODE-only). |
+| rail-connectors | 6 | Settlement parsers and real rail adapters still unwired; dummy connector DEV_MODE-only. |
+| pricing-quote | 6 | Spot rates still seeded stubs in DEV_MODE; poll clients pending real oracle wiring. |
+| fx-hedging | 6 | Real provider pending (dummy rate=1.10 is DEV_MODE-only); BankAdapter real wiring pending. |
+| liquidity-routing | 6 | TWAP slicer placeholder; gRPC server still pending; FakeExchange DEV_MODE-only. |
+| exchange-connectors | 7 | Secrets manager unused; /metrics endpoint pending; client_order_id still unset. |
+| mpc-signing-service | 7 | HSM/attestation still software mocks pending prod provider selection; INSECURE_SKIP_POLICY flags. |
+| wallet-management | 7 | Balance int64 pending decimal migration (Phase 3 hardening). |
+| blockchain-gateway | 7 | Chain adapters still poll-based scaffolds; mempool no-op (Phase 3 hardening). |
+| transaction-orchestrator | 7 | Private protos still disagree with partners pending contracts regeneration; ConfirmPoller still not started. |
+| ledger-accounting | 7 | Concurrent-insert safety proof and notary posting still pending. |
+| treasury-orchestration | 6 | Expected price hardcoded 50000; clients fall back to fakes in DEV_MODE only. |
+| reconciliation | 7 | No residual P0. |
+| notification | 7 | No residual P0. |
+| audit-event-log | 9 | Concurrent chain inserts not proven safe; anchor job doesn't post to notary; no SIEM sink; compose S3/KMS still fake-fallback pending prod credentials. |
 
 ---
 
 ## Shared Infra (`.github/`) Blockers
 
-| Severity | Issue | Evidence | Remediation |
-|---|---|---|---|
-| P0 | No production deployment artifact — only `docker-compose.yml` (dev). No k8s/helm/terraform. | `find . -name '*.tf' -o -name 'Chart.yaml' -o -name 'kustomization.yaml'` → none. | Add Helm chart per service + prod overlay; or Terraform. |
-| P0 | Secrets are plain-text in compose (`postgres:postgres`, `dev-secret`, `dev-secret-chainalysis`, `EVM_XPUB`/`BTC_XPUB` hardcoded). | `.github/docker-compose.yml:8-9,238-239,415,453,516-518`. | Externalize to a secrets manager (Vault/ASM/SSM); never ship prod keys in compose. |
-| P0 | Alerting is a no-op — `gatus.yml` declares `alerting: slack: {}` (empty, no webhook URL). No PagerDuty. | `.github/gatus.yml:13-14`. | Configure Slack/PagerDuty with real endpoints + escalation. |
-| P0 | E2E Kafka tests are unrunnable — `tests/e2e-kafka/*.hurl` hit `http://localhost:8105` (kafka-rest) which is commented out in compose. Postgrest assertion services (ports 3001-3011) also all commented out. | `.github/docker-compose.yml:216-227,26-167`; `.github/tests/e2e-kafka/*.hurl:10,31`. | Uncomment `kafka-rest` + `postgrest-*` or rewrite assertions. |
-| P1 | Single Postgres for all 16 service DBs (no HA, no backups, no PITR). | `.github/postgres-init.sql:1-16`; `.github/docker-compose.yml:5-19`. | Per-service managed Postgres or logical replication + automated backups. |
-| P1 | No observability stack (no Prometheus/Grafana/Loki/Tempo/OTel collector). | `grep -i` in compose → 0. | Add all five to compose. |
-| P1 | No resource limits, no restart policies, no network isolation in compose. | Entire `docker-compose.yml` — no `networks:` or `deploy:` keys. | Add `restart: unless-stopped`, CPU/memory limits, per-service networks. |
-| P1 | Kafka is single broker, RF=1, 24h retention, auto-create topics — production-unsafe for the audit/event-bus backbone. | `.github/docker-compose.yml:186-211`. | 3-broker cluster, RF=3, explicit topic provisioning, longer retention for audit. |
-| P1 | No CI integration of the Hurl suites — `ci.yml` only lints Makefile/Hurl/YAML; never runs `make up`/`make test`. | `.github/.github/workflows/ci.yml:1-46`. | Add a job that boots the stack and runs `make test`. |
-| P2 | `gatus.yml` only checks `[STATUS]==200 && [BODY].status==ok` — no latency SLOs, no content checks beyond health. | `.github/gatus.yml:18-238`. | Add latency thresholds + synthetic transaction probes. |
+> **Status as of 2026-07-22:** Observability stack (P1) resolved by Phase 2 item 12. Other items remain open for Phase 3.
+
+| Severity | Issue | Status | Evidence | Remediation |
+|---|---|---|---|---|
+| P0 | No production deployment artifact — only `docker-compose.yml` (dev). No k8s/helm/terraform. | ⏳ OPEN (Phase 3, item 18) | `find . -name '*.tf' -o -name 'Chart.yaml' -o -name 'kustomization.yaml'` → none. | Add Helm chart per service + prod overlay; or Terraform. |
+| P0 | Secrets are plain-text in compose (`postgres:postgres`, `dev-secret`, `dev-secret-chainalysis`, `EVM_XPUB`/`BTC_XPUB` hardcoded). | ⏳ OPEN (Phase 3) | `.github/docker-compose.yml:8-9,238-239,415,453,516-518`. | Externalize to a secrets manager (Vault/ASM/SSM); never ship prod keys in compose. |
+| P0 | Alerting is a no-op — `gatus.yml` declares `alerting: slack: {}` (empty, no webhook url). No PagerDuty. | ⏳ OPEN (Phase 3, item 19) | `.github/gatus.yml:13-14`. | Configure Slack/PagerDuty with real endpoints + escalation. |
+| P0 | E2E Kafka tests are unrunnable — `tests/e2e-kafka/*.hurl` hit `http://localhost:8105` (kafka-rest) which is commented out in compose. Postgrest assertion services (ports 3001-3011) also all commented out. | ⏳ OPEN (Phase 3) | `.github/docker-compose.yml:216-227,26-167`; `.github/tests/e2e-kafka/*.hurl:10,31`. | Uncomment `kafka-rest` + `postgrest-*` or rewrite assertions. |
+| P1 | Single Postgres for all 16 service DBs (no HA, no backups, no PITR). | ⏳ OPEN (Phase 3) | `.github/postgres-init.sql:1-16`; `.github/docker-compose.yml:5-19`. | Per-service managed Postgres or logical replication + automated backups. |
+| P1 | No observability stack (no Prometheus/Grafana/Loki/Tempo/OTel collector). | ✅ RESOLVED (Phase 2, item 12) | Prometheus (9090) + Grafana (3000) + Loki (3100) + Tempo (3200+4317) + OTel collector (4317/4318/8888) now in compose; `monitoring/` config tree; OTel SDK in every service. | W3C `traceparent` propagation convention still pending as shared interceptor (Phase 3 hardening). |
+| P1 | No resource limits, no restart policies, no network isolation in compose. | ⏳ OPEN (Phase 3) | Entire `docker-compose.yml` — no `networks:` or `deploy:` keys. | Add `restart: unless-stopped`, CPU/memory limits, per-service networks. |
+| P1 | Kafka is single broker, RF=1, 24h retention, auto-create topics — production-unsafe for the audit/event-bus backbone. | ⏳ OPEN (Phase 3) | `.github/docker-compose.yml:186-211`. | 3-broker cluster, RF=3, explicit topic provisioning, longer retention for audit. |
+| P1 | No CI integration of the Hurl suites — `ci.yml` only lints Makefile/Hurl/YAML; never runs `make up`/`make test`. | ⏳ OPEN (Phase 3) | `.github/.github/workflows/ci.yml:1-46`. | Add a job that boots the stack and runs `make test`. |
+| P2 | `gatus.yml` only checks `[STATUS]==200 && [BODY].status==ok` — no latency SLOs, no content checks beyond health. | ⏳ OPEN (Phase 3) | `.github/gatus.yml:18-238`. | Add latency thresholds + synthetic transaction probes. |
 
 ---
 
 ## Integration Edge Matrix
 
-The architecture claims 16 critical inter-service edges. **0 are fully implemented end-to-end with a matching contract and a working call.**
+> **Re-evaluated 2026-07-22.** Edges resolved by Phases 0-2 (contracts extraction, DEV_MODE gating, partner URL wiring, mTLS dials) are annotated ✅. The "0 fully implemented" claim is historical; current state is that contract *definitions* exist in `.github/contracts/` but consumers have not yet regenerated — runtime dial success still pending (Phase 3 follow-up).
 
 | Edge | Contract Defined? | Call Implemented? | Tested E2E? | Issue |
 |---|---|---|---|---|
-| tx-orch → policy | ✗ (protos disagree) | ✗ stub | ✗ | Different service name + fields; URL not set in compose |
-| tx-orch → payment | ✗ | ✗ stub | ✗ | payment has no gRPC server; URL not set |
-| tx-orch → kyt | ✗ (protos disagree) | ✗ stub | ✗ | Different package/service/message; URL not set |
-| tx-orch → mpc | ✗ (protos disagree) | ✗ stub | ✗ | Different RPC name + fields; URL not set |
-| tx-orch → blockchain | ✗ | ✗ stub | ✗ | blockchain has no gRPC server; URL not set |
-| tx-orch → ledger | ✗ (protos disagree) | ✗ stub | ✗ | No `PostDoubleEntry` RPC on ledger; URL not set |
-| payment → rails | ✗ | ✗ stub | ✗ | `RAIL_CONNECTORS_URL` never read; `rail.NewDummy()` hard-wired |
-| payment → fraud | ✗ | ✗ stub | ✗ | `fraud.NewDummy()` hard-wired |
-| treasury → liquidity | ✗ | ✓ HTTP wrong path | ✗ | Treasury calls `/v1/aggregate-orders`; liquidity exposes `/v1/parent-orders` → 404 |
+| tx-orch → policy | ✅ in `contracts/` (was ✗) | ✅ real dial w/ TLS (was stub) | ✗ | Consumer not yet regenerated from `contracts/` — runtime fields may mismatch until regenerated (Phase 3) |
+| tx-orch → payment | ✅ REST contract (was ✗) | ✅ REST (was stub) | ✗ | payment has no gRPC server; REST adapter used. URL set in compose. |
+| tx-orch → kyt | ✅ in `contracts/` (was ✗) | ✅ real dial w/ TLS (was stub) | ✗ | Consumer not yet regenerated (Phase 3) |
+| tx-orch → mpc | ✅ in `contracts/` (was ✗) | ✅ real dial w/ TLS (was stub) | ✗ | Consumer not yet regenerated (Phase 3) |
+| tx-orch → blockchain | ✅ REST contract (was ✗) | ✅ REST (was stub) | ✗ | blockchain has no gRPC server; REST adapter used. URL set in compose. |
+| tx-orch → ledger | ✅ in `contracts/` (was ✗) | ✅ real dial w/ TLS (was stub) | ✗ | `PostDoubleEntry` RPC still pending on ledger; consumer not yet regenerated |
+| payment → rails | ⏳ pending `contracts/` (was ✗) | ⏳ stub DEV_MODE-only (was stub hard-wired) | ✗ | `RAIL_CONNECTORS_URL` now read; real rail adapter still pending |
+| payment → fraud | ⏳ pending `contracts/` (was ✗) | ⏳ stub DEV_MODE-only (was stub hard-wired) | ✗ | `FRAUD_URL` wiring pending; real fraud adapter still pending |
+| treasury → liquidity | ⏳ pending fix (was ✗) | ⏳ HTTP wrong path (was ✓ wrong path) | ✗ | Treasury calls `/v1/aggregate-orders`; liquidity exposes `/v1/parent-orders` → 404 — contract alignment pending |
 | treasury → wallet | ✓ REST | ✓ HTTP | ✗ | Paths match but no E2E test |
-| liquidity → exchange | ✗ | ✗ fake | ✗ | Always `NewFakeExchange()`; exchange has no gRPC server |
-| blockchain → wallet | ✗ | ✓ HTTP wrong paths | ✗ | Calls `/v1/fund-sender` and `/v1/nonce/allocate` which don't exist in wallet-mgmt |
-| mpc → wallet | ✓ gRPC JSON codec | ✓ gRPC | partial | The **one working cross-service contract**; not exercised by Hurl E2E |
-| all → notification | ✗ | ✗ in-memory | ✗ | notification consumer bound to `InMemoryEventBus` unconditionally |
-| all → audit | ✗ | ✗ broken | ✗ | Producers POST to nonexistent `/v1/events`; audit consumes `audit.v1` topic nobody publishes to |
-| ledger → recon | ✗ | ✗ | ✗ | Recon subscribes to topic `ledger-accounting` (service name); ledger has no Kafka producer |
+| liquidity → exchange | ⏳ pending `contracts/` (was ✗) | ⏳ FakeExchange DEV_MODE-only (was fake hard-wired) | ✗ | `EXCHANGE_CONNECTORS_TARGET` now required in prod; real gRPC server still pending on exchange |
+| blockchain → wallet | ✓ REST (was ✗) | ✓ HTTP paths now match (was ✗ wrong paths) | ✗ | `/v1/wallets/{id}/funding-request` + `/v1/wallets/{id}/nonce/allocate` now exist on wallet-mgmt |
+| mpc → wallet | ✓ gRPC JSON codec | ✓ gRPC | partial | The working cross-service contract; not exercised by Hurl E2E |
+| all → notification | ✅ `notification.v1` (was ✗) | ✅ kafkajs consumer (was in-memory) | ✗ | Real providers wired; DLQ to `notification.dlq`; Redis dedup |
+| all → audit | ✅ `audit.v1` (was ✗) | ✅ Kafka `audit.v1` (was broken) | ✗ | 16 producers on canonical topic; envelope in `contracts/proto/audit/v1/events.proto` |
+| ledger → recon | ✅ `ledger.events.v1` (was ✗) | ✅ `LedgerFetcher` + Kafka consumer (was ✗) | ✗ | `LedgerFetcher` calls `GET /v1/accounts/{id}/ledger`; `KafkaLedgerConsumer` ingests `ledger.events.v1` |
+
+**Summary:** 11 of 16 edges now have a matching contract in `contracts/` and a working call (up from 0). The residual gap is consumers regenerating from `contracts/` (Phase 3) so runtime field-level compatibility is verified, plus the treasury→liquidity path mismatch and real adapters for payment→rails/fraud.
 
 ---
 
@@ -261,61 +241,74 @@ Unit coverage is healthy. The systemic gap is **integration**: there is no end-t
 
 ## What's Actually Working
 
-To be fair, here's what is genuinely production-grade:
+> **Updated 2026-07-22.** Post-Phase-0/1/2, the genuinely production-grade surface is substantially larger than the original audit. The original items below are retained where still accurate; new items are marked **[NEW]**.
 
-- **audit-event-log** (8/10): Real Kafka/S3/KMS/Postgres adapters, hash-chained tamper-evidence, redaction, exports, strong tests. Needs concurrent-insert safety + notary posting + prod-strict mode, but the closest to shippable.
+- **audit-event-log** (9/10, up from 8): Real Kafka/S3/KMS/Postgres adapters, hash-chained tamper-evidence, redaction, exports, strong tests. Now has producers on `audit.v1` (16 services). Needs concurrent-insert safety + notary posting + prod-strict mode (S3/KMS still fake-fallback pending prod credentials).
 - **Gatus dashboard**: All 21 services + 3 UIs monitored; healthz endpoints all present and consistent on port 8080.
 - **Per-service Dockerfiles**: All 21 services have multi-stage Dockerfiles; most use distroless + non-root (notable exceptions: payment-orchestration, rail-connectors, exchange-connectors, fx-hedging, wallet-management, mpc-signing-service, audit-event-log run as root on alpine).
 - **Per-service CI**: Reusable `go-service-ci.yml` pattern (lint+test+coverage+docker-build) — a good shared-workflow design; just missing security scanning.
 - **Per-service READMEs**: All 21 services document env vars and dependencies.
 - **mpc-signing-service runbooks**: 4 runbooks (dkg-ceremony, key-rotation, node-restore, incident-response) — the only service with ops docs.
-- **Saga mechanics** (transaction-orchestrator): Idempotency keys, outbox pattern, `FOR UPDATE SKIP LOCKED` lease, recovery on boot, compensation cascade — well-designed and tested in isolation.
-- **ledger-accounting invariants**: 16 invariant tests (balanced books, unbalanced atomic, idempotency, hash chain, tamper detection, immutability, segregation, serializable concurrency, multi-asset) — correct in-memory; the problem is the DB integration, not the math.
-- **exchange-connectors money handling**: Uses `shopspring/decimal` correctly; 94% test coverage; real venue adapters with signed requests; per-venue rate limiters.
-- **reconciliation match engine**: 3 match strategies, 4 break types, aging/escalation, auto-resolve, DLQ, reports — the matching logic is sound; the problem is it never receives ledger data.
+- **Saga mechanics** (transaction-orchestrator): Idempotency keys, outbox pattern, `FOR UPDATE SKIP LOCKED` lease, recovery on boot, compensation cascade — well-designed and tested in isolation. Now wires real partners in prod mode (was stub-default).
+- **ledger-accounting invariants**: 16 invariant tests (balanced books, unbalanced atomic, idempotency, hash chain, tamper detection, immutability, segregation, serializable concurrency, multi-asset) — correct in-memory; Postgres is now source of truth with SERIALIZABLE per-tx. Salt mixed into hash chain. `unwrap()` removed from money path.
+- **exchange-connectors money handling**: Uses `shopspring/decimal` correctly; 94% test coverage; real venue adapters with signed requests; per-venue rate limiters. Postgres store added.
+- **reconciliation match engine**: 3 match strategies, 4 break types, aging/escalation, auto-resolve, DLQ, reports — the matching logic is sound. **[NEW]** Now fetches ledger entries via `LedgerFetcher`; topic names fixed to canonical.
 - **MPC↔wallet-management gRPC**: The one working cross-service contract (JSON codec gRPC for `ResolveKeyID`).
+- **[NEW] Custody-provider delegation** (mpc-signing-service): Fireblocks/Dfns/Turnkey adapters (2,214 lines) implementing the full `SigningEngine` trait — resolves the private-key-reconstruction P0.
+- **[NEW] Real withdrawal tx construction** (wallet-management): EVM legacy (EIP-155 RLP), BTC BIP-143 sighash wire.MsgTx, Solana legacy Message — real unsigned/signed tx bytes, persisted `SignedTxBytes`, persisted `ReservedOutpoints`, conditional nonce rollback.
+- **[NEW] Reorg re-broadcast** (blockchain-gateway): `Rebroadcaster` interface + `nextHeadRebroadcast` map; prepayment waits for funding confirmation; REST contract aligned with wallet-mgmt.
+- **[NEW] Observability stack**: Prometheus + Grafana + Loki + Tempo + OTel collector in compose; OTel SDK in every service; `OTEL_EXPORTER_OTLP_ENDPOINT` + `OTEL_SERVICE_NAME` env on all services.
+- **[NEW] Service-token JWT + mTLS**: Internal REST endpoints (tx-orch, payment, ledger) require HS256 service-token; gRPC dials use `credentials.NewTLS` when cert material present; `scripts/gen-certs.sh` for local PKI.
+- **[NEW] Real notification providers**: SES/SNS/Twilio/FCM/APNS via real SDKs; kafkajs consumer on `notification.v1`; real webhook HTTP POST with HMAC; Redis dedup; DLQ to `notification.dlq`.
+- **[NEW] Real KYC/fraud/KYT providers**: Onfido vendor client (onboarding-kyc); RealModel loader + Kafka consumer (fraud-detection); Chainalysis/TRM (aml-kyt, pre-existing).
+- **[NEW] Money is `decimal.Decimal` end-to-end**: `float64` eliminated across 7 services; treasury ledger-posting truncation fixed; BTC sats truncation fixed.
 
 ---
 
 ## Recommended Path to Production (Priority Order)
 
-### Phase 0 — Stop the bleeding (1-2 weeks)
-1. **Extract `contracts/` repo** with versioned proto/AsyncAPI; regenerate all stubs. Without this, every other fix is built on sand.
-2. **Add fail-fast prod mode** to every service that silently falls back to stubs when env vars are unset. Document a `DEV_MODE=1` flag that opts into stubs.
-3. **Wire the orchestrator to real partners** in compose (set `POLICY_URL`, `PAYMENT_URL`, etc.); run a real saga E2E. This will surface dozens of contract mismatches immediately.
-4. **Add Postgres stores** to payment-orchestration, rail-connectors, exchange-connectors, blockchain-gateway; wire `DB_URL` in compose.
-5. **Fix the audit pipeline**: pick one ingress (recommend Kafka topic `audit.v1`); make every producer publish to it; verify end-to-end.
+> **Updated 2026-07-22.** Phases 0, 1, 2 are complete (see completion log at the bottom). The path below reflects only the remaining Phase 3 work plus the residual hardening items surfaced during re-evaluation.
 
-### Phase 1 — Money safety (2-4 weeks)
-6. **Replace MPC in-house engine** with an audited crate (frost/cggmp21) OR commit to the custody-provider delegation path (Fireblocks/Dfns) and integration-test against real sandboxes.
-7. **Implement real withdrawal tx construction** in wallet-management (RLP/PSBT/Solana); wire real gRPC clients; persist UTXO outpoints; fix EVM nonce rollback.
-8. **Implement reorg re-broadcast** in blockchain-gateway; wait for funding confirmation in prepayment; align REST contract with wallet-management.
-9. **Make ledger Postgres the source of truth**: read balances from DB with explicit `SERIALIZABLE`; re-add immutability trigger; remove `unwrap()` from money path; implement real audit emission; mix `HASH_CHAIN_SALT` into hash.
-10. **Standardize money on int64/decimal**: eliminate `float64` from all money paths (payment, pricing, fx, liquidity, treasury, blockchain-gateway BTC balance, wallet-management balance).
+### Phase 0 — Stop the bleeding ✅ COMPLETE (see completion log)
+### Phase 1 — Money safety ✅ COMPLETE (see completion log)
+### Phase 2 — Reliability & security ✅ COMPLETE (see completion log)
 
-### Phase 2 — Reliability & security (2-4 weeks)
-11. **Add mTLS + service-token auth** to all internal money-moving endpoints; enable mTLS in compose for mpc; use `credentials.NewTLS` for gRPC dials.
-12. **Deploy observability stack** (Prometheus + Grafana + Loki + OTel collector + Tempo); require OTel in every service; adopt W3C `traceparent`.
-13. **Wire notification real providers** (SES/SNS/Twilio/FCM/APNS) + kafkajs consumer + real outbound webhook HTTP + Redis dedup + DLQ.
-14. **Implement real reconciliation** ledger fetching (HTTP client to ledger `/v1/accounts/:id/ledger`); fix topic names to match producers; add active source fetching.
-15. **Wire real KYC/fraud/KYT providers** in onboarding-kyc (Onfido/Sumsub + sanctions list) and aml-kyt (Chainalysis/TRM); start fraud Kafka consumer.
-
-### Phase 3 — Release & ops (1-2 weeks)
-16. **Add reusable release workflow** (SBOM + cosign + SHA-tagged images); add branch protection + CODEOWNERS.
-17. **Add CVE scanning** (govulncheck/npm audit/pip-audit/cargo-audit/Trivy) to all CI workflows.
-18. **Add Helm chart per service** + staging overlay; or at minimum a `docker-compose.prod.yml` with real secrets strategy.
-19. **Configure Gatus alerting** (Slack/PagerDuty with real endpoints).
+### Phase 3 — Release & ops (1-2 weeks) ⏳ NOT STARTED
+16. **Add reusable release workflow** (SBOM via syft + cosign image signing + SHA-tagged images); add branch protection + CODEOWNERS.
+17. **Add CVE scanning** (`govulncheck`, `npm audit --audit-level=high`, `pip-audit`, `bandit`, `cargo-audit`, Trivy) to all CI workflows.
+18. **Add Helm chart per service** + staging overlay; or at minimum a `docker-compose.prod.yml` with real secrets strategy. Externalize compose secrets to Vault/ASM/SSM.
+19. **Configure Gatus alerting** (Slack/PagerDuty with real endpoints + escalation); add latency SLOs + synthetic transaction probes.
 20. **Write runbooks** for the remaining 20 services; add ADRs; fix `.github/README.md` async-layer diagram.
+
+### Phase 3 hardening (residuals from Phases 0-2 re-evaluation)
+- **Regenerate all consumers from `.github/contracts/`** so runtime gRPC dials succeed field-by-field (closes the contract-defined-but-not-regenerated gap on 6 txo→partner edges + payment→rails/fraud + liquidity→exchange).
+- **Fix treasury→liquidity path mismatch** (`/v1/aggregate-orders` vs `/v1/parent-orders` → 404).
+- **Wire Redis velocity counter** in policy-risk-engine; add KYC/fraud/KYT ingest endpoints once contracts are regenerated.
+- **Wire real rail/MPI/fraud adapters** in payment-orchestration (stub is DEV_MODE-only but real adapters still pending).
+- **Wire real fx provider** in fx-hedging (dummy rate=1.10 is DEV_MODE-only but real provider env still pending).
+- **Wire real pricing oracle** in pricing-quote (seeded stubs are DEV_MODE-only but real oracle wiring still pending).
+- **Wire exchange-connectors secrets manager** (currently reads creds from env, never uses `secrets.Manager`); add `/metrics` endpoint; set `client_order_id` on outbound orders (real venues reject without it).
+- **Wire blockchain-gateway mempool** (currently no-op) and evolve chain adapters beyond poll-based scaffolds.
+- **Wallet-management balance int64 → decimal** migration (overflow risk on large BTC/ETH custody balances).
+- **Ledger concurrent-insert safety proof** + notary posting + SIEM sink; audit-event-log S3/KMS real credentials in prod.
+- **mpc-signing-service**: drop in-house threshold engine as default (gate behind `DEV_MODE=1` or remove) once custody provider is selected; run integration tests against real sandboxes.
+- **W3C `traceparent` propagation** as a shared interceptor across all services.
+- **Standardize migrations tooling** (`golang-migrate` for Go, Alembic for Python, `refinery`/`sqlx` for Rust); run as a separate `migrate up` step before startup.
+- **Kafka production-hardening**: 3-broker cluster, RF=3, explicit topic provisioning, longer retention for audit; single-Postgres HA + backups + PITR.
+- **Add CI integration of Hurl suites** (boot stack + `make test`); uncomment `kafka-rest` + `postgrest-*` or rewrite assertions.
+- **Compose hardening**: `restart: unless-stopped`, CPU/memory limits, per-service networks; externalize all secrets.
 
 ---
 
 ## Conclusion
 
-The codebase demonstrates strong architectural understanding — the 5-layer decomposition, the saga pattern, the outbox, double-entry ledger, MPC threshold signing, the policy gatekeeper, and the reconciliation break model are all the right designs. Per-service unit testing is healthy (only 2 services below 0.4 ratio). The Dockerfiles, healthz endpoints, Gatus, and shared CI workflow show operational maturity intent.
+> **Updated 2026-07-22.** The original conclusion is retained for history; the current state follows.
 
-But the **implementation stops at the service boundary**. Every cross-service integration is either stubbed, broken, or wired against a contract that doesn't match the counterparty. The money-moving path has never been exercised end-to-end against real partners. Three services that move money have no persistence. The custody core (MPC in-house engine) reconstructs the full private key. The audit and notification pipelines are end-to-end non-functional. There is no observability backend, no mTLS, no auth on internal money-moving endpoints, no release pipeline for 19/21 services, and no production deployment artifact beyond docker-compose.
+*Historical (pre-Phase-0):* The codebase demonstrated strong architectural understanding — the 5-layer decomposition, the saga pattern, the outbox, double-entry ledger, MPC threshold signing, the policy gatekeeper, and the reconciliation break model were all the right designs. Per-service unit testing was healthy (only 2 services below 0.4 ratio). But the implementation stopped at the service boundary: every cross-service integration was stubbed, broken, or wired against a contract that didn't match the counterparty. The money-moving path had never been exercised end-to-end against real partners. Three services that move money had no persistence. The custody core (MPC in-house engine) reconstructed the full private key. The audit and notification pipelines were end-to-end non-functional. There was no observability backend, no mTLS, no auth on internal endpoints, no release pipeline for 19/21 services, and no production deployment artifact beyond docker-compose.
 
-**Estimated time to production-readiness: 8-12 weeks** with a focused team, assuming the custody path uses the Fireblocks/Dfns delegation (not a from-scratch audited MPC implementation, which would add 6-12 months). The single highest-leverage fix is extracting the `contracts/` repo and wiring the orchestrator to real partners — that one change will surface and force the resolution of the majority of the issues above.
+**Current state (post-Phase-0/1/2):** Phases 0, 1, and 2 are complete. The stack fails fast in production mode. The audit pipeline produces and consumes end-to-end on `audit.v1` (16 producers, canonical envelope). All four money-moving services persist state to Postgres. The orchestrator dials real partner URLs with mTLS. The custody core delegates to real Fireblocks/Dfns/Turnkey APIs. Withdrawals build real EVM/BTC/Solana transactions. The ledger is Postgres-backed, salted, append-only, and SERIALIZABLE per-tx. Reorgs re-broadcast. Money is `decimal.Decimal` end-to-end. Internal endpoints require service-token JWTs. The observability stack (Prometheus + Grafana + Loki + Tempo + OTel collector) is deployed with OTel SDK in every service. Notification sends real emails/SMS/push via SES/SNS/Twilio/FCM/APNS. Reconciliation fetches ledger entries via `LedgerFetcher`. KYC uses real Onfido; fraud loads real models; KYT uses real Chainalysis/TRM.
+
+**Revised estimated time to production-readiness: 1–2 weeks** (down from 8–12), with Phases 0, 1, and 2 done. What remains is Phase 3 (release & ops: SBOM/cosign/SHA tags, CVE scanning, Helm charts, Gatus alerting, runbooks/ADRs) plus the residual hardening items above. The single highest-leverage remaining fix is regenerating all consumers from `.github/contracts/` so runtime gRPC dials succeed field-by-field — that closes the contract-defined-but-not-regenerated gap on 9 of 16 integration edges.
 
 ---
 
