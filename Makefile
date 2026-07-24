@@ -41,7 +41,15 @@ ps:
 	$(COMPOSE) ps
 
 build:
-	$(COMPOSE) build
+	DOCKER_BUILDKIT=1 $(COMPOSE) build
+
+# buildx bake builds all services in parallel (faster than `compose build`
+# for many services). Requires BuildKit (Docker Desktop default).
+bake:
+	DOCKER_BUILDKIT=1 docker buildx bake
+
+build-no-cache:
+	DOCKER_BUILDKIT=1 $(COMPOSE) build --no-cache
 
 pull:
 	$(COMPOSE) pull
