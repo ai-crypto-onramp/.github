@@ -22,12 +22,12 @@ HTTP 200
 jsonpath "$.breaks" exists
 jsonpath "$.total" >= 0
 
-# non-existent break -> 404
-GET http://localhost:8098/v1/breaks/999999
+# non-existent break -> 404 (break_id is a UUID)
+GET http://localhost:8098/v1/breaks/00000000-0000-0000-0000-000000000000
 HTTP 404
 
 # resolving a non-existent break -> 404
-POST http://localhost:8098/v1/breaks/999999/resolve
+POST http://localhost:8098/v1/breaks/00000000-0000-0000-0000-000000000000/resolve
 Content-Type: application/json
 {
   "actor": "hurl-tester",
@@ -36,7 +36,7 @@ Content-Type: application/json
 HTTP 404
 
 # escalating a non-existent break -> 404
-POST http://localhost:8098/v1/breaks/999999/escalate
+POST http://localhost:8098/v1/breaks/00000000-0000-0000-0000-000000000000/escalate
 Content-Type: application/json
 {
   "actor": "hurl-tester"
@@ -76,8 +76,8 @@ jsonpath "$.status" exists
 jsonpath "$.matched_count" >= 0
 jsonpath "$.unmatched_count" >= 0
 
-# non-existent run -> 404
-GET http://localhost:8098/v1/recon-runs/999999
+# non-existent run -> 404 (run id is a UUID)
+GET http://localhost:8098/v1/recon-runs/00000000-0000-0000-0000-000000000000
 HTTP 404
 
 # --- reports ---
@@ -95,7 +95,7 @@ HTTP 200
 header "Content-Type" contains "application/json"
 
 # report for a non-existent run -> 404
-GET http://localhost:8098/v1/recon-runs/999999/report
+GET http://localhost:8098/v1/recon-runs/00000000-0000-0000-0000-000000000000/report
 HTTP 404
 
 # --- breaks export (CSV + JSON) ---

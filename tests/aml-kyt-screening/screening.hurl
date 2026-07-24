@@ -30,16 +30,16 @@ HTTP 200
 screen_id: jsonpath "$.screen_id"
 [Asserts]
 jsonpath "$.screen_id" exists
-jsonpath "$.decision" == "allow"
-jsonpath "$.exposure" == "clean"
+jsonpath "$.decision" == "ALLOW"
+jsonpath "$.exposure" == "CLEAN"
 
 # PostgREST: confirm the screen row landed in aml_kyt.kyt_screens
 GET http://localhost:3003/kyt_screens?screen_id=eq.{{screen_id}}
 HTTP 200
 [Asserts]
 jsonpath "$[0].screen_id" == "{{screen_id}}"
-jsonpath "$[0].decision" == "allow"
-jsonpath "$[0].exposure" == "clean"
+jsonpath "$[0].decision" == "ALLOW"
+jsonpath "$[0].exposure" == "CLEAN"
 
 # screening the same address again is served from the address-risk cache
 POST http://localhost:8081/v1/kyt/screen
@@ -52,7 +52,7 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-jsonpath "$.decision" == "allow"
+jsonpath "$.decision" == "ALLOW"
 jsonpath "$.cache_hit" == true
 
 # malformed body is rejected

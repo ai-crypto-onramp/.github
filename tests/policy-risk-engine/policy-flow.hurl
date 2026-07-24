@@ -21,7 +21,7 @@ HTTP 201
 [Captures]
 policy_user_id: jsonpath "$.user_id"
 [Asserts]
-jsonpath "$.status" == "pending"
+jsonpath "$.status" == "PENDING"
 
 # PostgREST: confirm the whitelist entry landed in policy_engine.whitelist_addresses
 GET http://localhost:3004/whitelist_addresses?user_id=eq.{{policy_user_id}}&address=eq.0xhurldest1
@@ -29,7 +29,7 @@ HTTP 200
 [Asserts]
 jsonpath "$[0].user_id" == "{{policy_user_id}}"
 jsonpath "$[0].address" == "0xhurldest1"
-jsonpath "$[0].status" == "pending"
+jsonpath "$[0].status" == "PENDING"
 
 # pending (unverified) destinations are denied
 POST http://localhost:8095/v1/policy/evaluate
@@ -60,13 +60,13 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-jsonpath "$.status" == "verified"
+jsonpath "$.status" == "VERIFIED"
 
 # PostgREST: whitelist entry status should now be verified
 GET http://localhost:3004/whitelist_addresses?user_id=eq.{{policy_user_id}}&address=eq.0xhurldest1
 HTTP 200
 [Asserts]
-jsonpath "$[0].status" == "verified"
+jsonpath "$[0].status" == "VERIFIED"
 
 GET http://localhost:8095/v1/policy/whitelist/{{policy_user_id}}
 HTTP 200
@@ -146,7 +146,7 @@ jsonpath "$[0].decision" == "manual_review"
 GET http://localhost:3004/review_queue?decision_id=eq.{{decision_id}}
 HTTP 200
 [Asserts]
-jsonpath "$[0].status" == "pending"
+jsonpath "$[0].status" == "PENDING"
 
 GET http://localhost:8095/v1/policy/review?status=pending
 HTTP 200
@@ -162,15 +162,15 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-jsonpath "$.status" == "resolved"
-jsonpath "$.resolution" == "allow"
+jsonpath "$.status" == "RESOLVED"
+jsonpath "$.resolution" == "ALLOW"
 
 # PostgREST: review_queue entry should now be resolved
 GET http://localhost:3004/review_queue?decision_id=eq.{{decision_id}}
 HTTP 200
 [Asserts]
-jsonpath "$[0].status" == "resolved"
-jsonpath "$[0].resolution" == "allow"
+jsonpath "$[0].status" == "RESOLVED"
+jsonpath "$[0].resolution" == "ALLOW"
 
 # a review can only be resolved once
 POST http://localhost:8095/v1/policy/review/{{decision_id}}/resolve

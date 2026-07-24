@@ -95,7 +95,8 @@ clean:
 	rm -rf $(REPORTS)
 
 test: clean
-	hurl --test --report-html $(REPORTS) tests/*/*.hurl
+	SERVICE_TOKEN=$$(python3 -c "import hmac,hashlib,base64,json,time; s='dev-internal-shared-secret'; n=int(time.time()); h=base64.urlsafe_b64encode(json.dumps({'alg':'HS256','typ':'JWT'},separators=(',',':')).encode()).rstrip(b'=').decode(); p=base64.urlsafe_b64encode(json.dumps({'sub':'hurl-test','iat':n,'exp':n+86400},separators=(',',':')).encode()).rstrip(b'=').decode(); sig=base64.urlsafe_b64encode(hmac.new(s.encode(),(h+'.'+p).encode(),hashlib.sha256).digest()).rstrip(b'=').decode(); print(h+'.'+p+'.'+sig)") \
+	hurl --test --variable service_token=$$SERVICE_TOKEN --report-html $(REPORTS) tests/*/*.hurl
 
 # Short aliases for service names, used by the up-%, logs-% and test-%
 # patterns. Services without an alias (postgres, redis, gatus) are addressed
@@ -145,7 +146,8 @@ logs-%:
 # Run one service's integration test suite: make test-<alias|service>,
 # e.g. make test-policy or make test-policy-risk-engine
 test-%:
-	hurl --test tests/$(or $($*),$*)/*.hurl
+	SERVICE_TOKEN=$$(python3 -c "import hmac,hashlib,base64,json,time; s='dev-internal-shared-secret'; n=int(time.time()); h=base64.urlsafe_b64encode(json.dumps({'alg':'HS256','typ':'JWT'},separators=(',',':')).encode()).rstrip(b'=').decode(); p=base64.urlsafe_b64encode(json.dumps({'sub':'hurl-test','iat':n,'exp':n+86400},separators=(',',':')).encode()).rstrip(b'=').decode(); sig=base64.urlsafe_b64encode(hmac.new(s.encode(),(h+'.'+p).encode(),hashlib.sha256).digest()).rstrip(b'=').decode(); print(h+'.'+p+'.'+sig)") \
+	hurl --test --variable service_token=$$SERVICE_TOKEN tests/$(or $($*),$*)/*.hurl
 
 # One-shot / interactive tools
 psql:
@@ -166,4 +168,4 @@ seed-db:
 # Requires the postgres container to be running with services migrated.
 # Use `make reset-db seed-db` to wipe and repopulate in one shot.
 reset-db:
-	@$(COMPOSE) exec -T postgres psql -U postgres -v ON_ERROR_STOP=1 < fixtures/reset.sql
+	@$(COMPOSE) exec -T postgres psql -q -U postgres -v ON_ERROR_STOP=1 < fixtures/reset.sql

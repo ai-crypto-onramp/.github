@@ -18,26 +18,26 @@ jsonpath "$.ready" == true
 POST http://localhost:8092/v1/preferences/hurl-user
 Content-Type: application/json
 {
-  "channels": {"email": true, "sms": false, "push": true, "webhook": false},
+  "channels": {"EMAIL": true, "SMS": false, "PUSH": true, "WEBHOOK": false},
   "locale": "en"
 }
 HTTP 201
 [Asserts]
 jsonpath "$.user_id" == "hurl-user"
-jsonpath "$.channels.email" == true
-jsonpath "$.channels.sms" == false
+jsonpath "$.channels.EMAIL" == true
+jsonpath "$.channels.SMS" == false
 
 GET http://localhost:8092/v1/preferences/hurl-user
 HTTP 200
 [Asserts]
 jsonpath "$.locale" == "en"
-jsonpath "$.channels.push" == true
+jsonpath "$.channels.PUSH" == true
 
 # unknown channels are rejected
 POST http://localhost:8092/v1/preferences/hurl-user
 Content-Type: application/json
 {
-  "channels": {"carrier-pigeon": true}
+  "channels": {"CARRIER_PIGEON": true}
 }
 HTTP 400
 [Asserts]

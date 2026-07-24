@@ -16,24 +16,24 @@ jsonpath "$.status" == "ready"
 POST http://localhost:8086/v1/exposure/EUR
 Content-Type: application/json
 {
-  "amount": 250000
+  "amount": "250000"
 }
 HTTP 200
 [Asserts]
 jsonpath "$.currency" == "EUR"
-jsonpath "$.net_amount" >= 250000
+jsonpath "$.net_amount" >= "250000"
 
 GET http://localhost:8086/v1/exposure/EUR
 HTTP 200
 [Asserts]
 jsonpath "$.currency" == "EUR"
-jsonpath "$.net_amount" >= 250000
+jsonpath "$.net_amount" >= "250000"
 
 # zero exposure for unknown currency
 GET http://localhost:8086/v1/exposure/JPY
 HTTP 200
 [Asserts]
-jsonpath "$.net_amount" == 0
+jsonpath "$.net_amount" == "0"
 
 # --- hedge execution ---
 
@@ -41,7 +41,7 @@ POST http://localhost:8086/v1/hedges
 Content-Type: application/json
 {
   "currency": "EUR",
-  "notional": 225000,
+  "notional": "225000",
   "tenor": "spot",
   "type": "spot"
 }
@@ -50,10 +50,10 @@ HTTP 201
 hedge_id: jsonpath "$.id"
 [Asserts]
 jsonpath "$.currency" == "EUR"
-jsonpath "$.notional" == 225000
+jsonpath "$.notional" == "225000"
 jsonpath "$.status" == "executed"
-jsonpath "$.quoted_rate" == 1.1
-jsonpath "$.fills[0].price" == 1.1
+jsonpath "$.quoted_rate" == "1.1"
+jsonpath "$.fills[0].price" == "1.1"
 
 # fetch the hedge
 GET http://localhost:8086/v1/hedges/{{hedge_id}}

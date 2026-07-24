@@ -21,8 +21,8 @@ Content-Type: application/json
   "from": "USD",
   "to": "BTC",
   "amount": "500",
-  "user_tier": "tier_1",
-  "side": "buy"
+  "user_tier": "TIER_1",
+  "side": "BUY"
 }
 HTTP 201
 [Captures]
@@ -69,8 +69,8 @@ Content-Type: application/json
   "from": "USD",
   "to": "ETH",
   "amount": "50",
-  "user_tier": "tier_2",
-  "side": "buy"
+  "user_tier": "TIER_2",
+  "side": "BUY"
 }
 HTTP 201
 [Captures]
@@ -89,8 +89,8 @@ POST http://localhost:8096/v1/quotes
 Content-Type: application/json
 {
   "items": [
-    {"from": "USD", "to": "BTC", "amount": "100", "user_tier": "tier_1", "side": "buy"},
-    {"from": "USD", "to": "BTC", "amount": "100", "user_tier": "tier_99", "side": "buy"}
+    {"from": "USD", "to": "BTC", "amount": "100", "user_tier": "TIER_1", "side": "BUY"},
+    {"from": "USD", "to": "BTC", "amount": "100", "user_tier": "TIER_99", "side": "BUY"}
   ]
 }
 HTTP 201
@@ -107,8 +107,8 @@ Content-Type: application/json
   "from": "USD",
   "to": "BTC",
   "amount": "-5",
-  "user_tier": "tier_1",
-  "side": "buy"
+  "user_tier": "TIER_1",
+  "side": "BUY"
 }
 HTTP 400
 [Asserts]
@@ -120,8 +120,8 @@ Content-Type: application/json
   "from": "us",
   "to": "BTC",
   "amount": "100",
-  "user_tier": "tier_1",
-  "side": "buy"
+  "user_tier": "TIER_1",
+  "side": "BUY"
 }
 HTTP 400
 [Asserts]
@@ -133,7 +133,7 @@ Content-Type: application/json
   "from": "USD",
   "to": "BTC",
   "amount": "100",
-  "user_tier": "tier_1",
+  "user_tier": "TIER_1",
   "side": "hold"
 }
 HTTP 400

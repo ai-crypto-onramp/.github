@@ -18,9 +18,9 @@ POST http://localhost:8089/v1/parent-orders
 Content-Type: application/json
 {
   "asset": "BTC",
-  "side": "buy",
+  "side": "BUY",
   "notional": 50000,
-  "strategy": "twap",
+  "strategy": "TWAP",
   "client_request_id": "hurl-{{newUuid}}",
   "quoted_mid": 65000
 }
@@ -29,9 +29,9 @@ HTTP 201
 order_id: jsonpath "$.id"
 [Asserts]
 jsonpath "$.asset" == "BTC"
-jsonpath "$.side" == "buy"
-jsonpath "$.strategy" == "twap"
-jsonpath "$.status" == "pending"
+jsonpath "$.side" == "BUY"
+jsonpath "$.strategy" == "TWAP"
+jsonpath "$.status" == "PENDING"
 
 # PostgREST: confirm the parent order landed in liquidity.parent_orders
 GET http://localhost:3008/parent_orders?id=eq.{{order_id}}
@@ -39,17 +39,17 @@ HTTP 200
 [Asserts]
 jsonpath "$[0].id" == "{{order_id}}"
 jsonpath "$[0].asset" == "BTC"
-jsonpath "$[0].side" == "buy"
-jsonpath "$[0].status" == "pending"
+jsonpath "$[0].side" == "BUY"
+jsonpath "$[0].status" == "PENDING"
 
 # duplicate client_request_id returns the existing order (200, not 201)
 POST http://localhost:8089/v1/parent-orders
 Content-Type: application/json
 {
   "asset": "BTC",
-  "side": "buy",
+  "side": "BUY",
   "notional": 50000,
-  "strategy": "twap",
+  "strategy": "TWAP",
   "client_request_id": "hurl-dup-{{newUuid}}",
   "quoted_mid": 65000
 }
@@ -61,9 +61,9 @@ POST http://localhost:8089/v1/parent-orders
 Content-Type: application/json
 {
   "asset": "BTC",
-  "side": "buy",
+  "side": "BUY",
   "notional": 50000,
-  "strategy": "twap",
+  "strategy": "TWAP",
   "client_request_id": "{{dup_crid}}",
   "quoted_mid": 65000
 }
@@ -74,7 +74,7 @@ POST http://localhost:8089/v1/parent-orders
 Content-Type: application/json
 {
   "asset": "BTC",
-  "side": "buy",
+  "side": "BUY",
   "notional": 1000,
   "strategy": "hold",
   "client_request_id": "hurl-bad-{{newUuid}}",

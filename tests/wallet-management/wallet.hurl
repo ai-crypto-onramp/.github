@@ -5,7 +5,7 @@
 POST http://localhost:8101/v1/wallets
 {
   "chain": "ethereum",
-  "type": "hot",
+  "type": "HOT",
   "label": "hurl-smoke"
 }
 HTTP 201
@@ -13,7 +13,7 @@ HTTP 201
 wallet_id: jsonpath "$.id"
 [Asserts]
 jsonpath "$.chain" == "ethereum"
-jsonpath "$.type" == "hot"
+jsonpath "$.type" == "HOT"
 jsonpath "$.state" == "active"
 
 # PostgREST: confirm the wallet row landed in wallet_management.wallets
@@ -22,7 +22,7 @@ HTTP 200
 [Asserts]
 jsonpath "$[0].id" == "{{wallet_id}}"
 jsonpath "$[0].chain" == "ethereum"
-jsonpath "$[0].type" == "hot"
+jsonpath "$[0].type" == "HOT"
 jsonpath "$[0].state" == "active"
 
 GET http://localhost:8101/v1/wallets/{{wallet_id}}

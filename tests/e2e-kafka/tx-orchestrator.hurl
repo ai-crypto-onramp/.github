@@ -35,6 +35,7 @@ HTTP *
 # --- trigger: create a transaction ---
 
 POST http://localhost:8099/v1/transactions
+Authorization: Bearer {{service_token}}
 Content-Type: application/json
 {
   "user_id": "e2e-kafka-user",

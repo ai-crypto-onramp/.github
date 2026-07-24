@@ -14,6 +14,7 @@ jsonpath "$.status" == "ready"
 # --- create transaction ---
 
 POST http://localhost:8099/v1/transactions
+Authorization: Bearer {{service_token}}
 Content-Type: application/json
 {
   "user_id": "hurl-user",
@@ -80,6 +81,7 @@ jsonpath "$.steps" count == 6
 
 # retry a specific step on a freshly created (non-terminal) transaction
 POST http://localhost:8099/v1/transactions/{{tx_id}}/retry
+Authorization: Bearer {{service_token}}
 Content-Type: application/json
 {
   "step": "policy"
@@ -91,6 +93,7 @@ jsonpath "$.step" == "policy"
 
 # retry without a step uses the current saga step
 POST http://localhost:8099/v1/transactions/{{tx_id}}/retry
+Authorization: Bearer {{service_token}}
 Content-Type: application/json
 {}
 HTTP 202
@@ -101,12 +104,14 @@ jsonpath "$.status" == "retry-accepted"
 
 # compensate a non-terminal transaction
 POST http://localhost:8099/v1/transactions/{{tx_id}}/compensate
+Authorization: Bearer {{service_token}}
 HTTP 202
 [Asserts]
 jsonpath "$.status" == "compensate-accepted"
 
 # compensating again may return 409 (terminal) or 202 (still processing)
 POST http://localhost:8099/v1/transactions/{{tx_id}}/compensate
+Authorization: Bearer {{service_token}}
 HTTP *
 [Asserts]
 status >= 200
@@ -114,6 +119,7 @@ status < 500
 
 # retry on a non-existent transaction -> 400 (no saga state found)
 POST http://localhost:8099/v1/transactions/tx_doesnotexist/retry
+Authorization: Bearer {{service_token}}
 Content-Type: application/json
 {"step": "policy"}
 HTTP *

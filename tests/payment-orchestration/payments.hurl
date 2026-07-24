@@ -12,6 +12,7 @@ HTTP 200
 # --- create a card intent (auto-authorized) ---
 
 POST http://localhost:8094/v1/payments/intents
+Authorization: Bearer {{service_token}}
 Content-Type: application/json
 Idempotency-Key: hurl-{{newUuid}}
 {
@@ -44,6 +45,7 @@ HTTP 404
 # --- capture ---
 
 POST http://localhost:8094/v1/payments/{{payment_id}}/capture
+Authorization: Bearer {{service_token}}
 Content-Type: application/json
 Idempotency-Key: hurl-cap-{{newUuid}}
 {
@@ -56,6 +58,7 @@ jsonpath "$.status" == "captured"
 # --- refund ---
 
 POST http://localhost:8094/v1/payments/{{payment_id}}/refund
+Authorization: Bearer {{service_token}}
 Content-Type: application/json
 Idempotency-Key: hurl-ref-{{newUuid}}
 {
@@ -68,6 +71,7 @@ jsonpath "$.status" == "refunded"
 # --- void (on a fresh intent that hasn't been captured) ---
 
 POST http://localhost:8094/v1/payments/intents
+Authorization: Bearer {{service_token}}
 Content-Type: application/json
 Idempotency-Key: hurl-void-{{newUuid}}
 {
@@ -81,6 +85,7 @@ HTTP 201
 void_payment_id: jsonpath "$.id"
 
 POST http://localhost:8094/v1/payments/{{void_payment_id}}/void
+Authorization: Bearer {{service_token}}
 Content-Type: application/json
 Idempotency-Key: hurl-void-do-{{newUuid}}
 HTTP 200
@@ -98,6 +103,7 @@ jsonpath "$.webhook_backlog" exists
 # --- 3DS flow: create a card intent requiring 3DS ---
 
 POST http://localhost:8094/v1/payments/intents
+Authorization: Bearer {{service_token}}
 Content-Type: application/json
 Idempotency-Key: hurl-3ds-{{newUuid}}
 {
@@ -115,6 +121,7 @@ jsonpath "$.status" == "3ds_pending"
 
 # resume from 3DS challenge
 POST http://localhost:8094/v1/payments/{{ds_payment_id}}/3ds-challenge
+Authorization: Bearer {{service_token}}
 Content-Type: application/json
 Idempotency-Key: hurl-3dsres-{{newUuid}}
 {
@@ -127,6 +134,7 @@ jsonpath "$.status" == "authorized"
 # --- webhook ingestion: invalid signature -> 401 ---
 
 POST http://localhost:8094/v1/webhooks/card
+Authorization: Bearer {{service_token}}
 Content-Type: application/json
 X-Webhook-Signature: invalid-signature
 {

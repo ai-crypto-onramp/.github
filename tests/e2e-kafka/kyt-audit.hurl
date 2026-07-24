@@ -1,11 +1,11 @@
 # e2e-kafka: trigger a KYT screen and verify an audit.Event was
-# produced on the "kyt.audit.v1" topic.
+# produced on the "audit.v1" topic.
 #
 # The aml-kyt-screening service emits audit events asynchronously via
 # a bounded-queue emitter, so the Kafka message may arrive a few
 # hundred milliseconds after the HTTP response.
 
-# --- setup consumer for "kyt.audit.v1" topic ---
+# --- setup consumer for "audit.v1" topic ---
 
 DELETE http://localhost:8105/consumers/e2e-kyt-run/instances/c
 HTTP *
@@ -23,7 +23,7 @@ HTTP 200
 POST http://localhost:8105/consumers/e2e-kyt-run/instances/c/subscription
 Content-Type: application/vnd.kafka.json.v2+json
 {
-  "topics": ["kyt.audit.v1"]
+  "topics": ["audit.v1"]
 }
 HTTP 204
 
@@ -46,9 +46,9 @@ HTTP 200
 [Captures]
 kyt_screen_id: jsonpath "$.screen_id"
 [Asserts]
-jsonpath "$.decision" == "allow"
+jsonpath "$.decision" == "ALLOW"
 
-# --- verify: an audit.Event arrived on "kyt.audit.v1" ---
+# --- verify: an audit.Event arrived on "audit.v1" ---
 
 GET http://localhost:8105/consumers/e2e-kyt-run/instances/c/records?timeout=10000&max_bytes=1048576
 Accept: application/vnd.kafka.json.v2+json
@@ -56,10 +56,9 @@ HTTP *
 [Asserts]
 status == 200
 jsonpath "$" count >= 1
-jsonpath "$[0].value.screen_id" == "{{kyt_screen_id}}"
-jsonpath "$[0].value.decision" == "allow"
-jsonpath "$[0].value.address" == "0xe2ekafkaclean"
-jsonpath "$[0].value.chain" == "ethereum"
+jsonpath "$[0].value.source_service" == "aml-kyt-screening"
+jsonpath "$[0].value.action" exists
+jsonpath "$[0].value.target_id" == "{{kyt_screen_id}}"
 
 # --- cleanup ---
 

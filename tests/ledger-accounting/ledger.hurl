@@ -26,7 +26,7 @@ POST http://localhost:8088/v1/accounts
 Content-Type: application/json
 {
   "type": "user_custodial",
-  "asset_class": "crypto",
+  "asset_class": "CRYPTO",
   "label": "hurl-custodial"
 }
 HTTP 201
@@ -39,7 +39,7 @@ POST http://localhost:8088/v1/accounts
 Content-Type: application/json
 {
   "type": "user_payable",
-  "asset_class": "fiat",
+  "asset_class": "FIAT",
   "label": "hurl-payable"
 }
 HTTP 201
