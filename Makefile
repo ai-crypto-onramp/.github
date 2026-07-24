@@ -7,6 +7,10 @@
 #   make ps            list running services
 #   make logs          tail logs for all services
 #   make build         (re)build all service images
+#   make build-go      (re)build all Go services
+#   make build-ts      (re)build all TypeScript services
+#   make build-rs      (re)build all Rust services
+#   make build-py      (re)build all Python services
 #   make pull          pull base images
 #   make dashboard     open the Gatus health dashboard in the browser
 #   make test          run all Hurl integration suites (HTML report in `reports/`)
@@ -23,7 +27,7 @@
 COMPOSE := docker compose
 REPORTS := reports
 
-.PHONY: all clean up down restart ps logs build pull test seed-db reset-db dashboard psql redis-cli up-% down-% build-% logs-% test-%
+.PHONY: all clean up down restart ps logs build build-go build-ts build-rs build-py bake build-no-cache pull test seed-db reset-db dashboard psql redis-cli up-% down-% build-% logs-% test-%
 
 # Default target: start the whole stack
 all: up
@@ -42,6 +46,29 @@ ps:
 
 build:
 	DOCKER_BUILDKIT=1 $(COMPOSE) build
+
+# Build only the Go services (shared module + build cache via BuildKit mounts).
+GO_SERVICES := aml-kyt-screening audit-event-log blockchain-gateway exchange-connectors \
+	fx-hedging identity-auth liquidity-routing onboarding-kyc payment-orchestration \
+	policy-risk-engine pricing-quote rail-connectors transaction-orchestrator \
+	treasury-orchestration wallet-management
+build-go:
+	DOCKER_BUILDKIT=1 $(COMPOSE) build $(GO_SERVICES)
+
+# Build only the TypeScript services.
+TS_SERVICES := api-gateway notification front-office-ui middle-office-ui
+build-ts:
+	DOCKER_BUILDKIT=1 $(COMPOSE) build $(TS_SERVICES)
+
+# Build only the Rust services.
+RS_SERVICES := ledger-accounting mpc-signing-service
+build-rs:
+	DOCKER_BUILDKIT=1 $(COMPOSE) build $(RS_SERVICES)
+
+# Build only the Python services.
+PY_SERVICES := fraud-detection reconciliation back-office-ui
+build-py:
+	DOCKER_BUILDKIT=1 $(COMPOSE) build $(PY_SERVICES)
 
 # buildx bake builds all services in parallel (faster than `compose build`
 # for many services). Requires BuildKit (Docker Desktop default).

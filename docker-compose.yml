@@ -239,6 +239,7 @@ services:
       - DB_URL=postgres://postgres:postgres@postgres:5432/aml_kyt?sslmode=disable
       - REDIS_URL=redis://redis:6379
       - PORT=8080
+      - DEV_MODE=1
       - CHAINALYSIS_WEBHOOK_SECRET=dev-secret-chainalysis
       - TRM_WEBHOOK_SECRET=dev-secret-trm
       - AUDIT_EVENT_BUS_URL=kafka://kafka:9092?topic=audit.v1
@@ -330,6 +331,7 @@ services:
       - DB_URL=postgres://postgres:postgres@postgres:5432/fraud?sslmode=disable
       - REDIS_URL=redis://redis:6379
       - KAFKA_BROKERS=kafka:9092
+      - DEV_MODE=1
     depends_on:
       postgres:
         condition: service_healthy
@@ -363,6 +365,7 @@ services:
       - default
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/identity_auth?sslmode=disable
+      - DEV_MODE=1
     depends_on:
       postgres:
         condition: service_healthy
@@ -436,6 +439,7 @@ services:
       - WALLET_MANAGEMENT_URL=http://wallet-management:9090
       - KAFKA_BROKERS=kafka:9092
       - NODE_ID=node-0
+      - DEV_MODE=1
       # mTLS for the gRPC port. The /certs mount is read-only; provision the
       # CA + server cert/key out-of-band (e.g. scripts/gen-certs.sh or a
       # secrets mount). When all three are unset, DEV_MODE=1 allows
@@ -533,6 +537,7 @@ services:
       - DB_URL=postgres://postgres:postgres@postgres:5432/pricing_quote?sslmode=disable
       - DATABASE_URL=postgres://postgres:postgres@postgres:5432/pricing_quote?sslmode=disable
       - REDIS_URL=redis://redis:6379
+      - DEV_MODE=1
     depends_on:
       postgres:
         condition: service_healthy
@@ -563,6 +568,7 @@ services:
       - DB_URL=postgresql+asyncpg://postgres:postgres@postgres:5432/reconciliation
       - KAFKA_BROKERS=kafka:9092
       - ENABLE_KAFKA=true
+      - DEV_MODE=1
     depends_on:
       postgres:
         condition: service_healthy
@@ -584,7 +590,8 @@ services:
       - LEDGER_URL=ledger-accounting:8081
       - PAYMENT_URL=http://payment-orchestration:8080
       - BLOCKCHAIN_URL=http://blockchain-gateway:8080
-      - ENABLE_STUB_PARTNERS=0
+      - ENABLE_STUB_PARTNERS=1
+      - DEV_MODE=1
       # Shared HS256 secret for service-token JWT auth on internal REST
       # endpoints. Override in real deployments via a secrets mount.
       - SERVICE_TOKEN_SECRET=dev-internal-shared-secret
@@ -679,6 +686,7 @@ services:
     environment:
       - NODE_ENV=production
       - PORT=3000
+      - HOSTNAME=0.0.0.0
       - NEXT_PUBLIC_API_GATEWAY_URL=http://api-gateway:8080
       - NEXT_PUBLIC_APP_NAME=AI Crypto On-Ramp
       - NEXT_PUBLIC_AUTH_ISSUER=http://identity-auth:8080
