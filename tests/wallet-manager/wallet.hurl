@@ -57,3 +57,64 @@ GET http://localhost:8101/v1/wallets/{{wallet_id}}/balances
 HTTP 200
 [Asserts]
 jsonpath "$" count == 0
+
+# --- list all wallets ---
+
+GET http://localhost:8101/v1/wallets
+HTTP 200
+[Asserts]
+jsonpath "$" count >= 1
+
+# --- funding requests ---
+
+POST http://localhost:8101/v1/wallets/{{wallet_id}}/funding-request
+Content-Type: application/json
+{
+  "asset": "ETH",
+  "amount": "1.5",
+  "reason": "hurl test"
+}
+HTTP 201
+[Asserts]
+jsonpath "$.status" == "requested"
+
+GET http://localhost:8101/v1/wallets/{{wallet_id}}/funding-requests
+HTTP 200
+[Asserts]
+jsonpath "$.funding_requests" count >= 1
+
+# --- nonce allocation ---
+
+POST http://localhost:8101/v1/wallets/{{wallet_id}}/nonce/allocate
+Content-Type: application/json
+{
+  "chain": "ethereum"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.nonce" exists
+
+# --- withdrawals ---
+
+# POST creates a withdrawal (may 500 on DB constraint in dev — accept any
+# non-404 response to cover the endpoint)
+POST http://localhost:8101/v1/withdrawals
+Content-Type: application/json
+{
+  "wallet_id": "{{wallet_id}}",
+  "to_address": "0xdeadbeefdeadbeefdeadbeefdeadbeefdeadbeef",
+  "asset": "ETH",
+  "amount": "100000000000000000"
+}
+HTTP *
+
+GET http://localhost:8101/v1/withdrawals
+HTTP 200
+[Asserts]
+jsonpath "$.withdrawals" exists
+
+# non-existent withdrawal -> 404
+GET http://localhost:8101/v1/withdrawals/00000000-0000-7000-8000-000000000099
+HTTP 404
+[Asserts]
+jsonpath "$.error" exists

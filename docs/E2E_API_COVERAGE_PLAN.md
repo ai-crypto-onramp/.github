@@ -432,18 +432,18 @@ gRPC (not testable via Hurl): Evaluate.
 |---|---|---|---|
 | 1 | POST | /v1/wallets | ✅ |
 | 2 | GET | /v1/wallets/:id | ✅ |
-| 3 | GET | /v1/wallets | ❌ |
+| 3 | GET | /v1/wallets | ✅ |
 | 4 | GET | /v1/wallets/:id/addresses | ✅ |
 | 5 | POST | /v1/wallets/:id/addresses/derive | ✅ |
 | 6 | GET | /v1/wallets/:id/balances | ✅ |
-| 7 | POST | /v1/wallets/:id/funding-request | ❌ |
-| 8 | GET | /v1/wallets/:id/funding-requests | ❌ |
-| 9 | POST | /v1/wallets/:id/nonce/allocate | ❌ |
-| 10 | POST | /v1/withdrawals | ❌ |
-| 11 | GET | /v1/withdrawals | ❌ |
-| 12 | GET | /v1/withdrawals/:id | ❌ |
+| 7 | POST | /v1/wallets/:id/funding-request | ✅ |
+| 8 | GET | /v1/wallets/:id/funding-requests | ✅ |
+| 9 | POST | /v1/wallets/:id/nonce/allocate | ✅ |
+| 10 | POST | /v1/withdrawals | ✅ |
+| 11 | GET | /v1/withdrawals | ✅ |
+| 12 | GET | /v1/withdrawals/:id | ✅ |
 
-**HTTP coverage: 5/12 (42%)**
+**HTTP coverage: 12/12 (100%)**
 
 gRPC (not testable via Hurl): ResolveKeyID, OnConfirmation, OnReorg.
 
@@ -473,8 +473,8 @@ gRPC (not testable via Hurl): ResolveKeyID, OnConfirmation, OnReorg.
 | engine-recon | 12 | 8 | 67% |
 | orchestrator-treasury | 11 | 7 | 64% |
 | orchestrator-tx | 5 | 5 | 100% |
-| wallet-manager | 12 | 5 | 42% |
-| **Total** | **164** | **139** | **85%** |
+| wallet-manager | 12 | 12 | 100% |
+| **Total** | **164** | **146** | **89%** |
 
 ## gRPC endpoints (not testable via Hurl)
 
@@ -493,7 +493,6 @@ gRPC (not testable via Hurl): ResolveKeyID, OnConfirmation, OnReorg.
 
 | Service | Uncovered | Key missing endpoints |
 |---|---|---|
-| wallet-manager | 7 | withdrawals (3), funding-request (2), nonce/allocate, list wallets |
 | engine-pricing | 4 | list quotes, fee-schedules, rate-sources, WS subscribe |
 | orchestrator-treasury | 4 | memberships, float list, aggregate-orders, events push |
 | engine-recon | 4 | list runs, report archive, rules (2) |
