@@ -142,80 +142,61 @@ These items from the prior report's Phases 0-2 are confirmed done in the codebas
 
 ## Recommended Path to Production (Priority Order)
 
-Phases 0-2 items below are the **verified-completed** subset of the prior report's plan. Phases 3+ are new/residual.
+> Completed Phase 0-2 work from the prior report (contracts extraction, DEV_MODE gating, Postgres stores, audit.v1 topic, custody adapters, reorg re-broadcast, notifier providers, LedgerFetcher, service-token auth on 3 services, decimal migration in 7 services) is carried forward as the baseline; only incomplete/residual items are listed below.
 
-### Phase 0 — Stop the bleeding ✅ COMPLETE (verified)
-1. ✅ Extract `contracts/` repo
-2. ✅ `DEV_MODE` fail-fast gating (partial — see Phase 4 for gaps)
-3. ✅ Wire orchestrator-tx partner URLs in compose
-4. ✅ Postgres stores for money-moving services
-5. ✅ `audit.v1` canonical Kafka ingress
+### Phase 1 — Money safety & custody (re-opened Phase 1-2 residuals)
+> Items the prior report marked complete but the fresh audit found incomplete or regressed.
 
-### Phase 1 — Money safety ⚠️ PARTIALLY COMPLETE (re-opened)
-6. ✅ Custody-provider adapters implemented (Fireblocks/Dfns/Turnkey) — **but not default; in-house still reconstructs key** → see Phase 4
-7. ⚠️ Real withdrawal tx construction — EVM confirmed; **BTC/Solana use placeholder pubkeys/blockhash** → see Phase 4
-8. ✅ Reorg re-broadcast (gateway-blockchain)
-9. ✅ Ledger Postgres source of truth + salt + SERIALIZABLE — **non-atomic chain extension** → see Phase 4
-10. ⚠️ `decimal.Decimal` migration — **5 services still have float64 on money paths** → see Phase 4
-
-### Phase 2 — Reliability & security ⚠️ PARTIALLY COMPLETE (re-opened)
-11. ✅ Service-token JWT on orchestrator-tx, orchestrator-fiat, accounting-ledger REST — **12 other services unauthenticated** → see Phase 4
-12. ❌ **Observability stack NOT in compose** (prior claim false) → see Phase 4
-13. ✅ Real notifier providers + kafkajs + HMAC webhooks + Redis dedup + DLQ — **Redis silent in-memory fallback** → see Phase 4
-14. ✅ `LedgerFetcher` + canonical topic names in engine-recon — **Kafka defaults off, sqlite default DB** → see Phase 4
-15. ✅ Real Onfido/Chainalysis/TRM providers — **`StubModel` default in fraud** → see Phase 4
-
-### Phase 3 — Release & ops ⏳ NOT STARTED (unchanged from prior report)
-16. **Reusable release workflow** (SBOM via syft + cosign image signing + SHA-tagged images); branch protection + CODEOWNERS.
-17. **CVE scanning** (`govulncheck`, `npm audit --audit-level=high`, `pip-audit`, `bandit`, `cargo-audit`, Trivy) in all CI workflows.
-18. **Finish UI services**:
-    - ui-front-office: 51/52 tasks — signup, KYC wizard, quoting/checkout, dashboard, wallets, notifications, auth/session, error boundaries.
-    - ui-middle-office: 52/53 tasks — KYC review queue, AML desk, policy dashboard, user mgmt, audit explorer, TanStack Query/Router, BFF proxy.
-    - ui-back-office: dashboards thin, MPC monitor placeholder, no auth, clients carry no service token.
-19. **Wire real third-party vendor API keys and drop `DEV_MODE=1`.** Per-service credential inventory (unchanged from prior report): kyt (`CHAINALYSIS/TRM_API_KEY`), kyc (`ONFIDO_API_TOKEN`), fraud (`MODEL_PATH`), notifier (SES/SNS/Twilio/FCM/APNS creds), orchestrator-fiat (rail/MPI provider keys), fx-hedger (FX provider key), engine-pricing (oracle key), gateway-exchange (venue API keys/secrets), gateway-blockchain (RPC URLs), mpc-signer (`CUSTODY_PROVIDER` + custody creds), wallet-manager (real xpubs), all gRPC services (`TLS_*_FILE` for mTLS).
-20. **Runbooks** for 20 services.
-
-### Phase 4 — Reopened Phase 1-2 residuals (NEW — from fresh audit)
-> These are items the prior report marked complete but the fresh audit found incomplete or regressed.
-
-21. **Make custody-provider the default in mpc-signer.** Set `CUSTODY_PROVIDER=fireblocks|dfns|turnkey` in compose; gate in-house threshold engine behind `DEV_MODE=1` or remove it. Authenticate control-plane RPCs (DKG/Rotate/Restore/GetKeyMetadata) with policy token. Wire HSM/attestation (not `MockHsmStore`). Run integration tests against real sandboxes. (src/engine/threshold/cluster.rs:171, src/grpc/service.rs:179, src/enclave/store.rs)
-22. **Fix wallet-manager BTC/Solana withdrawal sighashes.** BTC: derive real P2WPKH pubkey hash from the wallet's xpub + derivation path (not 20-byte zero placeholder). Solana: fetch real recent blockhash from RPC; use real `from` pubkey (not `sha256(walletID)`). Without this, every BTC/Solana withdrawal is invalid. (internal/withdrawal/txbuilder.go:148,156,194,209)
-23. **Add auth to 12 unauthenticated services.** Service-token JWT middleware (reuse the orchestrator-tx pattern) on: gateway-blockchain, gateway-exchange, gateway-fiat, orchestrator-treasury, engine-pricing, engine-liquidity, engine-fraud, engine-recon, fx-hedger, notifier, wallet-manager, kyc-onboarding. mpc-signer control-plane RPCs. accounting-ledger gRPC. audit-logger: replace `X-Audit-Roles` header with signed token. (cited per service above)
-24. **Wire real adapters (not stubs) in prod path for 6 services:**
+1. **Make custody-provider the default in mpc-signer.** Set `CUSTODY_PROVIDER=fireblocks|dfns|turnkey` in compose; gate in-house threshold engine behind `DEV_MODE=1` or remove it. Authenticate control-plane RPCs (DKG/Rotate/Restore/GetKeyMetadata) with policy token. Wire HSM/attestation (not `MockHsmStore`). Run integration tests against real sandboxes. (src/engine/threshold/cluster.rs:171, src/grpc/service.rs:179, src/enclave/store.rs)
+2. **Fix wallet-manager BTC/Solana withdrawal sighashes.** BTC: derive real P2WPKH pubkey hash from the wallet's xpub + derivation path (not 20-byte zero placeholder). Solana: fetch real recent blockhash from RPC; use real `from` pubkey (not `sha256(walletID)`). Without this, every BTC/Solana withdrawal is invalid. (internal/withdrawal/txbuilder.go:148,156,194,209)
+3. **Eliminate float64 on money paths in 5 services:** fx-hedger Postgres cols → NUMERIC + decimal; engine-liquidity `BookLevel.Price/Size` + slicer participation → decimal; engine-policy-risk USD caps → decimal; gateway-fiat ACH amount → decimal (remove `Float64()`+`int64(f+0.5)`); orchestrator-treasury config thresholds → decimal.
+4. **Make ledger + audit-logger chain extension atomic.** Read `prev_hash`/`sequence_number` inside the insert transaction under `SERIALIZABLE` + advisory lock, or use `INSERT ... RETURNING` with a single `WITH` CTE. (accounting-ledger src/store.rs:761, audit-logger internal/ingest/ingest.go:152-208)
+5. **Wire real adapters (not stubs) in prod path for 6 services:**
     - gateway-fiat: implement real rail connectors (ACH/SEPA/Card/Pix/UPI); remove `dummy/register.go` init; remove "not yet implemented" fatal.
     - gateway-exchange: wire `secrets.Manager` for venue credentials; remove "not yet implemented" fatal.
     - orchestrator-fiat: implement real rail + MPI clients (not `NewDummy()`).
     - engine-liquidity: wire real exchange gRPC client when `EXCHANGE_CONNECTORS_TARGET` set (not `FakeExchange`); wire real treasury/audit/recon clients.
     - engine-pricing: wire `SetFXClient`/`startFeedConsumer`/`SetPollHook`; use Postgres store in prod (not in-memory); fetch real spot rates from oracle.
     - fx-hedger: wire real FX provider in prod (not `provider.NewDummy()`); wire real `BankAdapter`/`VenueAdapter` when URLs set.
-25. **Eliminate float64 on money paths in 5 services:** fx-hedger Postgres cols → NUMERIC + decimal; engine-liquidity `BookLevel.Price/Size` + slicer participation → decimal; engine-policy-risk USD caps → decimal; gateway-fiat ACH amount → decimal (remove `Float64()`+`int64(f+0.5)`); orchestrator-treasury config thresholds → decimal.
-26. **Make ledger + audit-logger chain extension atomic.** Read `prev_hash`/`sequence_number` inside the insert transaction under `SERIALIZABLE` + advisory lock, or use `INSERT ... RETURNING` with a single `WITH` CTE. (accounting-ledger src/store.rs:761, audit-logger internal/ingest/ingest.go:152-208)
-27. **Wire observability stack in compose.** Add Prometheus + Grafana + Loki + Tempo + OTel collector services; set `OTEL_EXPORTER_OTLP_ENDPOINT` + `OTEL_SERVICE_NAME` on every service. Prior report claimed this was done — it is not. (`.github/docker-compose.yml` — no such services present)
-28. **Fix engine-recon defaults.** `enable_kafka` should default to `True` when `KAFKA_BROKERS` set (not `False`); `DB_URL` should fatal in prod when unset (not sqlite `:memory:`). (config.py:24,36)
-29. **Fix engine-fraud defaults.** Remove `StubModel` as fallback; fatal in prod when `MODEL_PATH`/`MODEL_REGISTRY_URL` unset. Wire Kafka producer for audit (currently in-memory). Wire real `FeatureStoreClient` (not `InMemoryFeatureStore` default). (scoring.py:221, app.py:65,68)
-30. **Fix gateway-auth password hashing.** Replace SHA-256 with Argon2id (or bcrypt). Make `JWT_SECRET` unset = fatal in prod. Add JWKS endpoint or migrate to RS256. Wire Kafka audit (currently in-memory only). (internal/crypto.go:46, config.go:22)
-31. **Fix notifier Redis fallback.** Fatal in prod when `REDIS_URL` unset (not silent in-memory). Wire `EVENT_BUS_URL`/Kafka bus when `KAFKA_BROKERS` set (currently logs "not yet wired" and continues). (src/redis-runtime.ts:37, src/index.ts:47)
-32. **Fix static `/readyz` in 6 services.** Add real dependency checks (DB/Redis/Kafka/vendor): orchestrator-treasury, orchestrator-tx, engine-fraud, engine-recon, gateway-auth, gateway-blockchain. (cited per service above)
-33. **Fix orchestrator-treasury outbox.** Append outbox events inside the same DB transaction as the state change (not after commit). (app.go:162-163)
-34. **Fix orchestrator-tx audit + payment + blockchain.** Dial audit partner (currently stub never replaced); implement real payment/blockchain adapters (currently stub-or-fatal). Wire OTel + `/metrics`. (main.go:87-88,125)
-35. **Fix mpc-signer + wallet-manager gRPC TLS.** mpc `GrpcWalletClient` must use HTTPS + TLS (not `http://`); wallet-manager gRPC clients must use `credentials.NewTLS` (not `insecure.NewCredentials()` default). (src/wallet.rs:72, internal/clients/clients.go:38)
-36. **Fix dockerfiles running as root.** gateway-fiat, gateway-exchange, fx-hedger, engine-recon, audit-logger → distroless nonroot or add `USER`.
+6. **Fix engine-fraud defaults.** Remove `StubModel` as fallback; fatal in prod when `MODEL_PATH`/`MODEL_REGISTRY_URL` unset. Wire Kafka producer for audit (currently in-memory). Wire real `FeatureStoreClient` (not `InMemoryFeatureStore` default). (scoring.py:221, app.py:65,68)
+7. **Fix engine-recon defaults.** `enable_kafka` should default to `True` when `KAFKA_BROKERS` set (not `False`); `DB_URL` should fatal in prod when unset (not sqlite `:memory:`). (config.py:24,36)
+8. **Fix orchestrator-tx audit + payment + blockchain.** Dial audit partner (currently stub never replaced); implement real payment/blockchain adapters (currently stub-or-fatal). Wire OTel + `/metrics`. (main.go:87-88,125)
+9. **Fix orchestrator-treasury outbox.** Append outbox events inside the same DB transaction as the state change (not after commit). (app.go:162-163)
 
-### Phase 5 — Hardening (residuals carried from prior report)
-37. **Regenerate all consumers from `.github/contracts/`** so runtime gRPC dials succeed field-by-field.
-38. **Fix treasury→liquidity path mismatch** (`/v1/aggregate-orders` vs `/v1/parent-orders`).
-39. **Wire Redis velocity counter** in engine-policy-risk; add KYC/fraud/KYT ingest endpoints once contracts regenerated.
-40. **Wire gateway-blockchain mempool + real chain adapters** (not poll-based scaffolds).
-41. **Wallet-manager balance int64 → decimal** migration.
-42. **Ledger notary posting + SIEM sink** in audit-logger; real S3/KMS creds in prod.
-43. **W3C `traceparent` propagation** as shared interceptor.
-44. **Standardize migrations tooling** (`golang-migrate` for Go, Alembic for Python, `refinery`/`sqlx` for Rust); run as separate `migrate up` step.
-45. **Kafka prod hardening** (3-broker, RF=3, explicit topic provisioning, longer audit retention); Postgres HA + PITR.
-46. **Add Hurl E2E suites to CI.**
-47. **Extract `platform-go` shared module** (logging, tracing, mtls, errors, kafka client) consumed by all Go services.
-48. **Compose app healthchecks** (only postgres/redis/kafka have them today); `restart: unless-stopped`; resource limits; per-service networks.
-49. **Schema versioning** on all non-audit event topics; schema registry.
-50. **KYC document encryption at rest** (currently base64 in `object_key` column).
+### Phase 2 — Reliability & security (re-opened Phase 1-2 residuals)
+10. **Add auth to 12+ unauthenticated services.** Service-token JWT middleware (reuse the orchestrator-tx pattern) on: gateway-blockchain, gateway-exchange, gateway-fiat, orchestrator-treasury, engine-pricing, engine-liquidity, engine-fraud, engine-recon, fx-hedger, notifier, wallet-manager, kyc-onboarding. mpc-signer control-plane RPCs. accounting-ledger gRPC. audit-logger: replace `X-Audit-Roles` header with signed token. (cited per service above)
+11. **Wire observability stack in compose.** Add Prometheus + Grafana + Loki + Tempo + OTel collector services; set `OTEL_EXPORTER_OTLP_ENDPOINT` + `OTEL_SERVICE_NAME` on every service. Prior report claimed this was done — it is not. (`.github/docker-compose.yml` — no such services present)
+12. **Fix gateway-auth password hashing.** Replace SHA-256 with Argon2id (or bcrypt). Make `JWT_SECRET` unset = fatal in prod. Add JWKS endpoint or migrate to RS256. Wire Kafka audit (currently in-memory only). (internal/crypto.go:46, config.go:22)
+13. **Fix notifier Redis fallback.** Fatal in prod when `REDIS_URL` unset (not silent in-memory). Wire `EVENT_BUS_URL`/Kafka bus when `KAFKA_BROKERS` set (currently logs "not yet wired" and continues). (src/redis-runtime.ts:37, src/index.ts:47)
+14. **Fix static `/readyz` in 6 services.** Add real dependency checks (DB/Redis/Kafka/vendor): orchestrator-treasury, orchestrator-tx, engine-fraud, engine-recon, gateway-auth, gateway-blockchain. (cited per service above)
+15. **Fix mpc-signer + wallet-manager gRPC TLS.** mpc `GrpcWalletClient` must use HTTPS + TLS (not `http://`); wallet-manager gRPC clients must use `credentials.NewTLS` (not `insecure.NewCredentials()` default). (src/wallet.rs:72, internal/clients/clients.go:38)
+16. **Fix dockerfiles running as root.** gateway-fiat, gateway-exchange, fx-hedger, engine-recon, audit-logger → distroless nonroot or add `USER`.
+
+### Phase 3 — Release & ops ⏳ NOT STARTED (unchanged from prior report)
+17. **Reusable release workflow** (SBOM via syft + cosign image signing + SHA-tagged images); branch protection + CODEOWNERS.
+18. **CVE scanning** (`govulncheck`, `npm audit --audit-level=high`, `pip-audit`, `bandit`, `cargo-audit`, Trivy) in all CI workflows.
+19. **Finish UI services**:
+    - ui-front-office: 51/52 tasks — signup, KYC wizard, quoting/checkout, dashboard, wallets, notifications, auth/session, error boundaries.
+    - ui-middle-office: 52/53 tasks — KYC review queue, AML desk, policy dashboard, user mgmt, audit explorer, TanStack Query/Router, BFF proxy.
+    - ui-back-office: dashboards thin, MPC monitor placeholder, no auth, clients carry no service token.
+20. **Wire real third-party vendor API keys and drop `DEV_MODE=1`.** Per-service credential inventory (unchanged from prior report): kyt (`CHAINALYSIS/TRM_API_KEY`), kyc (`ONFIDO_API_TOKEN`), fraud (`MODEL_PATH`), notifier (SES/SNS/Twilio/FCM/APNS creds), orchestrator-fiat (rail/MPI provider keys), fx-hedger (FX provider key), engine-pricing (oracle key), gateway-exchange (venue API keys/secrets), gateway-blockchain (RPC URLs), mpc-signer (`CUSTODY_PROVIDER` + custody creds), wallet-manager (real xpubs), all gRPC services (`TLS_*_FILE` for mTLS).
+21. **Runbooks** for 20 services.
+
+### Phase 4 — Hardening (residuals)
+22. **Regenerate all consumers from `.github/contracts/`** so runtime gRPC dials succeed field-by-field.
+23. **Fix treasury→liquidity path mismatch** (`/v1/aggregate-orders` vs `/v1/parent-orders`).
+24. **Wire Redis velocity counter** in engine-policy-risk; add KYC/fraud/KYT ingest endpoints once contracts regenerated.
+25. **Wire gateway-blockchain mempool + real chain adapters** (not poll-based scaffolds).
+26. **Wallet-manager balance int64 → decimal** migration.
+27. **Ledger notary posting + SIEM sink** in audit-logger; real S3/KMS creds in prod.
+28. **W3C `traceparent` propagation** as shared interceptor.
+29. **Standardize migrations tooling** (`golang-migrate` for Go, Alembic for Python, `refinery`/`sqlx` for Rust); run as separate `migrate up` step.
+30. **Kafka prod hardening** (3-broker, RF=3, explicit topic provisioning, longer audit retention); Postgres HA + PITR.
+31. **Add Hurl E2E suites to CI.**
+32. **Extract `platform-go` shared module** (logging, tracing, mtls, errors, kafka client) consumed by all Go services.
+33. **Compose app healthchecks** (only postgres/redis/kafka have them today); `restart: unless-stopped`; resource limits; per-service networks.
+34. **Schema versioning** on all non-audit event topics; schema registry.
+35. **KYC document encryption at rest** (currently base64 in `object_key` column).
 
 ---
 
