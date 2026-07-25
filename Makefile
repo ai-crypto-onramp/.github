@@ -1,8 +1,16 @@
 # Makefile — docker compose aliases for the local dev stack.
 #
+# Postgres data is fresh on every `make up`: `make down` removes the named
+# pg-data volume (so the next `make up` boots an empty cluster and each
+# service re-runs its migrations). To preserve Postgres across down/up
+# cycles (e.g. iterating on a single service without wiping data), use
+# `make down KEEP_DB=1`. For an in-place data reset against a live stack,
+# `make reset-db` truncates every service database without bouncing it.
+#
 # Usage:
-#   make up            bring the full stack up (detached)
-#   make down          stop and remove containers
+#   make up            bring the full stack up (detached; fresh Postgres)
+#   make down          stop, remove containers and volumes (fresh DB next up)
+#   make down KEEP_DB=1  stop and remove containers, keep the pg-data volume
 #   make restart       restart all services
 #   make ps            list running services
 #   make logs          tail logs for all services
@@ -48,8 +56,11 @@ all: up
 up:
 	$(COMPOSE) up -d
 
+# Stop and remove containers. By default also removes named volumes (so
+# Postgres starts fresh on the next `make up`). Pass KEEP_DB=1 to preserve
+# the pg-data volume across down/up cycles (persistent dev data).
 down:
-	$(COMPOSE) down
+	$(COMPOSE) down $(if $(KEEP_DB),,-v)
 
 restart:
 	$(COMPOSE) restart

@@ -247,6 +247,15 @@ Then open http://localhost:8090. Gatus polls each `/healthz` endpoint every 30s
 and renders the status page from `gatus.yml`. To add or change monitors, edit
 `gatus.yml` and restart the `gatus` container.
 
+Postgres data is **fresh on every stack up**: `make down` removes the named
+`pg-data` volume (and all other volumes), so the next `make up` boots an empty
+cluster and each service re-runs its migrations. There is no DB-reset one-shot
+in the compose graph — rebuilding and restarting a single service no longer
+truncates the database. To preserve Postgres across down/up cycles (e.g. while
+iterating on one service), use `make down KEEP_DB=1`. For an in-place data wipe
+against a live stack, `make reset-db` truncates every service database without
+bouncing it.
+
 ### Gatus configuration
 
 Monitors are defined in `gatus.yml`. Each endpoint block sets:

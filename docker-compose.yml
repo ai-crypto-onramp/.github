@@ -30,38 +30,6 @@ services:
       timeout: 3s
       retries: 10
 
-  # One-shot DB reset: truncates every service database after postgres is
-  # healthy and before any app service starts, so app boots land on empty
-  # tables and never hold locks that would stall the truncate. The DB list
-  # is derived from fixtures/seed/*.sql filenames (each seed file is named
-  # <db>.sql), so adding a service DB only needs a new seed file.
-  #
-  # reset.sql is the same file used by `make reset-db`; it runs once per DB
-  # with a 5s lock_timeout and a lock_not_available EXCEPTION handler so a
-  # locked DB aborts atomically (left untouched, not half-truncated) and
-  # the one-shot exits non-zero, which blocks downstream app services from
-  # starting against a half-reset state.
-  db-reset:
-    image: postgres:16-alpine
-    depends_on:
-      postgres:
-        condition: service_healthy
-    restart: "no"
-    environment:
-      - PGPASSWORD=postgres
-    volumes:
-      - ./fixtures:/fixtures:ro
-    entrypoint: ["/bin/sh", "-c"]
-    command:
-      - |
-        set -e
-        for f in /fixtures/seed/*.sql; do
-          db=$$(basename "$$f" .sql)
-          echo "Resetting database $$db..."
-          psql -h postgres -U postgres -d "$$db" -v ON_ERROR_STOP=1 < /fixtures/reset.sql
-        done
-        echo "All databases reset."
-
   # Shared Kafka broker for the transactional event bus, audit-logger
   # ingestion, kyt-aml-screening audit sink, gateway-blockchain lifecycle
   # events, gateway-exchange fill/balance events, and treasury-
@@ -148,8 +116,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
       redis:
         condition: service_healthy
       kafka:
@@ -176,8 +142,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
       kafka:
         condition: service_healthy
 
@@ -204,8 +168,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
       wallet-manager:
         condition: service_healthy
       kafka:
@@ -226,8 +188,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
       kafka:
         condition: service_healthy
 
@@ -245,8 +205,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
       redis:
         condition: service_healthy
       kafka:
@@ -266,8 +224,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
       kafka:
         condition: service_healthy
 
@@ -283,8 +239,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
 
   accounting-ledger:
     build: ../accounting-ledger
@@ -304,8 +258,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
       kafka:
         condition: service_healthy
 
@@ -325,8 +277,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
       redis:
         condition: service_healthy
       kafka:
@@ -386,8 +336,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
       kafka:
         condition: service_healthy
       kafka-init:
@@ -406,8 +354,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
       kafka:
         condition: service_healthy
 
@@ -448,8 +394,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
       redis:
         condition: service_healthy
       kafka:
@@ -469,8 +413,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
       redis:
         condition: service_healthy
 
@@ -487,8 +429,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
 
   engine-recon:
     build: ../engine-recon
@@ -504,8 +444,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
       kafka:
         condition: service_healthy
 
@@ -540,8 +478,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
       kafka:
         condition: service_healthy
       engine-policy-risk:
@@ -576,8 +512,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
       redis:
         condition: service_healthy
       kafka:
@@ -606,8 +540,6 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
-      db-reset:
-        condition: service_completed_successfully
       redis:
         condition: service_healthy
       kafka:
