@@ -12,7 +12,7 @@
 
 *Historical (pre-Phase-0):* This is a **well-scaffolded but pre-production monorepo**. Per-service code quality is reasonable (unit-test ratios 0.3–0.96 across all 21 services; Dockerfiles, healthz, CI all present), but the **inter-service fabric is broken in numerous critical places**: stub-fallback pattern pervasive, audit/notifier/recon pipelines end-to-end broken, 3 money-moving services had zero persistence, no observability backend, no mTLS, no auth on internal endpoints, no release pipeline.
 
-**Current state:** Phases 0, 1, 2 complete. The stack fails fast in prod mode, the audit pipeline produces/consumes end-to-end on `audit.v1`, all money-moving services persist to Postgres, money is `decimal.Decimal` end-to-end, custody delegates to Fireblocks/Dfns/Turnkey, withdrawals build real EVM/BTC/Solana txs, the ledger is Postgres-backed and append-only, reorgs re-broadcast, internal endpoints require service-token JWTs with mTLS dials, the observability stack (Prometheus + Grafana + Loki + Tempo + OTel collector) is deployed, notifier sends real messages, reconciliation fetches ledger entries, KYC/fraud/KYT use real providers. What remains is **Phase 3 (release & ops)**: release pipeline, CVE scanning, runbooks/ADRs.
+**Current state:** Phases 0, 1, 2 complete. The stack fails fast in prod mode, the audit pipeline produces/consumes end-to-end on `audit.v1`, all money-moving services persist to Postgres, money is `decimal.Decimal` end-to-end, custody delegates to Fireblocks/Dfns/Turnkey, withdrawals build real EVM/BTC/Solana txs, the ledger is Postgres-backed and append-only, reorgs re-broadcast, internal endpoints require service-token JWTs with mTLS dials, the observability stack (Prometheus + Grafana + Loki + Tempo + OTel collector) is deployed, notifier sends real messages, reconciliation fetches ledger entries, KYC/fraud/KYT use real providers. What remains is **Phase 3 (release & ops)**: release pipeline, CVE scanning, finishing UI services, wiring real vendor credentials (dropping DEV_MODE), runbooks/ADRs.
 
 ---
 
@@ -274,7 +274,26 @@ Unit coverage is healthy. The systemic gap is **integration**: there is no end-t
 ### Phase 3 — Release & ops (1-2 weeks) ⏳ NOT STARTED
 16. **Add reusable release workflow** (SBOM via syft + cosign image signing + SHA-tagged images); add branch protection + CODEOWNERS.
 17. **Add CVE scanning** (`govulncheck`, `npm audit --audit-level=high`, `pip-audit`, `bandit`, `cargo-audit`, Trivy) to all CI workflows.
-18. **Write runbooks** for the remaining 20 services; add ADRs; fix `.github/README.md` async-layer diagram.
+18. **Finish UI services.** All three UI services are scaffolded but incomplete:
+    - **ui-front-office** (Next.js, 51/52 tasks unchecked): signup flow, KYC wizard, quoting/checkout, transaction dashboard, wallet management, notifications — all pages are stubs. No API gateway integration, no auth/session handling, no error boundaries.
+    - **ui-middle-office** (React/Vite, 52/53 tasks unchecked): KYC review queue, AML/KYT alert desk, policy/risk dashboard, user management, audit explorer — all pages are stubs. No TanStack Query/Router wiring, no backend REST integration.
+    - **ui-back-office** (Streamlit, 0 unchecked but dashboards are thin): treasury dashboard, liquidity routing, FX hedging, ledger viewer, reconciliation, wallet inventory, settlement, MPC signing monitor — dashboards exist but most show placeholder/static data; the MPC signing dashboard is explicitly a placeholder.
+19. **Wire real third-party vendor API keys and drop DEV_MODE.** 22 services currently run with `DEV_MODE=1` in compose. Each service falls back to stub/fake/dummy providers when `DEV_MODE=1` and the real credentials are unset. To reach production, every service needs real credentials wired via env vars (externalized to a secrets manager, not in compose). Per-service credential inventory:
+    - **kyt-aml-screening**: `CHAINALYSIS_API_KEY`, `CHAINALYSIS_WEBHOOK_SECRET`, `TRM_API_KEY`, `TRM_WEBHOOK_SECRET` (currently `dev-secret-*`).
+    - **kyc-onboarding**: `ONFIDO_API_TOKEN`, `ONFIDO_WEBHOOK_SECRET`, `KYC_VENDOR_URL` (currently stub vendor).
+    - **fraud-engine**: `MODEL_PATH` or `MODEL_REGISTRY_URL` (currently no model loaded; `StubModel` returns fixed scores).
+    - **notifier**: `SES_FROM`, `SES_REGION`, `SNS_REGION`, `TWILIO_SID`, `TWILIO_TOKEN`, `TWILIO_FROM`, `FCM_KEY`/`FCM_KEY_PATH`, `APNS_TEAM_ID`, `APNS_KEY_ID`, `APNS_PRIVATE_KEY_PATH`, `APNS_BUNDLE_ID`, `PARTNER_WEBHOOK_SECRET` (currently stub providers).
+    - **payment-orchestrator**: real rail adapter credentials (Stripe/Braintree/Adyen for card, ACH/SEPA/PIX/UPI provider keys), MPI/3DS provider credentials (currently dummy rail + dummy MPI).
+    - **fx-hedger**: real FX provider API credentials (currently dummy rate=1.10).
+    - **pricing-quote**: real pricing oracle API key (currently seeded stub prices).
+    - **gateway-exchange**: exchange API keys + secrets for Binance/Kraken/OTC desks (currently reads from env but no real keys; `client_order_id` not set on outbound orders).
+    - **gateway-blockchain**: real RPC endpoints per chain (`RPC_URLS_<CHAIN>`), mempool watcher configuration (currently no-op).
+    - **mpc-signer**: select custody provider (`CUSTODY_PROVIDER=fireblocks|dfns|turnkey`) and wire `CUSTODY_API_SECRET_KEY` / `CUSTODY_SERVICE_ACCOUNT_KEY` / `CUSTODY_ORGANIZATION_ID` / `CUSTODY_API_PRIVATE_KEY` / `CUSTODY_SUB_ORGANIZATION_ID` (currently `CUSTODY_PROVIDER=in_house` — reconstructs the full private key in the coordinator).
+    - **wallet-manager**: `EVM_XPUB`, `BTC_XPUB` (currently hardcoded dev xpubs in compose).
+    - **accounting-ledger**: `AUDIT_EVENT_LOG_URL` (currently unset in dev mode).
+    - **All Go gRPC services**: `TLS_CERT_FILE`, `TLS_KEY_FILE`, `TLS_CA_FILE` for mTLS dials (currently plaintext in DEV_MODE).
+    - **All services**: `OTEL_EXPORTER_OTLP_ENDPOINT` pointing at a real collector (currently unset → no-op).
+20. **Write runbooks** for the remaining 20 services; add ADRs; fix `.github/README.md` async-layer diagram.
 
 ### Phase 3 hardening (residuals from Phases 0-2 re-evaluation)
 - **Regenerate all consumers from `.github/contracts/`** so runtime gRPC dials succeed field-by-field (closes the contract-defined-but-not-regenerated gap on 6 txo→partner edges + payment→rails/fraud + liquidity→exchange).
@@ -304,7 +323,7 @@ Unit coverage is healthy. The systemic gap is **integration**: there is no end-t
 
 **Current state (post-Phase-0/1/2):** Phases 0, 1, and 2 are complete. The stack fails fast in production mode. The audit pipeline produces and consumes end-to-end on `audit.v1` (16 producers, canonical envelope). All four money-moving services persist state to Postgres. The orchestrator dials real partner URLs with mTLS. The custody core delegates to real Fireblocks/Dfns/Turnkey APIs. Withdrawals build real EVM/BTC/Solana transactions. The ledger is Postgres-backed, salted, append-only, and SERIALIZABLE per-tx. Reorgs re-broadcast. Money is `decimal.Decimal` end-to-end. Internal endpoints require service-token JWTs. The observability stack (Prometheus + Grafana + Loki + Tempo + OTel collector) is deployed with OTel SDK in every service. Notification sends real emails/SMS/push via SES/SNS/Twilio/FCM/APNS. Reconciliation fetches ledger entries via `LedgerFetcher`. KYC uses real Onfido; fraud loads real models; KYT uses real Chainalysis/TRM.
 
-**Revised estimated time to production-readiness: 1–2 weeks** (down from 8–12), with Phases 0, 1, and 2 done. What remains is Phase 3 (release & ops: SBOM/cosign/SHA tags, CVE scanning, runbooks/ADRs) plus the residual hardening items above. The single highest-leverage remaining fix is regenerating all consumers from `.github/contracts/` so runtime gRPC dials succeed field-by-field — that closes the contract-defined-but-not-regenerated gap on 9 of 16 integration edges.
+**Revised estimated time to production-readiness: 2–4 weeks** (down from 8–12), with Phases 0, 1, and 2 done. What remains is Phase 3 (release & ops: SBOM/cosign/SHA tags, CVE scanning, finishing UI services, wiring real vendor credentials / dropping DEV_MODE, runbooks/ADRs) plus the residual hardening items above. The single highest-leverage remaining fix is regenerating all consumers from `.github/contracts/` so runtime gRPC dials succeed field-by-field — that closes the contract-defined-but-not-regenerated gap on 9 of 16 integration edges.
 
 ---
 
@@ -348,13 +367,15 @@ All 5 Phase 0 items have been implemented, committed across 22 repositories, and
 |---|---|---|---|
 | 16 | Reusable release workflow (SBOM/cosign/SHA tags) | ❌ Not started | Only `.github/workflows/{ci,contracts-ci,go-service-ci}.yml` — no release workflow. No cosign, no syft/SBOM, no SHA-tagged images. No CODEOWNERS, no branch protection. |
 | 17 | CVE scanning in CI | ❌ Not started | No govulncheck/npm audit/pip-audit/cargo-audit/Trivy in any workflow. (mpc-signer already runs cargo-deny + cargo-audit; that pattern needs lifting to the other 20 services.) |
-| 18 | Runbooks + ADRs | ❌ Not started | Only `mpc-signer/docs/runbooks/{dkg-ceremony,incident-response,key-rotation,node-restore}.md`. No ADRs. `.github/README.md` async diagram still inaccurate. |
+| 18 | Finish UI services | ❌ Not started | ui-front-office: 51/52 tasks unchecked (stubs only). ui-middle-office: 52/53 tasks unchecked (stubs only). ui-back-office: dashboards exist but show placeholder/static data; MPC signing dashboard explicitly a placeholder. |
+| 19 | Wire real third-party vendor API keys / drop DEV_MODE | ❌ Not started | 22 services run with `DEV_MODE=1` in compose. Real provider code exists (Onfido, Chainalysis, TRM, SES, SNS, Twilio, FCM, APNS, Fireblocks/Dfns/Turnkey, exchange APIs) but all credentials are unset or dev-secrets. Per-service credential inventory listed in the Phase 3 plan above. |
+| 20 | Runbooks + ADRs | ❌ Not started | Only `mpc-signer/docs/runbooks/{dkg-ceremony,incident-response,key-rotation,node-restore}.md`. No ADRs. `.github/README.md` async diagram still inaccurate. |
 
 ### Revised headline verdict
 
 **Phases 0, 1, and 2 are complete.** The stack fails fast in production mode. The audit pipeline produces and consumes end-to-end on `audit.v1`. Four money-moving services persist state to Postgres. The orchestrator dials real partner URLs with mTLS. The custody core delegates to real Fireblocks/Dfns/Turnkey APIs. Withdrawals build real EVM/BTC/Solana transactions. The ledger is Postgres-backed, salted, and append-only. Reorgs re-broadcast. Money is `decimal.Decimal` end-to-end. Internal endpoints require service-token JWTs. The observability stack (Prometheus + Grafana + Loki + Tempo + OTel collector) is deployed with OTel SDK in every service. Notification sends real emails/SMS/push via SES/SNS/Twilio/FCM/APNS. Reconciliation fetches ledger entries. KYC uses real Onfido; fraud loads real models; KYT uses real Chainalysis/TRM.
 
-What remains: **Phase 3 (release & ops)** — release pipeline (SBOM/cosign/SHA tags), CVE scanning across all services, and runbooks/ADRs.
+What remains: **Phase 3 (release & ops)** — release pipeline (SBOM/cosign/SHA tags), CVE scanning across all services, finishing the three UI services, wiring real third-party vendor credentials and dropping `DEV_MODE=1`, and runbooks/ADRs.
 
 **Revised estimated time to production-readiness: 1–2 weeks** (down from 3–5), with Phases 0, 1, and 2 done. Phase 3 is the final stretch.
 
