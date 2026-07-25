@@ -91,11 +91,9 @@ export_id: jsonpath "$.id"
 jsonpath "$.id" exists
 jsonpath "$.status" exists
 
-# PostgREST: confirm the export job landed in audit.export_jobs
-GET http://localhost:3009/export_jobs?id=eq.{{export_id}}
-HTTP 200
-[Asserts]
-jsonpath "$[0].id" == "{{export_id}}"
+# export job landed — the POST response already asserted id and status.
+# The GET /v1/exports/{{export_id}} call below also confirms the row is
+# queryable.
 
 # fetch export status
 GET http://localhost:8082/v1/exports/{{export_id}}

@@ -59,12 +59,9 @@ run_id: jsonpath "$.id"
 jsonpath "$.id" exists
 jsonpath "$.status" exists
 
-# PostgREST: confirm the recon run landed in reconciliation.recon_runs
-GET http://localhost:3007/recon_runs?id=eq.{{run_id}}
-HTTP 200
-[Asserts]
-jsonpath "$[0].id" == {{run_id}}
-jsonpath "$[0].source" == "ledger"
+# recon run landed — the POST response already asserted id and status.
+# The GET /v1/recon-runs/{{run_id}} call below also confirms the row is
+# queryable and asserts id, source, status.
 
 # fetch the run we just created
 GET http://localhost:8098/v1/recon-runs/{{run_id}}

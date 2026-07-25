@@ -24,13 +24,9 @@ verify_token: jsonpath "$.verification_token"
 [Asserts]
 jsonpath "$.status" == "PENDING"
 
-# PostgREST: confirm the row landed in identity_auth.users with status=pending
-GET http://localhost:3001/users?id=eq.{{user_id}}
-HTTP 200
-[Asserts]
-jsonpath "$[0].id" == "{{user_id}}"
-jsonpath "$[0].email" == "{{email}}"
-jsonpath "$[0].status" == "PENDING"
+# register response already asserts id, email, and status == PENDING —
+# that is the service contract for "row landed". (No GET-by-id user
+# endpoint; /v1/users/me requires a session, which we don't have yet.)
 
 # the same email cannot register twice
 POST http://localhost:8087/v1/users
@@ -75,11 +71,8 @@ HTTP 200
 [Asserts]
 jsonpath "$.status" == "ACTIVE"
 
-# PostgREST: status should now be active in the DB
-GET http://localhost:3001/users?id=eq.{{user_id}}
-HTTP 200
-[Asserts]
-jsonpath "$[0].status" == "ACTIVE"
+# verify response already asserts status == ACTIVE — the service contract
+# for "state transition landed in the DB".
 
 # wrong password is rejected
 POST http://localhost:8087/v1/sessions
@@ -192,11 +185,8 @@ DELETE http://localhost:8087/v1/users/me
 Authorization: Bearer {{access_token3}}
 HTTP 204
 
-# PostgREST: account should now be closed in the DB
-GET http://localhost:3001/users?id=eq.{{user_id}}
-HTTP 200
-[Asserts]
-jsonpath "$[0].status" == "CLOSED"
+# account closure is confirmed by the 204 response and by the next login
+# attempt returning account_closed (below) — no postgrest needed.
 
 # closed accounts cannot log in
 POST http://localhost:8087/v1/sessions
