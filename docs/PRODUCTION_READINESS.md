@@ -12,7 +12,7 @@
 
 *Historical (pre-Phase-0):* This is a **well-scaffolded but pre-production monorepo**. Per-service code quality is reasonable (unit-test ratios 0.3–0.96 across all 21 services; Dockerfiles, healthz, CI all present), but the **inter-service fabric is broken in numerous critical places**: stub-fallback pattern pervasive, audit/notifier/recon pipelines end-to-end broken, 3 money-moving services had zero persistence, no observability backend, no mTLS, no auth on internal endpoints, no release pipeline.
 
-**Current state:** Phases 0, 1, 2 complete. The stack fails fast in prod mode, the audit pipeline produces/consumes end-to-end on `audit.v1`, all money-moving services persist to Postgres, money is `decimal.Decimal` end-to-end, custody delegates to Fireblocks/Dfns/Turnkey, withdrawals build real EVM/BTC/Solana txs, the ledger is Postgres-backed and append-only, reorgs re-broadcast, internal endpoints require service-token JWTs with mTLS dials, the observability stack (Prometheus + Grafana + Loki + Tempo + OTel collector) is deployed, notifier sends real messages, reconciliation fetches ledger entries, KYC/fraud/KYT use real providers. What remains is **Phase 3 (release & ops)**: release pipeline, CVE scanning, Helm charts, Gatus alerting, runbooks/ADRs.
+**Current state:** Phases 0, 1, 2 complete. The stack fails fast in prod mode, the audit pipeline produces/consumes end-to-end on `audit.v1`, all money-moving services persist to Postgres, money is `decimal.Decimal` end-to-end, custody delegates to Fireblocks/Dfns/Turnkey, withdrawals build real EVM/BTC/Solana txs, the ledger is Postgres-backed and append-only, reorgs re-broadcast, internal endpoints require service-token JWTs with mTLS dials, the observability stack (Prometheus + Grafana + Loki + Tempo + OTel collector) is deployed, notifier sends real messages, reconciliation fetches ledger entries, KYC/fraud/KYT use real providers. What remains is **Phase 3 (release & ops)**: release pipeline, CVE scanning, runbooks/ADRs.
 
 ---
 
@@ -169,9 +169,7 @@ Only `mpc-signer/docs/runbooks/{dkg-ceremony,key-rotation,node-restore,incident-
 
 | Severity | Issue | Status | Evidence | Remediation |
 |---|---|---|---|---|
-| P0 | No production deployment artifact — only `docker-compose.yml` (dev). No k8s/helm/terraform. | ⏳ OPEN (Phase 3, item 18) | `find . -name '*.tf' -o -name 'Chart.yaml' -o -name 'kustomization.yaml'` → none. | Add Helm chart per service + prod overlay; or Terraform. |
 | P0 | Secrets are plain-text in compose (`postgres:postgres`, `dev-secret`, `dev-secret-chainalysis`, `EVM_XPUB`/`BTC_XPUB` hardcoded). | ⏳ OPEN (Phase 3) | `.github/docker-compose.yml:8-9,238-239,415,453,516-518`. | Externalize to a secrets manager (Vault/ASM/SSM); never ship prod keys in compose. |
-| P0 | Alerting is a no-op — `gatus.yml` declares `alerting: slack: {}` (empty, no webhook url). No PagerDuty. | ⏳ OPEN (Phase 3, item 19) | `.github/gatus.yml:13-14`. | Configure Slack/PagerDuty with real endpoints + escalation. |
 | P0 | E2E Kafka tests are unrunnable — `tests/e2e-kafka/*.hurl` hit `http://localhost:8105` (kafka-rest) which is commented out in compose. Postgrest assertion services (ports 3001-3011) also all commented out. | ⏳ OPEN (Phase 3) | `.github/docker-compose.yml:216-227,26-167`; `.github/tests/e2e-kafka/*.hurl:10,31`. | Uncomment `kafka-rest` + `postgrest-*` or rewrite assertions. |
 | P1 | Single Postgres for all 16 service DBs (no HA, no backups, no PITR). | ⏳ OPEN (Phase 3) | `.github/postgres-init.sql:1-16`; `.github/docker-compose.yml:5-19`. | Per-service managed Postgres or logical replication + automated backups. |
 | P1 | No observability stack (no Prometheus/Grafana/Loki/Tempo/OTel collector). | ✅ RESOLVED (Phase 2, item 12) | Prometheus (9090) + Grafana (3000) + Loki (3100) + Tempo (3200+4317) + OTel collector (4317/4318/8888) now in compose; `monitoring/` config tree; OTel SDK in every service. | W3C `traceparent` propagation convention still pending as shared interceptor (Phase 3 hardening). |
@@ -276,9 +274,7 @@ Unit coverage is healthy. The systemic gap is **integration**: there is no end-t
 ### Phase 3 — Release & ops (1-2 weeks) ⏳ NOT STARTED
 16. **Add reusable release workflow** (SBOM via syft + cosign image signing + SHA-tagged images); add branch protection + CODEOWNERS.
 17. **Add CVE scanning** (`govulncheck`, `npm audit --audit-level=high`, `pip-audit`, `bandit`, `cargo-audit`, Trivy) to all CI workflows.
-18. **Add Helm chart per service** + staging overlay; or at minimum a `docker-compose.prod.yml` with real secrets strategy. Externalize compose secrets to Vault/ASM/SSM.
-19. **Configure Gatus alerting** (Slack/PagerDuty with real endpoints + escalation); add latency SLOs + synthetic transaction probes.
-20. **Write runbooks** for the remaining 20 services; add ADRs; fix `.github/README.md` async-layer diagram.
+18. **Write runbooks** for the remaining 20 services; add ADRs; fix `.github/README.md` async-layer diagram.
 
 ### Phase 3 hardening (residuals from Phases 0-2 re-evaluation)
 - **Regenerate all consumers from `.github/contracts/`** so runtime gRPC dials succeed field-by-field (closes the contract-defined-but-not-regenerated gap on 6 txo→partner edges + payment→rails/fraud + liquidity→exchange).
@@ -308,7 +304,7 @@ Unit coverage is healthy. The systemic gap is **integration**: there is no end-t
 
 **Current state (post-Phase-0/1/2):** Phases 0, 1, and 2 are complete. The stack fails fast in production mode. The audit pipeline produces and consumes end-to-end on `audit.v1` (16 producers, canonical envelope). All four money-moving services persist state to Postgres. The orchestrator dials real partner URLs with mTLS. The custody core delegates to real Fireblocks/Dfns/Turnkey APIs. Withdrawals build real EVM/BTC/Solana transactions. The ledger is Postgres-backed, salted, append-only, and SERIALIZABLE per-tx. Reorgs re-broadcast. Money is `decimal.Decimal` end-to-end. Internal endpoints require service-token JWTs. The observability stack (Prometheus + Grafana + Loki + Tempo + OTel collector) is deployed with OTel SDK in every service. Notification sends real emails/SMS/push via SES/SNS/Twilio/FCM/APNS. Reconciliation fetches ledger entries via `LedgerFetcher`. KYC uses real Onfido; fraud loads real models; KYT uses real Chainalysis/TRM.
 
-**Revised estimated time to production-readiness: 1–2 weeks** (down from 8–12), with Phases 0, 1, and 2 done. What remains is Phase 3 (release & ops: SBOM/cosign/SHA tags, CVE scanning, Helm charts, Gatus alerting, runbooks/ADRs) plus the residual hardening items above. The single highest-leverage remaining fix is regenerating all consumers from `.github/contracts/` so runtime gRPC dials succeed field-by-field — that closes the contract-defined-but-not-regenerated gap on 9 of 16 integration edges.
+**Revised estimated time to production-readiness: 1–2 weeks** (down from 8–12), with Phases 0, 1, and 2 done. What remains is Phase 3 (release & ops: SBOM/cosign/SHA tags, CVE scanning, runbooks/ADRs) plus the residual hardening items above. The single highest-leverage remaining fix is regenerating all consumers from `.github/contracts/` so runtime gRPC dials succeed field-by-field — that closes the contract-defined-but-not-regenerated gap on 9 of 16 integration edges.
 
 ---
 
@@ -352,15 +348,13 @@ All 5 Phase 0 items have been implemented, committed across 22 repositories, and
 |---|---|---|---|
 | 16 | Reusable release workflow (SBOM/cosign/SHA tags) | ❌ Not started | Only `.github/workflows/{ci,contracts-ci,go-service-ci}.yml` — no release workflow. No cosign, no syft/SBOM, no SHA-tagged images. No CODEOWNERS, no branch protection. |
 | 17 | CVE scanning in CI | ❌ Not started | No govulncheck/npm audit/pip-audit/cargo-audit/Trivy in any workflow. (mpc-signer already runs cargo-deny + cargo-audit; that pattern needs lifting to the other 20 services.) |
-| 18 | Helm chart per service / docker-compose.prod.yml | ❌ Not started | No `Chart.yaml`/`kustomization.yaml`/`*.tf` anywhere. |
-| 19 | Gatus alerting | ❌ Not started | `gatus.yml` still `alerting: slack: {}` (empty, no webhook). No PagerDuty. |
-| 20 | Runbooks + ADRs | ❌ Not started | Only `mpc-signer/docs/runbooks/{dkg-ceremony,incident-response,key-rotation,node-restore}.md`. No ADRs. `.github/README.md` async diagram still inaccurate. |
+| 18 | Runbooks + ADRs | ❌ Not started | Only `mpc-signer/docs/runbooks/{dkg-ceremony,incident-response,key-rotation,node-restore}.md`. No ADRs. `.github/README.md` async diagram still inaccurate. |
 
 ### Revised headline verdict
 
 **Phases 0, 1, and 2 are complete.** The stack fails fast in production mode. The audit pipeline produces and consumes end-to-end on `audit.v1`. Four money-moving services persist state to Postgres. The orchestrator dials real partner URLs with mTLS. The custody core delegates to real Fireblocks/Dfns/Turnkey APIs. Withdrawals build real EVM/BTC/Solana transactions. The ledger is Postgres-backed, salted, and append-only. Reorgs re-broadcast. Money is `decimal.Decimal` end-to-end. Internal endpoints require service-token JWTs. The observability stack (Prometheus + Grafana + Loki + Tempo + OTel collector) is deployed with OTel SDK in every service. Notification sends real emails/SMS/push via SES/SNS/Twilio/FCM/APNS. Reconciliation fetches ledger entries. KYC uses real Onfido; fraud loads real models; KYT uses real Chainalysis/TRM.
 
-What remains: **Phase 3 (release & ops)** — release pipeline (SBOM/cosign/SHA tags), CVE scanning across all services, Helm charts or docker-compose.prod.yml, Gatus alerting, and runbooks/ADRs.
+What remains: **Phase 3 (release & ops)** — release pipeline (SBOM/cosign/SHA tags), CVE scanning across all services, and runbooks/ADRs.
 
 **Revised estimated time to production-readiness: 1–2 weeks** (down from 3–5), with Phases 0, 1, and 2 done. Phase 3 is the final stretch.
 
