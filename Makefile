@@ -32,14 +32,14 @@
 #   make logs-<svc>    tail logs for one service:    `make logs-policy`
 #   make test-<svc>    run one service's test suite: `make test-pricing`
 #
-#   make psql          psql into the shared postgres container
-#   make redis-cli     redis-cli into the shared redis container
-#   make kafka-topics            list Kafka topics
-#   make kafka-consumer TOPIC=t  tail a Kafka topic (interactive)
-#   make kafka-producer TOPIC=t  produce to a Kafka topic (interactive, stdin)
-#   make kafka-describe TOPIC=t  describe a Kafka topic
-#   make kafka-groups            list Kafka consumer groups
+#   make kafka-topics                  list Kafka topics
+#   make kafka-consumer TOPIC=t        tail a Kafka topic (interactive)
+#   make kafka-producer TOPIC=t        produce to a Kafka topic (interactive, stdin)
+#   make kafka-describe TOPIC=t        describe a Kafka topic
+#   make kafka-groups                  list Kafka consumer groups
 #   make kafka-group-describe GROUP=g  describe a consumer group
+#   make psql                          `psql` into the shared postgres container
+#   make redis-cli                     `redis-cli` into the shared redis container
 #
 #   make seed-db       populate all postgres databases with fixture data
 #   make reset-db      truncate all tables across all postgres databases
