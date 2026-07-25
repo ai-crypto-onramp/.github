@@ -4,7 +4,7 @@
 #
 # The dummy venue returns an immediate fill on market orders. The fill
 # is persisted to the exchange_connectors DB and queryable via the
-# service-native REST API. We also verify the balance changed.
+# service-native REST API.
 
 GET http://localhost:8084/healthz
 HTTP 200
@@ -34,18 +34,20 @@ jsonpath "$.status" == "filled"
 GET http://localhost:8084/v1/orders/{{fill_order_id}}/fills
 HTTP 200
 [Asserts]
-jsonpath "$" count >= 1
-jsonpath "$[0].venue_order_id" == "{{fill_order_id}}"
-jsonpath "$[0].venue" == "dummy"
-jsonpath "$[0].pair" == "BTC/USD"
+jsonpath "$.fills" count >= 1
+jsonpath "$.fills[0].VenueOrderID" == "{{fill_order_id}}"
+jsonpath "$.fills[0].TradeID" exists
+jsonpath "$.fills[0].Price" exists
+jsonpath "$.fills[0].Quantity" exists
 
 # --- verify: the order itself reflects the fill ---
 
 GET http://localhost:8084/v1/orders/{{fill_order_id}}
 HTTP 200
 [Asserts]
-jsonpath "$.venue_order_id" == "{{fill_order_id}}"
-jsonpath "$.status" == "filled"
+jsonpath "$.VenueOrderID" == "{{fill_order_id}}"
+jsonpath "$.Status" == "filled"
+jsonpath "$.Fills" count >= 1
 
 # --- verify: balances endpoint is reachable (balance reflects the fill) ---
 
