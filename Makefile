@@ -21,9 +21,9 @@
 #   make test          run all Hurl integration suites (HTML report in `reports/`)
 #
 #   make build-go      (re)build all Go services
-#   make build-ts      (re)build all TypeScript services
-#   make build-rs      (re)build all Rust services
 #   make build-py      (re)build all Python services
+#   make build-rs      (re)build all Rust services
+#   make build-ts      (re)build all TypeScript services
 #
 #   make up-<svc>      start one service:            `make up-kyc`, `make up-identity-auth`
 #   make down-<svc>    stop & remove one service:    `make down-kyc`, `make down-front-office-ui`
@@ -101,11 +101,11 @@ GO_SERVICES := audit-logger engine-liquidity engine-policy-risk engine-pricing \
 build-go:
 	DOCKER_BUILDKIT=1 $(COMPOSE) build $(GO_SERVICES)
 
-# Build only the TypeScript services.
-TS_SERVICES := gateway-api notifier ui-front-office ui-middle-office
+# Build only the Python services.
+PY_SERVICES := engine-fraud engine-recon ui-back-office
 
-build-ts:
-	DOCKER_BUILDKIT=1 $(COMPOSE) build $(TS_SERVICES)
+build-py:
+	DOCKER_BUILDKIT=1 $(COMPOSE) build $(PY_SERVICES)
 
 # Build only the Rust services.
 RS_SERVICES := accounting-ledger mpc-signer
@@ -113,11 +113,11 @@ RS_SERVICES := accounting-ledger mpc-signer
 build-rs:
 	DOCKER_BUILDKIT=1 $(COMPOSE) build $(RS_SERVICES)
 
-# Build only the Python services.
-PY_SERVICES := engine-fraud engine-recon ui-back-office
+# Build only the TypeScript services.
+TS_SERVICES := gateway-api notifier ui-front-office ui-middle-office
 
-build-py:
-	DOCKER_BUILDKIT=1 $(COMPOSE) build $(PY_SERVICES)
+build-ts:
+	DOCKER_BUILDKIT=1 $(COMPOSE) build $(TS_SERVICES)
 
 # Short aliases for service names, used by the up-%, logs-% and test-%
 # patterns. Services without an alias (postgres, redis, gatus) are addressed
