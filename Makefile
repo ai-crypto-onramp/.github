@@ -175,7 +175,7 @@ redis-cli:
 
 # Populate all databases with synthetic fixture data via scripts/seed.py.
 # Runs the seed compose service inside the network. MODE selects dataset
-# size: 10 (default), 100, or 1000 records per table. The seeder inserts
+# size: 10, 100 (default), or 1000 records per table. The seeder inserts
 # only (no truncate); run `make reset-db` first for a clean slate.
 #   make seed-db
 #   make seed-db MODE=100
