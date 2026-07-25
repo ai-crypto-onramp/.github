@@ -302,8 +302,8 @@ services:
       db-reset:
         condition: service_completed_successfully
 
-  ledger-accounting:
-    build: ../ledger-accounting
+  accounting-ledger:
+    build: ../accounting-ledger
     ports:
       - "8088:8080"
     expose:
@@ -537,7 +537,7 @@ services:
       - POLICY_URL=policy-risk-engine:9090
       - KYT_URL=kyt-aml-screening:9090
       - MPC_URL=mpc-signer:9090
-      - LEDGER_URL=ledger-accounting:8081
+      - LEDGER_URL=accounting-ledger:8081
       - PAYMENT_URL=http://payment-orchestrator:8080
       - BLOCKCHAIN_URL=http://gateway-blockchain:8080
       - ENABLE_STUB_PARTNERS=1
@@ -566,7 +566,7 @@ services:
         condition: service_started
       mpc-signer:
         condition: service_started
-      ledger-accounting:
+      accounting-ledger:
         condition: service_started
       payment-orchestrator:
         condition: service_started
@@ -674,7 +674,7 @@ services:
       - TREASURY_URL=http://treasury-orchestrator:8080
       - LIQUIDITY_URL=http://liquidity-router:8080
       - FX_HEDGING_URL=http://fx-hedger:8080
-      - LEDGER_URL=http://ledger-accounting:8080
+      - LEDGER_URL=http://accounting-ledger:8080
       - RECONCILIATION_URL=http://reconciliation:8080
       - WALLET_URL=http://wallet-manager:8080
       - PAYMENT_URL=http://payment-orchestrator:8080

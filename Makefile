@@ -82,7 +82,7 @@ build-ts:
 	DOCKER_BUILDKIT=1 $(COMPOSE) build $(TS_SERVICES)
 
 # Build only the Rust services.
-RS_SERVICES := ledger-accounting mpc-signer
+RS_SERVICES := accounting-ledger mpc-signer
 
 build-rs:
 	DOCKER_BUILDKIT=1 $(COMPOSE) build $(RS_SERVICES)
@@ -117,7 +117,7 @@ exchange  := exchange-connector
 fraud     := fraud-detection
 fx        := fx-hedger
 auth      := auth-identity
-ledger    := ledger-accounting
+ledger    := accounting-ledger
 liquidity := liquidity-router
 mpc       := mpc-signer
 notify    := notifier

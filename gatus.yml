@@ -108,9 +108,9 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: ledger-accounting
+  - name: accounting-ledger
     group: core
-    url: http://ledger-accounting:8080/healthz
+    url: http://accounting-ledger:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
