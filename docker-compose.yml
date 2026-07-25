@@ -18,154 +18,6 @@ services:
       timeout: 5s
       retries: 10
 
-  # Read-only HTTP layers over Postgres so Hurl E2E tests can assert on
-  # data produced by the services. Each instance is published on a unique
-  # host port (3000+i) so host-side Hurl can reach it; the internal name
-  # is postgrest-<db>:3000. Add/remove instances in lockstep with the
-  # databases in postgres-init.sql.
-  postgrest-identity-auth:
-    image: postgrest/postgrest:v12.2.0
-    ports:
-      - "3001:3000"
-    environment:
-      - PGRST_DB_URI=postgres://postgres:postgres@postgres:5432/identity_auth?sslmode=disable
-      - PGRST_DB_ANON_ROLE=postgres
-      - PGRST_DB_SCHEMA=public
-      - PGRST_OPENAPI_SERVER_PROXY_URI=http://postgrest-identity-auth:3000
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  postgrest-onboarding-kyc:
-    image: postgrest/postgrest:v12.2.0
-    ports:
-      - "3002:3000"
-    environment:
-      - PGRST_DB_URI=postgres://postgres:postgres@postgres:5432/onboarding_kyc?sslmode=disable
-      - PGRST_DB_ANON_ROLE=postgres
-      - PGRST_DB_SCHEMA=public
-      - PGRST_OPENAPI_SERVER_PROXY_URI=http://postgrest-onboarding-kyc:3000
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  postgrest-aml-kyt:
-    image: postgrest/postgrest:v12.2.0
-    ports:
-      - "3003:3000"
-    environment:
-      - PGRST_DB_URI=postgres://postgres:postgres@postgres:5432/aml_kyt?sslmode=disable
-      - PGRST_DB_ANON_ROLE=postgres
-      - PGRST_DB_SCHEMA=public
-      - PGRST_OPENAPI_SERVER_PROXY_URI=http://postgrest-aml-kyt:3000
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  postgrest-policy-engine:
-    image: postgrest/postgrest:v12.2.0
-    ports:
-      - "3004:3000"
-    environment:
-      - PGRST_DB_URI=postgres://postgres:postgres@postgres:5432/policy_engine?sslmode=disable
-      - PGRST_DB_ANON_ROLE=postgres
-      - PGRST_DB_SCHEMA=public
-      - PGRST_OPENAPI_SERVER_PROXY_URI=http://postgrest-policy-engine:3000
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  postgrest-wallet-management:
-    image: postgrest/postgrest:v12.2.0
-    ports:
-      - "3005:3000"
-    environment:
-      - PGRST_DB_URI=postgres://postgres:postgres@postgres:5432/wallet_management?sslmode=disable
-      - PGRST_DB_ANON_ROLE=postgres
-      - PGRST_DB_SCHEMA=public
-      - PGRST_OPENAPI_SERVER_PROXY_URI=http://postgrest-wallet-management:3000
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  postgrest-treasury:
-    image: postgrest/postgrest:v12.2.0
-    ports:
-      - "3006:3000"
-    environment:
-      - PGRST_DB_URI=postgres://postgres:postgres@postgres:5432/treasury?sslmode=disable
-      - PGRST_DB_ANON_ROLE=postgres
-      - PGRST_DB_SCHEMA=public
-      - PGRST_OPENAPI_SERVER_PROXY_URI=http://postgrest-treasury:3000
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  postgrest-reconciliation:
-    image: postgrest/postgrest:v12.2.0
-    ports:
-      - "3007:3000"
-    environment:
-      - PGRST_DB_URI=postgres://postgres:postgres@postgres:5432/reconciliation?sslmode=disable
-      - PGRST_DB_ANON_ROLE=postgres
-      - PGRST_DB_SCHEMA=public
-      - PGRST_OPENAPI_SERVER_PROXY_URI=http://postgrest-reconciliation:3000
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  postgrest-liquidity:
-    image: postgrest/postgrest:v12.2.0
-    ports:
-      - "3008:3000"
-    environment:
-      - PGRST_DB_URI=postgres://postgres:postgres@postgres:5432/liquidity?sslmode=disable
-      - PGRST_DB_ANON_ROLE=postgres
-      - PGRST_DB_SCHEMA=public
-      - PGRST_OPENAPI_SERVER_PROXY_URI=http://postgrest-liquidity:3000
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  postgrest-audit:
-    image: postgrest/postgrest:v12.2.0
-    ports:
-      - "3009:3000"
-    environment:
-      - PGRST_DB_URI=postgres://postgres:postgres@postgres:5432/audit?sslmode=disable
-      - PGRST_DB_ANON_ROLE=postgres
-      - PGRST_DB_SCHEMA=public
-      - PGRST_OPENAPI_SERVER_PROXY_URI=http://postgrest-audit:3000
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  postgrest-blockchain:
-    image: postgrest/postgrest:v12.2.0
-    ports:
-      - "3010:3000"
-    environment:
-      - PGRST_DB_URI=postgres://postgres:postgres@postgres:5432/blockchain_gateway?sslmode=disable
-      - PGRST_DB_ANON_ROLE=postgres
-      - PGRST_DB_SCHEMA=public
-      - PGRST_OPENAPI_SERVER_PROXY_URI=http://postgrest-blockchain:3000
-    depends_on:
-      postgres:
-        condition: service_healthy
-
-  postgrest-transaction-orchestrator:
-    image: postgrest/postgrest:v12.2.0
-    ports:
-      - "3011:3000"
-    environment:
-      - PGRST_DB_URI=postgres://postgres:postgres@postgres:5432/transaction_orchestrator?sslmode=disable
-      - PGRST_DB_ANON_ROLE=postgres
-      - PGRST_DB_SCHEMA=public
-      - PGRST_OPENAPI_SERVER_PROXY_URI=http://postgrest-transaction-orchestrator:3000
-    depends_on:
-      postgres:
-        condition: service_healthy
-
   # Shared Redis for velocity counters (policy-risk-engine) and the
   # address-risk cache (aml-kyt-screening).
   redis:
@@ -177,6 +29,38 @@ services:
       interval: 5s
       timeout: 3s
       retries: 10
+
+  # One-shot DB reset: truncates every service database after postgres is
+  # healthy and before any app service starts, so app boots land on empty
+  # tables and never hold locks that would stall the truncate. The DB list
+  # is derived from fixtures/seed/*.sql filenames (each seed file is named
+  # <db>.sql), so adding a service DB only needs a new seed file.
+  #
+  # reset.sql is the same file used by `make reset-db`; it runs once per DB
+  # with a 5s lock_timeout and a lock_not_available EXCEPTION handler so a
+  # locked DB aborts atomically (left untouched, not half-truncated) and
+  # the one-shot exits non-zero, which blocks downstream app services from
+  # starting against a half-reset state.
+  db-reset:
+    image: postgres:16-alpine
+    depends_on:
+      postgres:
+        condition: service_healthy
+    restart: "no"
+    environment:
+      - PGPASSWORD=postgres
+    volumes:
+      - ./fixtures:/fixtures:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        set -e
+        for f in /fixtures/seed/*.sql; do
+          db=$$(basename "$$f" .sql)
+          echo "Resetting database $$db..."
+          psql -h postgres -U postgres -d "$$db" -v ON_ERROR_STOP=1 < /fixtures/reset.sql
+        done
+        echo "All databases reset."
 
   # Shared Kafka broker for the transactional event bus, audit-event-log
   # ingestion, aml-kyt-screening audit sink, blockchain-gateway lifecycle
@@ -280,6 +164,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       kafka:
@@ -306,6 +192,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
       kafka:
         condition: service_healthy
 
@@ -332,6 +220,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
       wallet-management:
         condition: service_healthy
       kafka:
@@ -352,6 +242,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
       kafka:
         condition: service_healthy
 
@@ -369,6 +261,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       kafka:
@@ -388,6 +282,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
       kafka:
         condition: service_healthy
 
@@ -403,6 +299,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
 
   ledger-accounting:
     build: ../ledger-accounting
@@ -422,6 +320,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
       kafka:
         condition: service_healthy
 
@@ -441,6 +341,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       kafka:
@@ -500,6 +402,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
       kafka:
         condition: service_healthy
       kafka-init:
@@ -518,6 +422,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
       kafka:
         condition: service_healthy
 
@@ -558,6 +464,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       kafka:
@@ -577,6 +485,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
 
@@ -593,6 +503,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
 
   reconciliation:
     build: ../reconciliation
@@ -608,6 +520,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
       kafka:
         condition: service_healthy
 
@@ -642,6 +556,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
       kafka:
         condition: service_healthy
       policy-risk-engine:
@@ -676,6 +592,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       kafka:
@@ -704,6 +622,8 @@ services:
     depends_on:
       postgres:
         condition: service_healthy
+      db-reset:
+        condition: service_completed_successfully
       redis:
         condition: service_healthy
       kafka:
