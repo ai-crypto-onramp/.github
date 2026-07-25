@@ -40,8 +40,8 @@
 #   make kafka-group-describe GROUP=g  describe a consumer group
 #   make psql                          `psql` into the shared postgres container
 #   make redis-cli                     `redis-cli` into the shared redis container
-#   make seed-db       populate all postgres databases with fixture data
-#   make reset-db      truncate all tables across all postgres databases
+#   make reset-db                      truncate all tables across all postgres databases
+#   make seed-db                       populate all postgres databases with fixture data
 
 COMPOSE := docker compose
 REPORTS := reports
@@ -221,6 +221,15 @@ psql:
 redis-cli:
 	$(COMPOSE) exec redis redis-cli
 
+# Truncate all data in every service database (tables and migrations
+# preserved). Pipes scripts/reset.sql through psql once per DB. Use
+# `make reset-db seed-db` to wipe and repopulate in one shot.
+reset-db:
+	@set -e; for db in $$(grep -oE 'CREATE DATABASE [a-z_]+' postgres-init.sql | awk '{print $$3}'); do \
+		echo "  resetting $$db..."; \
+		$(COMPOSE) exec -T postgres psql -q -U postgres -d $$db -v ON_ERROR_STOP=1 < scripts/reset.sql; \
+	done
+
 # Populate all databases with synthetic fixture data via scripts/seed.py.
 # Runs the seed compose service inside the network. MODE selects dataset
 # size: 10, 100 (default), or 1000 records per table. The seeder inserts
@@ -230,12 +239,3 @@ redis-cli:
 #   make seed-db MODE=1000
 seed-db:
 	SEED_MODE=$(or $(MODE),100) $(COMPOSE) run --rm --no-deps seed
-
-# Truncate all data in every service database (tables and migrations
-# preserved). Pipes scripts/reset.sql through psql once per DB. Use
-# `make reset-db seed-db` to wipe and repopulate in one shot.
-reset-db:
-	@set -e; for db in $$(grep -oE 'CREATE DATABASE [a-z_]+' postgres-init.sql | awk '{print $$3}'); do \
-		echo "  resetting $$db..."; \
-		$(COMPOSE) exec -T postgres psql -q -U postgres -d $$db -v ON_ERROR_STOP=1 < scripts/reset.sql; \
-	done
