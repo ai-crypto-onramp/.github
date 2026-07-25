@@ -28,7 +28,6 @@
   - [Only 1/21 services has runbooks](#only-121-services-has-runbooks-open-phase-3-item-20)
 - [Per-Service Critical Blockers (Summary Table)](#per-service-critical-blockers-summary-table)
 - [Integration Edge Matrix](#integration-edge-matrix)
-- [Test Coverage Aggregate](#test-coverage-aggregate)
 - [What's Actually Working](#whats-actually-working)
 - [Recommended Path to Production (Priority Order)](#recommended-path-to-production-priority-order)
   - [Phase 0 — Stop the bleeding](#phase-0--stop-the-bleeding--complete-see-completion-log)
@@ -231,36 +230,6 @@ Only `mpc-signer/docs/runbooks/{dkg-ceremony,key-rotation,node-restore,incident-
 | ledger → recon | ✅ `ledger.events.v1` (was ✗) | ✅ `LedgerFetcher` + Kafka consumer (was ✗) | ✗ | `LedgerFetcher` calls `GET /v1/accounts/{id}/ledger`; `KafkaLedgerConsumer` ingests `ledger.events.v1` |
 
 **Summary:** 11 of 16 edges now have a matching contract in `contracts/` and a working call (up from 0). The residual gap is consumers regenerating from `contracts/` (Phase 3) so runtime field-level compatibility is verified, plus the treasury→liquidity path mismatch and real adapters for payment→rails/fraud.
-
----
-
-## Test Coverage Aggregate
-
-| Service | Lang | Source | Test | Ratio | Verdict |
-|---|---|---|---|---|---|
-| gateway-api | TS | 25 | 14 | 0.56 | OK |
-| auth-identity | Go | 21 | 12 | 0.57 | OK |
-| kyc-onboarding | Go | 20 | 10 | 0.50 | OK |
-| kyt-aml-screening | Go | 24 | 14 | 0.58 | OK |
-| policy-risk-engine | Go | 27 | 17 | 0.63 | OK |
-| fraud-detection | Py | 25 | 17 | 0.68 | OK |
-| payment-orchestrator | Go | 14 | 12 | 0.86 | OK (but no integration) |
-| rail-connector | Go | 40 | 27 | 0.68 | OK |
-| pricing-quote | Go | 21 | 5 | 0.24 | **Thin** |
-| fx-hedger | Go | 20 | 14 | 0.70 | OK |
-| liquidity-router | Go | 19 | 14 | 0.74 | OK |
-| exchange-connector | Go | 19 | 12 | 0.63 | OK |
-| mpc-signer | Rust | 33 | 25 fns | 0.76 | OK |
-| wallet-manager | Go | 35 | 27 | 0.77 | OK |
-| gateway-blockchain | Go | 24 | 20 | 0.83 | OK |
-| tx-orchestrator | Go | 38 | 13 | 0.34 | **Thin** |
-| accounting-ledger | Rust | 17 | 15 fns | 0.88 | OK |
-| treasury-orchestrator | Go | 27 | 18 | 0.67 | OK |
-| reconciliation | Py | 23 | 12 | 0.52 | OK |
-| notifier | TS | 19 | 13 | 0.68 | OK |
-| audit-logger | Go | 24 | 23 | 0.96 | OK |
-
-Unit coverage is healthy. The systemic gap is **integration**: there is no end-to-end suite that exercises a real saga across real partner services. Hurl suites are happy-path only and depend on `audit-logger + service-native endpoints` + `postgrest-*` services that are commented out in compose — so even the existing E2E tests cannot run.
 
 ---
 
