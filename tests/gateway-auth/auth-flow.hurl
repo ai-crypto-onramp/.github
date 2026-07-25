@@ -106,6 +106,173 @@ HTTP 200
 jsonpath "$.id" == "{{user_id}}"
 jsonpath "$.email" == "{{email}}"
 
+# --- PATCH /me: update email ---
+
+PATCH http://localhost:8087/v1/users/me
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+{
+  "email": "hurl-patch-{{newUuid}}@example.com"
+}
+HTTP 200
+[Captures]
+patched_email: jsonpath "$.email"
+[Asserts]
+jsonpath "$.id" == "{{user_id}}"
+jsonpath "$.status" == "ACTIVE"
+
+# --- DELETE /sessions/:id (non-existent -> 404) ---
+
+DELETE http://localhost:8087/v1/sessions/00000000-0000-7000-8000-000000000000
+Authorization: Bearer {{access_token}}
+HTTP 404
+[Asserts]
+jsonpath "$.error.code" == "session_not_found"
+
+# --- MFA lifecycle ---
+
+POST http://localhost:8087/v1/mfa/enroll
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+{
+  "type": "TOTP"
+}
+HTTP 200
+[Captures]
+mfa_factor_id: jsonpath "$.factor_id"
+[Asserts]
+jsonpath "$.secret" exists
+jsonpath "$.qr_uri" exists
+
+# verify with a wrong code -> 401
+POST http://localhost:8087/v1/mfa/verify
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+{
+  "factor_id": "{{mfa_factor_id}}",
+  "code": "000000"
+}
+HTTP 401
+[Asserts]
+jsonpath "$.error.code" == "mfa_invalid"
+
+# generate recovery codes
+POST http://localhost:8087/v1/mfa/recovery
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+{
+  "code": "dummy"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.recovery_codes" count >= 1
+
+# delete the MFA factor
+DELETE http://localhost:8087/v1/mfa/factors/{{mfa_factor_id}}
+Authorization: Bearer {{access_token}}
+HTTP 204
+
+# --- password reset ---
+
+POST http://localhost:8087/v1/password/reset/init
+Content-Type: application/json
+{
+  "email": "{{patched_email}}"
+}
+HTTP 200
+[Captures]
+reset_token: jsonpath "$.reset_token"
+[Asserts]
+jsonpath "$.reset_token" exists
+
+# confirm with an invalid token -> 400
+POST http://localhost:8087/v1/password/reset/confirm
+Content-Type: application/json
+{
+  "token": "invalid-token",
+  "password": "NewS3cret!"
+}
+HTTP 400
+[Asserts]
+jsonpath "$.error.code" == "invalid_token"
+
+# --- API key CRUD ---
+
+POST http://localhost:8087/v1/api-keys
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+{
+  "partner_id": "partner-hurl",
+  "scopes": ["payments:write"]
+}
+HTTP 201
+[Captures]
+api_key_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.key" exists
+jsonpath "$.prefix" exists
+jsonpath "$.scopes[0]" == "payments:write"
+
+GET http://localhost:8087/v1/api-keys
+Authorization: Bearer {{access_token}}
+HTTP 200
+[Asserts]
+jsonpath "$" exists
+
+# rotate the key
+POST http://localhost:8087/v1/api-keys/{{api_key_id}}/rotate
+Authorization: Bearer {{access_token}}
+HTTP 200
+[Asserts]
+jsonpath "$.id" == "{{api_key_id}}"
+
+# delete (revoke) the key
+DELETE http://localhost:8087/v1/api-keys/{{api_key_id}}
+Authorization: Bearer {{access_token}}
+HTTP 204
+
+# --- RBAC ---
+
+GET http://localhost:8087/v1/roles
+Authorization: Bearer {{access_token}}
+HTTP 200
+[Asserts]
+jsonpath "$" count >= 1
+jsonpath "$[0].name" exists
+jsonpath "$[0].permissions" exists
+
+GET http://localhost:8087/v1/role-bindings
+Authorization: Bearer {{access_token}}
+HTTP 200
+
+# authz check for an action without a binding -> denied
+POST http://localhost:8087/v1/authz
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+{
+  "resource": "tx",
+  "action": "create"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.allow" == false
+
+# --- audit events ---
+
+GET http://localhost:8087/v1/audit-events
+Authorization: Bearer {{access_token}}
+HTTP 200
+
+# --- admin unlock (invalid uuid -> error) ---
+
+POST http://localhost:8087/v1/admin/unlock
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+{
+  "user_id": "00000000-0000-7000-8000-000000000099"
+}
+HTTP 404
+
 GET http://localhost:8087/v1/sessions
 Authorization: Bearer {{access_token}}
 HTTP 200
@@ -139,7 +306,7 @@ HTTP 401
 POST http://localhost:8087/v1/sessions
 Content-Type: application/json
 {
-  "email": "{{email}}",
+  "email": "{{patched_email}}",
   "password": "S3cretPass!"
 }
 HTTP 200
@@ -174,7 +341,7 @@ HTTP 401
 POST http://localhost:8087/v1/sessions
 Content-Type: application/json
 {
-  "email": "{{email}}",
+  "email": "{{patched_email}}",
   "password": "S3cretPass!"
 }
 HTTP 200
@@ -192,7 +359,7 @@ HTTP 204
 POST http://localhost:8087/v1/sessions
 Content-Type: application/json
 {
-  "email": "{{email}}",
+  "email": "{{patched_email}}",
   "password": "S3cretPass!"
 }
 HTTP 403
