@@ -1,5 +1,3 @@
-# yamllint disable rule:line-length
-# yamllint disable rule:truthy
 ---
 name: Contracts CI
 
