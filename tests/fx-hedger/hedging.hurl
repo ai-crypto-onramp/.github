@@ -44,7 +44,7 @@ jsonpath "$.net_amount" == "0"
 POST http://localhost:8086/v1/hedges
 Content-Type: application/json
 {
-  "currency": "EUR",
+  "currency": "{{exp_currency}}",
   "notional": "225000",
   "tenor": "SPOT",
   "type": "SPOT"
@@ -53,7 +53,7 @@ HTTP 201
 [Captures]
 hedge_id: jsonpath "$.id"
 [Asserts]
-jsonpath "$.currency" == "EUR"
+jsonpath "$.currency" == "{{exp_currency}}"
 jsonpath "$.notional" == "225000"
 jsonpath "$.status" == "EXECUTED"
 jsonpath "$.quoted_rate" == "1.1"
