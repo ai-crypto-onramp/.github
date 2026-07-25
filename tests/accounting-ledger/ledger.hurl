@@ -65,13 +65,13 @@ Content-Type: application/json
   "entries": [
     {
       "account_id": "{{acc_debit}}",
-      "direction": "debit",
+      "direction": "DEBIT",
       "amount": 100,
       "asset": "USD"
     },
     {
       "account_id": "{{acc_credit}}",
-      "direction": "credit",
+      "direction": "CREDIT",
       "amount": 100,
       "asset": "USD"
     }
@@ -94,13 +94,13 @@ Content-Type: application/json
   "entries": [
     {
       "account_id": "{{acc_debit}}",
-      "direction": "debit",
+      "direction": "DEBIT",
       "amount": 100,
       "asset": "USD"
     },
     {
       "account_id": "{{acc_credit}}",
-      "direction": "credit",
+      "direction": "CREDIT",
       "amount": 100,
       "asset": "USD"
     }
@@ -117,13 +117,13 @@ Content-Type: application/json
   "entries": [
     {
       "account_id": "{{acc_debit}}",
-      "direction": "debit",
+      "direction": "DEBIT",
       "amount": 100,
       "asset": "USD"
     },
     {
       "account_id": "{{acc_credit}}",
-      "direction": "credit",
+      "direction": "CREDIT",
       "amount": 50,
       "asset": "USD"
     }

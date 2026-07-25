@@ -140,7 +140,7 @@ jsonpath "$.decision" == "manual_review"
 # decision == manual_review. Verify the review-queue side effect via the
 # service-native GET /v1/policy/review?status=pending (called below).
 
-GET http://localhost:8095/v1/policy/review?status=pending
+GET http://localhost:8095/v1/policy/review?status=PENDING
 HTTP 200
 [Asserts]
 jsonpath "$.items" count >= 1
@@ -159,7 +159,7 @@ jsonpath "$.status" == "RESOLVED"
 jsonpath "$.resolution" == "ALLOW"
 
 # review_queue entry should now be resolved — verify via service-native GET
-GET http://localhost:8095/v1/policy/review?status=resolved
+GET http://localhost:8095/v1/policy/review?status=RESOLVED
 HTTP 200
 [Asserts]
 jsonpath "$.items[?(@.decision_id == '{{decision_id}}')].status" contains "RESOLVED"
