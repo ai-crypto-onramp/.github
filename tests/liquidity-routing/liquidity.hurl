@@ -33,14 +33,16 @@ jsonpath "$.side" == "BUY"
 jsonpath "$.strategy" == "TWAP"
 jsonpath "$.status" == "PENDING"
 
-# PostgREST: confirm the parent order landed in liquidity.parent_orders
-GET http://localhost:3008/parent_orders?id=eq.{{order_id}}
+# parent order landed — the POST response already asserted id, asset,
+# side, and status == PENDING. Re-fetch via the service-native GET endpoint
+# to confirm persistence.
+GET http://localhost:8089/v1/parent-orders/{{order_id}}
 HTTP 200
 [Asserts]
-jsonpath "$[0].id" == "{{order_id}}"
-jsonpath "$[0].asset" == "BTC"
-jsonpath "$[0].side" == "BUY"
-jsonpath "$[0].status" == "PENDING"
+jsonpath "$.parent.id" == "{{order_id}}"
+jsonpath "$.parent.asset" == "BTC"
+jsonpath "$.parent.side" == "BUY"
+jsonpath "$.parent.status" == "PENDING"
 
 # duplicate client_request_id returns the existing order (200, not 201)
 POST http://localhost:8089/v1/parent-orders
@@ -117,11 +119,13 @@ HTTP 200
 [Asserts]
 jsonpath "$.id" == "{{order_id}}"
 
-# PostgREST: parent order status should now reflect cancellation
-GET http://localhost:3008/parent_orders?id=eq.{{order_id}}
+# parent order status should now reflect cancellation — re-fetch via
+# the service-native GET endpoint.
+GET http://localhost:8089/v1/parent-orders/{{order_id}}
 HTTP 200
 [Asserts]
-jsonpath "$[0].status" != "pending"
+jsonpath "$.parent.id" == "{{order_id}}"
+jsonpath "$.parent.status" != "PENDING"
 
 # cancelling a non-existent order -> 404
 POST http://localhost:8089/v1/parent-orders/po_doesnotexist/cancel

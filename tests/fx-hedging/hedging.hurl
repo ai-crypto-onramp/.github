@@ -42,8 +42,8 @@ Content-Type: application/json
 {
   "currency": "EUR",
   "notional": "225000",
-  "tenor": "spot",
-  "type": "spot"
+  "tenor": "SPOT",
+  "type": "SPOT"
 }
 HTTP 201
 [Captures]
@@ -51,7 +51,7 @@ hedge_id: jsonpath "$.id"
 [Asserts]
 jsonpath "$.currency" == "EUR"
 jsonpath "$.notional" == "225000"
-jsonpath "$.status" == "executed"
+jsonpath "$.status" == "EXECUTED"
 jsonpath "$.quoted_rate" == "1.1"
 jsonpath "$.fills[0].price" == "1.1"
 
@@ -60,7 +60,7 @@ GET http://localhost:8086/v1/hedges/{{hedge_id}}
 HTTP 200
 [Asserts]
 jsonpath "$.id" == "{{hedge_id}}"
-jsonpath "$.status" == "executed"
+jsonpath "$.status" == "EXECUTED"
 jsonpath "$.fills" exists
 
 # non-existent hedge -> 404

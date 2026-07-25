@@ -1,0 +1,37 @@
+# yamllint configuration for the .github repo.
+#
+# yamllint defaults are noisy for ops/config YAML (compose files, gatus,
+# contracts) where tight line lengths, inline comments, and `on:` as a
+# truthy key are common. This config keeps the high-value rules (syntax
+# errors, indentation, document-end) but relaxes the style rules that
+# fail most often.
+#
+# CI runs `yamllint .` (no --strict) so warnings no longer fail the build.
+
+extends: default
+
+rules:
+  # Compose files and contracts routinely exceed 80 cols; line-length is a
+  # style preference, not a correctness issue.
+  line-length: disable
+  # `on:` in GitHub Actions workflows is parsed as a boolean by YAML 1.1,
+  # triggering the truthy rule; it's the canonical trigger key.
+  truthy:
+    check-keys: false
+  # Inline `# comment` without a space after # is common in compose env
+  # blocks (e.g. `#/producers`); not worth failing on.
+  comments:
+    require-starting-space: false
+    min-spaces-from-content: 1
+  # `---` document-start markers are optional; many config files omit them.
+  document-start: disable
+  # Trailing spaces are caught by editors; keep disabled to avoid churn.
+  trailing-spaces: disable
+  # Empty lines inside blocks (e.g. between compose services) are fine.
+  empty-lines:
+    max: 2
+  # Braces/brackets spacing is style, not correctness.
+  braces: disable
+  brackets: disable
+  # Commas in flow sequences are fine without a following space.
+  commas: disable

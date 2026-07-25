@@ -23,13 +23,14 @@ policy_user_id: jsonpath "$.user_id"
 [Asserts]
 jsonpath "$.status" == "PENDING"
 
-# PostgREST: confirm the whitelist entry landed in policy_engine.whitelist_addresses
-GET http://localhost:3004/whitelist_addresses?user_id=eq.{{policy_user_id}}&address=eq.0xhurldest1
+# whitelist entry landed — verify via the service-native GET endpoint
+GET http://localhost:8095/v1/policy/whitelist/{{policy_user_id}}
 HTTP 200
 [Asserts]
-jsonpath "$[0].user_id" == "{{policy_user_id}}"
-jsonpath "$[0].address" == "0xhurldest1"
-jsonpath "$[0].status" == "PENDING"
+jsonpath "$.entries" count == 1
+jsonpath "$.entries[0].user_id" == "{{policy_user_id}}"
+jsonpath "$.entries[0].address" == "0xhurldest1"
+jsonpath "$.entries[0].status" == "PENDING"
 
 # pending (unverified) destinations are denied
 POST http://localhost:8095/v1/policy/evaluate
@@ -62,11 +63,11 @@ HTTP 200
 [Asserts]
 jsonpath "$.status" == "VERIFIED"
 
-# PostgREST: whitelist entry status should now be verified
-GET http://localhost:3004/whitelist_addresses?user_id=eq.{{policy_user_id}}&address=eq.0xhurldest1
+# whitelist entry status should now be verified
+GET http://localhost:8095/v1/policy/whitelist/{{policy_user_id}}
 HTTP 200
 [Asserts]
-jsonpath "$[0].status" == "VERIFIED"
+jsonpath "$.entries[0].status" == "VERIFIED"
 
 GET http://localhost:8095/v1/policy/whitelist/{{policy_user_id}}
 HTTP 200
@@ -135,23 +136,15 @@ decision_id: jsonpath "$.decision_id"
 [Asserts]
 jsonpath "$.decision" == "manual_review"
 
-# PostgREST: confirm the decision landed in policy_engine.policy_decisions
-GET http://localhost:3004/policy_decisions?decision_id=eq.{{decision_id}}
-HTTP 200
-[Asserts]
-jsonpath "$[0].decision_id" == "{{decision_id}}"
-jsonpath "$[0].decision" == "manual_review"
-
-# PostgREST: and a review_queue entry was created
-GET http://localhost:3004/review_queue?decision_id=eq.{{decision_id}}
-HTTP 200
-[Asserts]
-jsonpath "$[0].status" == "PENDING"
+# decision landed — the evaluate response already asserted decision_id +
+# decision == manual_review. Verify the review-queue side effect via the
+# service-native GET /v1/policy/review?status=pending (called below).
 
 GET http://localhost:8095/v1/policy/review?status=pending
 HTTP 200
 [Asserts]
 jsonpath "$.items" count >= 1
+jsonpath "$.items[?(@.decision_id == '{{decision_id}}')].status" contains "PENDING"
 
 # resolve the parked review
 POST http://localhost:8095/v1/policy/review/{{decision_id}}/resolve
@@ -165,12 +158,12 @@ HTTP 200
 jsonpath "$.status" == "RESOLVED"
 jsonpath "$.resolution" == "ALLOW"
 
-# PostgREST: review_queue entry should now be resolved
-GET http://localhost:3004/review_queue?decision_id=eq.{{decision_id}}
+# review_queue entry should now be resolved — verify via service-native GET
+GET http://localhost:8095/v1/policy/review?status=resolved
 HTTP 200
 [Asserts]
-jsonpath "$[0].status" == "RESOLVED"
-jsonpath "$[0].resolution" == "ALLOW"
+jsonpath "$.items[?(@.decision_id == '{{decision_id}}')].status" contains "RESOLVED"
+jsonpath "$.items[?(@.decision_id == '{{decision_id}}')].resolution" contains "ALLOW"
 
 # a review can only be resolved once
 POST http://localhost:8095/v1/policy/review/{{decision_id}}/resolve

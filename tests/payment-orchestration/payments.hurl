@@ -32,6 +32,7 @@ jsonpath "$.status" == "authorized"
 
 # fetch the intent
 GET http://localhost:8094/v1/payments/{{payment_id}}
+Authorization: Bearer {{service_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.id" == "{{payment_id}}"
@@ -40,6 +41,7 @@ jsonpath "$.history" exists
 
 # non-existent intent -> 404
 GET http://localhost:8094/v1/payments/pm_doesnotexist
+Authorization: Bearer {{service_token}}
 HTTP 404
 
 # --- capture ---

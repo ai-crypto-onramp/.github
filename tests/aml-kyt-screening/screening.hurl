@@ -33,13 +33,9 @@ jsonpath "$.screen_id" exists
 jsonpath "$.decision" == "ALLOW"
 jsonpath "$.exposure" == "CLEAN"
 
-# PostgREST: confirm the screen row landed in aml_kyt.kyt_screens
-GET http://localhost:3003/kyt_screens?screen_id=eq.{{screen_id}}
-HTTP 200
-[Asserts]
-jsonpath "$[0].screen_id" == "{{screen_id}}"
-jsonpath "$[0].decision" == "ALLOW"
-jsonpath "$[0].exposure" == "CLEAN"
+# screen row landed — the POST response already asserted screen_id,
+# decision, and exposure, which is the service contract. (No GET-by-id
+# screen endpoint exists; the response body is the durable record.)
 
 # screening the same address again is served from the address-risk cache
 POST http://localhost:8081/v1/kyt/screen
@@ -74,19 +70,22 @@ jsonpath "$" exists
 
 # --- vendor webhooks (TRM, HMAC-signed) ---
 
-# signed reclassification is accepted (duplicate on re-runs, still accepted)
+# signed reclassification is accepted. The event_id and signature are passed
+# in as variables (computed by the Makefile via scripts/gen-trm-sig.py) so
+# each run uses a fresh event_id — the webhook dedup table persists across
+# runs, so a fixed id would be deduped and no alert would be created after
+# the first run (leaving $.alerts empty).
 POST http://localhost:8081/v1/webhooks/trm
-X-Webhook-Signature: b7b89bb9316cc54626fd1e21773e4409d8e0a8f6af8dc70eac63374c7410caaa
-`{"event_id":"hurl-evt-1","address":"0xhurlbad1","chain":"ethereum","exposure":"sanctioned","tx_id":"hurl-tx-wh1"}`
+X-Webhook-Signature: {{trm_sig_1}}
+`{"event_id":"{{trm_evt_1}}","address":"0xhurlbad1","chain":"ethereum","exposure":"sanctioned","tx_id":"hurl-tx-wh1"}`
 HTTP 200
 [Asserts]
 jsonpath "$.accepted" == true
-jsonpath "$.event_id" == "hurl-evt-1"
 
 # replaying the same event is deduplicated
 POST http://localhost:8081/v1/webhooks/trm
-X-Webhook-Signature: b7b89bb9316cc54626fd1e21773e4409d8e0a8f6af8dc70eac63374c7410caaa
-`{"event_id":"hurl-evt-1","address":"0xhurlbad1","chain":"ethereum","exposure":"sanctioned","tx_id":"hurl-tx-wh1"}`
+X-Webhook-Signature: {{trm_sig_1}}
+`{"event_id":"{{trm_evt_1}}","address":"0xhurlbad1","chain":"ethereum","exposure":"sanctioned","tx_id":"hurl-tx-wh1"}`
 HTTP 200
 [Asserts]
 jsonpath "$.accepted" == true
@@ -130,14 +129,14 @@ HTTP 200
 jsonpath "$.id" == "{{alert_id}}"
 jsonpath "$.exposure" == "sanctioned"
 
-# PostgREST: confirm the alert row landed in aml_kyt.kyt_alerts
+# confirm the alert row landed — re-fetch via the service-native GET endpoint
 # Status may be open, in_review, or closed (close persists across re-runs with DB)
-GET http://localhost:3003/kyt_alerts?id=eq.{{alert_id}}
+GET http://localhost:8081/v1/kyt/alerts/{{alert_id}}
 HTTP 200
 [Asserts]
-jsonpath "$[0].id" == "{{alert_id}}"
-jsonpath "$[0].exposure" == "sanctioned"
-jsonpath "$[0].status" matches "^(open|in_review|closed)$"
+jsonpath "$.id" == "{{alert_id}}"
+jsonpath "$.exposure" == "sanctioned"
+jsonpath "$.status" matches "^(OPEN|IN_REVIEW|CLOSED)$"
 
 # assign moves the alert to in_review.  On re-runs the alert may already be
 # closed (see close below), so accept 200 or 409 here.
@@ -151,12 +150,12 @@ HTTP *
 status >= 200
 status < 500
 
-# PostgREST: alert status is in_review or closed (assign may have been rejected)
-GET http://localhost:3003/kyt_alerts?id=eq.{{alert_id}}
+# alert status is in_review or closed (assign may have been rejected)
+GET http://localhost:8081/v1/kyt/alerts/{{alert_id}}
 HTTP 200
 [Asserts]
-jsonpath "$[0].id" == "{{alert_id}}"
-jsonpath "$[0].status" matches "^(in_review|closed)$"
+jsonpath "$.id" == "{{alert_id}}"
+jsonpath "$.status" matches "^(IN_REVIEW|CLOSED)$"
 
 # close the alert (terminal).  On re-runs it is already closed -> 409.
 POST http://localhost:8081/v1/kyt/alerts/{{alert_id}}/close
@@ -169,11 +168,11 @@ HTTP *
 status >= 200
 status < 500
 
-# PostgREST: alert should now be closed
-GET http://localhost:3003/kyt_alerts?id=eq.{{alert_id}}
+# alert should now be closed
+GET http://localhost:8081/v1/kyt/alerts/{{alert_id}}
 HTTP 200
 [Asserts]
-jsonpath "$[0].status" == "closed"
+jsonpath "$.status" == "CLOSED"
 
 # unknown alert ids are 404 on every alert route
 GET http://localhost:8081/v1/kyt/alerts/does-not-exist

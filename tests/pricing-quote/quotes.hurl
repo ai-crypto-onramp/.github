@@ -28,7 +28,7 @@ HTTP 201
 [Captures]
 quote_id: jsonpath "$.quote_id"
 [Asserts]
-jsonpath "$.status" == "open"
+jsonpath "$.status" == "OPEN"
 jsonpath "$.spread_bps" == 80
 jsonpath "$.fee_currency" == "USD"
 jsonpath "$.source_venue" == "kraken"
@@ -39,7 +39,7 @@ GET http://localhost:8096/v1/quotes/{{quote_id}}
 HTTP 200
 [Asserts]
 jsonpath "$.quote_id" == "{{quote_id}}"
-jsonpath "$.status" == "open"
+jsonpath "$.status" == "OPEN"
 
 # claim the quote (orchestrator-internal, within the 30s rate lock)
 POST http://localhost:8096/internal/v1/quotes/{{quote_id}}/claim
@@ -49,7 +49,7 @@ Content-Type: application/json
 }
 HTTP 200
 [Asserts]
-jsonpath "$.status" == "claimed"
+jsonpath "$.status" == "CLAIMED"
 jsonpath "$.claimed_by" == "hurl-orchestrator"
 
 # a quote can only be claimed once
@@ -80,7 +80,7 @@ POST http://localhost:8096/v1/quotes/{{quote_id2}}/refresh
 HTTP 201
 [Asserts]
 jsonpath "$.quote_id" != "{{quote_id2}}"
-jsonpath "$.status" == "open"
+jsonpath "$.status" == "OPEN"
 jsonpath "$.from" == "USD"
 jsonpath "$.to" == "ETH"
 

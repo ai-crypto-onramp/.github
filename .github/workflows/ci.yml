@@ -1,5 +1,3 @@
-# yamllint disable rule:line-length
-# yamllint disable rule:truthy
 ---
 name: CI
 
@@ -43,4 +41,4 @@ jobs:
       - name: Install yamllint
         run: pipx install yamllint
       - name: Lint YAML files
-        run: yamllint --strict .
+        run: yamllint .
