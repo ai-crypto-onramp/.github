@@ -40,7 +40,6 @@
 #   make kafka-group-describe GROUP=g  describe a consumer group
 #   make psql                          `psql` into the shared postgres container
 #   make redis-cli                     `redis-cli` into the shared redis container
-#
 #   make seed-db       populate all postgres databases with fixture data
 #   make reset-db      truncate all tables across all postgres databases
 
