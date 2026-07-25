@@ -88,7 +88,7 @@ build-rs:
 	DOCKER_BUILDKIT=1 $(COMPOSE) build $(RS_SERVICES)
 
 # Build only the Python services.
-PY_SERVICES := fraud-detection reconciliation ui-back-office
+PY_SERVICES := fraud-engine reconciliation ui-back-office
 
 build-py:
 	DOCKER_BUILDKIT=1 $(COMPOSE) build $(PY_SERVICES)
@@ -114,7 +114,7 @@ gateway   := gateway-api
 audit     := audit-logger
 chain     := gateway-blockchain
 exchange  := exchange-connector
-fraud     := fraud-detection
+fraud     := fraud-engine
 fx        := fx-hedger
 auth      := auth-identity
 ledger    := accounting-ledger

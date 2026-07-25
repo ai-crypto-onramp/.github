@@ -247,8 +247,8 @@ services:
       kafka:
         condition: service_healthy
 
-  fraud-detection:
-    build: ../fraud-detection
+  fraud-engine:
+    build: ../fraud-engine
     ports:
       - "8085:8080"
     networks:

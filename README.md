@@ -44,7 +44,7 @@ Minimized language sprawl. Standardized on:
 | [**Onboarding / KYC**](https://github.com/ai-crypto-onramp/kyc-onboarding) | Go | Orchestrates identity verification via vendors (Onfido/Sumsub), document + liveness, sanctions/PEP screening at signup. |
 | [**AML / KYT Screening**](https://github.com/ai-crypto-onramp/kyt-aml-screening) | Go | Pre-settlement Know-Your-Transaction checks against destination addresses (Chainalysis/TRM); blocks tainted flows before broadcast. |
 | [**Policy / Risk Engine**](https://github.com/ai-crypto-onramp/policy-risk-engine) | Go | Per-tx caps, velocity limits, whitelisting, source auth. Auto-approves or routes to manual review. The gatekeeper before signing. |
-| [**Fraud Detection**](https://github.com/ai-crypto-onramp/fraud-detection) | Python | ML scoring on payment + behavioral signals (chargeback/velocity models); feeds the policy engine. |
+| [**Fraud Detection**](https://github.com/ai-crypto-onramp/fraud-engine) | Python | ML scoring on payment + behavioral signals (chargeback/velocity models); feeds the policy engine. |
 
 ### Fiat, Pricing & Liquidity
 

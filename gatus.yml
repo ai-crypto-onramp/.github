@@ -84,9 +84,9 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: fraud-detection
+  - name: fraud-engine
     group: risk
-    url: http://fraud-detection:8080/healthz
+    url: http://fraud-engine:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
