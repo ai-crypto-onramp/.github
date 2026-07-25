@@ -139,42 +139,49 @@ flowchart LR
 
 ### Async layer
 
-Dashed arrows = asynchronous events (event bus / webhooks). Treasury batches orders
-into aggregate buys; Reconciliation matches the Ledger against external state;
-Notification and Audit consume the event bus.
+Dashed arrows = asynchronous events (Kafka topics). The event bus carries
+three categories: (1) domain events from money-moving services consumed by
+Reconciliation for matching, (2) `tx.completed` events from the Orchestrator
+consumed by Treasury for batch aggregation, (3) audit and notification events
+consumed by the Audit Log and Notifier. Topic names are shown in brackets.
 
 ```mermaid
 flowchart LR
-    ORCH[🔀 Transaction Orchestrator]
-    TREAS[💰 Treasury Orchestration]
-    LIQ[🔄 Liquidity Routing]
-    WALLET[👛 Wallet Management]
-    FX[📈 FX & Hedging]
-    LEDGER[📖 Ledger]
+    ORCH[🔀 TX Orchestrator]
+    TREAS[💰 Treasury Orchestrator]
+    LIQ[🔄 Liquidity Router]
+    EXCH[🏬 Gateway Exchange]
+    RAILS[💵 Gateway Fiat]
+    CHAIN[⛓️ Gateway Blockchain]
+    PAY[💳 Payment Orchestrator]
+    MPC[✍️ MPC Signer]
+    FRAUD[🚨 Fraud Engine]
+    POLICY[🛡️ Policy Engine]
+    LEDGER[📖 Accounting Ledger]
     RECON[🧮 Reconciliation]
-    EXCH[🏬 Exchange Connectors]
-    RAILS[🏦 Rail Connectors]
-    CHAIN[⛓️ Blockchain Gateway]
-    NOTIF[🔔 Notification]
-    AUDIT[📜 Audit / Event Log]
-    PAY[💳 Payment Orchestration]
-    MPC[✍️ MPC Signing]
-    POLICY[🛡️ Policy / Risk Engine]
+    NOTIF[🔔 Notifier]
+    AUDIT[📜 Audit Logger]
 
-    ORCH -.-> TREAS
-    TREAS -.-> LIQ
-    TREAS -.-> WALLET
-    LEDGER -.-> RECON
-    EXCH -.-> RECON
-    RAILS -.-> RECON
-    CHAIN -.-> RECON
-    ORCH -.-> NOTIF
-    CHAIN -.-> NOTIF
-    ORCH -.-> AUDIT
-    PAY -.-> AUDIT
-    MPC -.-> AUDIT
-    POLICY -.-> AUDIT
-    LEDGER -.-> AUDIT
+    ORCH -.->|tx.completed| TREAS
+    TREAS -.->|aggregate fill| LIQ
+    LIQ -.->|fills| RECON
+    LIQ -.->|fills| EXCH
+    EXCH -.->|exchange.events.v1| RECON
+    RAILS -.->|rail.events.v1| RECON
+    CHAIN -.->|blockchain.events.v1| RECON
+    CHAIN -.->|tx.confirmed| NOTIF
+    PAY -.->|payment.events.v1| RECON
+    MPC -.->|custody.events.v1| RECON
+    FRAUD -.->|fraud.scored| POLICY
+    LEDGER -.->|ledger.events.v1| RECON
+    ORCH -.->|notification.v1| NOTIF
+    ORCH -.->|audit.v1| AUDIT
+    PAY -.->|audit.v1| AUDIT
+    MPC -.->|audit.v1| AUDIT
+    POLICY -.->|audit.v1| AUDIT
+    LEDGER -.->|audit.v1| AUDIT
+    FRAUD -.->|audit.v1| AUDIT
+    RECON -.->|audit.v1| AUDIT
 ```
 
 ### Reading the diagrams
@@ -183,10 +190,19 @@ flowchart LR
   which drives the saga: Policy check → Payment capture → KYT screen → MPC sign →
   Blockchain broadcast → Ledger posting.
 - **Compliance gate:** KYC (signup), Fraud, and KYT all feed the **Policy Engine**,
-  the single gatekeeper before signing.
-- **Async layer:** Treasury batches orders into aggregate buys via Liquidity
-  Routing (handling the T+0 vs T+2/3 float); Reconciliation matches Ledger against
-  bank, exchange, and on-chain state; Notification and Audit consume the event bus.
+  the single gatekeeper before signing. Fraud scores are also delivered async
+  via the `fraud.scored` Kafka topic.
+- **Async layer — domain events → Reconciliation:** Every money-moving service
+  (Ledger, Fiat, Exchange, Blockchain, Liquidity, Payment, Custody) publishes
+  domain events to its dedicated Kafka topic. Reconciliation consumes all of
+  them and matches the internal ledger against bank, exchange, and on-chain
+  state.
+- **Async layer — tx.completed → Treasury:** The Orchestrator publishes
+  `tx.completed` to the `transactions` topic; Treasury consumes it to add the
+  tx to an aggregate buy batch, then routes the fill via Liquidity Routing.
+- **Async layer — audit & notification:** All services publish audit events to
+  `audit.v1` (consumed by Audit Logger). The Orchestrator and Blockchain
+  Gateway publish lifecycle events to `notification.v1` (consumed by Notifier).
 
 ## Dashboard
 
