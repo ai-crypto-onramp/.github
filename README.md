@@ -98,34 +98,31 @@ Solid arrows = synchronous request/response on the transaction path.
 flowchart LR
     Client([🧑‍💻 Client])
     GW[🌐 API Gateway]
-    AUTH[🔐 Identity & Auth]
-    KYC[🪪 Onboarding / KYC]
-    PRICE[💱 Pricing / Quote]
-    ORCH[🔀 Transaction Orchestrator]
-    POLICY[🛡️ Policy / Risk Engine]
-    FRAUD[🚨 Fraud Detection]
-    KYT[🔍 AML / KYT Screening]
-    PAY[💳 Payment Orchestration]
-    RAILS[🏦 Rail Connectors]
-    FX[📈 FX & Hedging]
-    MPC[✍️ MPC Signing]
-    WALLET[👛 Wallet Management]
-    CHAIN[⛓️ Blockchain Gateway]
-    LEDGER[📖 Ledger]
-    LIQ[🔄 Liquidity Routing]
-    EXCH[🏬 Exchange Connectors]
+    AUTH[🔐 Auth Identity]
+    KYC[🪪 KYC Onboarding]
+    PRICE[💱 Pricing Quote]
+    ORCH[🔀 TX Orchestrator]
+    POLICY[🛡️ Policy Engine]
+    KYT[🔍 KYT Screening]
+    PAY[💳 Payment Orchestrator]
+    RAILS[💵 Gateway Fiat]
+    FRAUD[🚨 Fraud Engine]
+    FX[📈 FX Hedger]
+    MPC[✍️ MPC Signer]
+    WALLET[👛 Wallet Manager]
+    CHAIN[⛓️ Gateway Blockchain]
+    LEDGER[📖 Accounting Ledger]
+    LIQ[🔄 Liquidity Router]
+    EXCH[🏬 Gateway Exchange]
 
     Client --> GW
     GW --> AUTH
     GW --> KYC
     GW --> PRICE
     GW --> ORCH
-    KYC --> POLICY
-    FRAUD --> POLICY
-    KYT --> POLICY
     ORCH --> POLICY
-    ORCH --> PAY
     ORCH --> KYT
+    ORCH --> PAY
     ORCH --> MPC
     ORCH --> CHAIN
     ORCH --> LEDGER
@@ -189,9 +186,11 @@ flowchart LR
 - **Transaction path:** `Client → API Gateway → Transaction Orchestrator`,
   which drives the saga: Policy check → Payment capture → KYT screen → MPC sign →
   Blockchain broadcast → Ledger posting.
-- **Compliance gate:** KYC (signup), Fraud, and KYT all feed the **Policy Engine**,
-  the single gatekeeper before signing. Fraud scores are also delivered async
-  via the `fraud.scored` Kafka topic.
+- **Compliance gate:** KYC (at signup) and KYT (per-transaction, called by the
+  Orchestrator) feed the **Policy Engine** — the single gatekeeper before
+  signing. Fraud scores are delivered async via the `fraud.scored` Kafka topic
+  (see async diagram); the Payment Orchestrator also calls Fraud synchronously
+  for a real-time score on each transaction.
 - **Async layer — domain events → Reconciliation:** Every money-moving service
   (Ledger, Fiat, Exchange, Blockchain, Liquidity, Payment, Custody) publishes
   domain events to its dedicated Kafka topic. Reconciliation consumes all of
