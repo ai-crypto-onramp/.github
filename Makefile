@@ -33,6 +33,12 @@
 #
 #   make psql          psql into the shared postgres container
 #   make redis-cli     redis-cli into the shared redis container
+#   make kafka-topics  list Kafka topics
+#   make kafka-consumer TOPIC=<t>   tail a Kafka topic (interactive)
+#   make kafka-producer TOPIC=<t>   produce to a Kafka topic (interactive, stdin)
+#   make kafka-describe TOPIC=<t>   describe a Kafka topic
+#   make kafka-groups  list Kafka consumer groups
+#   make kafka-group-describe GROUP=<g>  describe a consumer group
 #   make seed-db       populate all postgres databases with dummy fixture data
 #   make reset-db      truncate all tables across all postgres databases
 
@@ -175,6 +181,42 @@ psql:
 
 redis-cli:
 	$(COMPOSE) exec redis redis-cli
+
+# Interactive Kafka console consumer: tail a topic to stdout.
+#   make kafka-consumer TOPIC=audit.v1
+#   make kafka-consumer TOPIC=transactions --from-beginning
+kafka-consumer:
+	$(COMPOSE) exec kafka /opt/kafka/bin/kafka-console-consumer.sh \
+		--bootstrap-server localhost:9092 --topic $(TOPIC) $(ARGS)
+
+# Interactive Kafka console producer: pipe stdin to a topic.
+#   echo '{"hello":"world"}' | make kafka-producer TOPIC=test
+#   make kafka-producer TOPIC=test  # then type JSON lines, Ctrl-D to exit
+kafka-producer:
+	$(COMPOSE) exec -T kafka /opt/kafka/bin/kafka-console-producer.sh \
+		--bootstrap-server localhost:9092 --topic $(TOPIC)
+
+# List Kafka topics.
+kafka-topics:
+	$(COMPOSE) exec kafka /opt/kafka/bin/kafka-topics.sh \
+		--bootstrap-server localhost:9092 --list
+
+# Describe a Kafka topic (partitions, replicas, config).
+#   make kafka-describe TOPIC=audit.v1
+kafka-describe:
+	$(COMPOSE) exec kafka /opt/kafka/bin/kafka-topics.sh \
+		--bootstrap-server localhost:9092 --describe --topic $(TOPIC)
+
+# List consumer groups and their lag.
+kafka-groups:
+	$(COMPOSE) exec kafka /opt/kafka/bin/kafka-consumer-groups.sh \
+		--bootstrap-server localhost:9092 --list
+
+# Describe a consumer group (members, partitions, lag).
+#   make kafka-group-describe GROUP=engine-recon
+kafka-group-describe:
+	$(COMPOSE) exec kafka /opt/kafka/bin/kafka-consumer-groups.sh \
+		--bootstrap-server localhost:9092 --describe --group $(GROUP)
 
 # Populate all databases with synthetic fixture data via scripts/seed.py.
 # Runs the seed compose service inside the network. MODE selects dataset
