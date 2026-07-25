@@ -12,21 +12,25 @@ HTTP 200
 jsonpath "$.status" == "ready"
 
 # --- exposure tracking ---
+# Use a unique currency per run to avoid accumulating exposure across
+# test runs (the exposure cap is global per currency).
 
-POST http://localhost:8086/v1/exposure/EUR
+POST http://localhost:8086/v1/exposure/X{{newUuid}}
 Content-Type: application/json
 {
   "amount": "250000"
 }
 HTTP 200
+[Captures]
+exp_currency: jsonpath "$.currency"
 [Asserts]
-jsonpath "$.currency" == "EUR"
+jsonpath "$.currency" exists
 jsonpath "$.net_amount" >= "250000"
 
-GET http://localhost:8086/v1/exposure/EUR
+GET http://localhost:8086/v1/exposure/{{exp_currency}}
 HTTP 200
 [Asserts]
-jsonpath "$.currency" == "EUR"
+jsonpath "$.currency" == "{{exp_currency}}"
 jsonpath "$.net_amount" >= "250000"
 
 # zero exposure for unknown currency

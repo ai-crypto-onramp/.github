@@ -151,7 +151,7 @@ POST http://localhost:8095/v1/policy/review/{{decision_id}}/resolve
 Content-Type: application/json
 {
   "assignee": "hurl-analyst",
-  "resolution": "allow"
+  "resolution": "ALLOW"
 }
 HTTP 200
 [Asserts]
@@ -170,7 +170,7 @@ POST http://localhost:8095/v1/policy/review/{{decision_id}}/resolve
 Content-Type: application/json
 {
   "assignee": "hurl-analyst",
-  "resolution": "deny"
+  "resolution": "DENY"
 }
 HTTP 409
 [Asserts]

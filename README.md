@@ -37,7 +37,7 @@ Minimized language sprawl. Standardized on:
 
 ### Core Microservices
 
-| Service | Language | Description |
+| Name | Lang | Description |
 |---|---|---|
 | [**API Gateway / BFF**](https://github.com/ai-crypto-onramp/gateway-api) | TS | Public edge. AuthN/Z, rate limiting, request shaping, aggregates backend calls for web/mobile SDKs. |
 | [**Identity & Auth**](https://github.com/ai-crypto-onramp/auth-identity) | Go | User accounts, sessions, MFA, API keys for B2B partners, RBAC. |
@@ -48,7 +48,7 @@ Minimized language sprawl. Standardized on:
 
 ### Fiat, Pricing & Liquidity
 
-| Service | Language | Description |
+| Name | Lang | Description |
 |---|---|---|
 | [**Payment Orchestration**](https://github.com/ai-crypto-onramp/payment-orchestrator) | Go | Fiat ingress. Normalizes across rails; manages 3DS, auth/capture, settlement webhooks, chargebacks. |
 | [**Rail Connectors**](https://github.com/ai-crypto-onramp/gateway-fiat) | Go | Adapter services per rail (card networks, ACH/SEPA/PIX/UPI). One deployable per rail family, common interface. |
@@ -59,7 +59,7 @@ Minimized language sprawl. Standardized on:
 
 ### Custody & On-Chain
 
-| Service | Language | Description |
+| Name | Lang | Description |
 |---|---|---|
 | [**MPC Signing Service**](https://github.com/ai-crypto-onramp/mpc-signer) | Rust | Threshold-signature (t-of-n) signing across distributed nodes. No single key. The most security-critical component. |
 | [**Wallet Management**](https://github.com/ai-crypto-onramp/wallet-manager) | Go | Hot/warm wallet inventory, address derivation/rotation, balance tracking per chain. |
@@ -67,7 +67,7 @@ Minimized language sprawl. Standardized on:
 
 ### Treasury, Ledger & Platform
 
-| Service | Language | Description |
+| Name | Lang | Description |
 |---|---|---|
 | [**Transaction Orchestrator**](https://github.com/ai-crypto-onramp/tx-orchestrator) | Go | The saga engine tying payment → policy → sign → deliver into one atomic, recoverable flow with compensation. |
 | [**Ledger / Accounting**](https://github.com/ai-crypto-onramp/accounting-ledger) | Rust | Immutable double-entry ledger — the single source of financial truth. Correctness over everything. |

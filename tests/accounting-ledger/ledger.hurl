@@ -82,7 +82,7 @@ HTTP 201
 [Captures]
 posting_id: jsonpath "$.posting_id"
 [Asserts]
-jsonpath "$.status" == "posted"
+jsonpath "$.status" == "POSTED"
 jsonpath "$.entry_ids" exists
 jsonpath "$.hash_head" exists
 
@@ -138,7 +138,7 @@ GET http://localhost:8088/v1/postings/{{posting_id}}
 HTTP 200
 [Asserts]
 jsonpath "$.posting_id" == "{{posting_id}}"
-jsonpath "$.status" == "posted"
+jsonpath "$.status" == "POSTED"
 jsonpath "$.entries" exists
 
 # non-existent posting -> 404

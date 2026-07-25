@@ -26,7 +26,7 @@ HTTP 201
 app_id: jsonpath "$.id"
 kyc_user_id: jsonpath "$.user_id"
 [Asserts]
-jsonpath "$.state" == "started"
+jsonpath "$.state" == "STARTED"
 
 # application row landed — the POST response already asserted id, user_id,
 # and state == started. Re-fetch via the service-native GET endpoint to
@@ -36,7 +36,7 @@ HTTP 200
 [Asserts]
 jsonpath "$.id" == "{{app_id}}"
 jsonpath "$.user_id" == "{{kyc_user_id}}"
-jsonpath "$.state" == "started"
+jsonpath "$.state" == "STARTED"
 
 # one active application per user
 POST http://localhost:8093/v1/kyc/applications
@@ -99,7 +99,7 @@ jsonpath "$.documents" count == 2
 GET http://localhost:8093/v1/kyc/applications/{{app_id}}
 HTTP 200
 [Asserts]
-jsonpath "$.state" == "documents_uploaded"
+jsonpath "$.state" == "DOCUMENTS_UPLOADED"
 jsonpath "$.documents" count == 2
 
 # state should be documents_uploaded, and 2 document rows exist —
@@ -122,7 +122,7 @@ GET http://localhost:8093/v1/kyc/status/{{kyc_user_id}}
 HTTP 200
 [Asserts]
 jsonpath "$.application_id" == "{{app_id}}"
-jsonpath "$.state" == "liveness_passed"
+jsonpath "$.state" == "LIVENESS_PASSED"
 
 # state should now be liveness_passed — verified by the
 # GET /v1/kyc/status/{{kyc_user_id}} call above (state == liveness_passed).

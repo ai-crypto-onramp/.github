@@ -79,7 +79,7 @@ POST http://localhost:8092/v1/notifications/send
 Content-Type: application/json
 {
   "event_id": "hurl-{{newUuid}}",
-  "channel": "email",
+  "channel": "EMAIL",
   "recipient": "hurl-user@example.com",
   "event_type": "payment.captured",
   "user_id": "hurl-user",
@@ -90,7 +90,7 @@ HTTP 201
 notification_id: jsonpath "$.id"
 sent_event_id: jsonpath "$.event_id"
 [Asserts]
-jsonpath "$.channel" == "email"
+jsonpath "$.channel" == "EMAIL"
 jsonpath "$.event_type" == "payment.captured"
 
 # the same (event, channel, recipient) is deduplicated
@@ -98,7 +98,7 @@ POST http://localhost:8092/v1/notifications/send
 Content-Type: application/json
 {
   "event_id": "{{sent_event_id}}",
-  "channel": "email",
+  "channel": "EMAIL",
   "recipient": "hurl-user@example.com",
   "event_type": "payment.captured"
 }
