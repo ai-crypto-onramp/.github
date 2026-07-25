@@ -37,13 +37,6 @@ endpoints:
     conditions:
       - "[CONNECTED] == true"
 
-  # - name: kafka-rest
-  #   group: infra
-  #   url: http://kafka-rest:8082/topics
-  #   interval: 30s
-  #   conditions:
-  #     - "[STATUS] == 200"
-
   - name: kyt-aml-screening
     group: core
     url: http://kyt-aml-screening:8080/healthz

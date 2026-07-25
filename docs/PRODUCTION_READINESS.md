@@ -170,7 +170,7 @@ Only `mpc-signer/docs/runbooks/{dkg-ceremony,key-rotation,node-restore,incident-
 | Severity | Issue | Status | Evidence | Remediation |
 |---|---|---|---|---|
 | P0 | Secrets are plain-text in compose (`postgres:postgres`, `dev-secret`, `dev-secret-chainalysis`, `EVM_XPUB`/`BTC_XPUB` hardcoded). | ⏳ OPEN (Phase 3) | `.github/docker-compose.yml:8-9,238-239,415,453,516-518`. | Externalize to a secrets manager (Vault/ASM/SSM); never ship prod keys in compose. |
-| P0 | E2E Kafka tests are unrunnable — `tests/e2e-kafka/*.hurl` hit `http://localhost:8105` (kafka-rest) which is commented out in compose. Postgrest assertion services (ports 3001-3011) also all commented out. | ⏳ OPEN (Phase 3) | `.github/docker-compose.yml:216-227,26-167`; `.github/tests/e2e-kafka/*.hurl:10,31`. | Uncomment `kafka-rest` + `postgrest-*` or rewrite assertions. |
+| P0 | E2E Kafka tests are unrunnable — `tests/e2e-async/*.hurl` hit `http://localhost:8082` (audit-logger + service-native endpoints) which is commented out in compose. Postgrest assertion services (ports 3001-3011) also all commented out. | ⏳ OPEN (Phase 3) | `.github/docker-compose.yml:216-227,26-167`; `.github/tests/e2e-async/*.hurl:10,31`. | Replaced kafka-rest e2e tests with service-native async assertions (e2e-async). |
 | P1 | Single Postgres for all 16 service DBs (no HA, no backups, no PITR). | ⏳ OPEN (Phase 3) | `.github/postgres-init.sql:1-16`; `.github/docker-compose.yml:5-19`. | Per-service managed Postgres or logical replication + automated backups. |
 | P1 | No observability stack (no Prometheus/Grafana/Loki/Tempo/OTel collector). | ✅ RESOLVED (Phase 2, item 12) | Prometheus (9090) + Grafana (3000) + Loki (3100) + Tempo (3200+4317) + OTel collector (4317/4318/8888) now in compose; `monitoring/` config tree; OTel SDK in every service. | W3C `traceparent` propagation convention still pending as shared interceptor (Phase 3 hardening). |
 | P1 | No resource limits, no restart policies, no network isolation in compose. | ⏳ OPEN (Phase 3) | Entire `docker-compose.yml` — no `networks:` or `deploy:` keys. | Add `restart: unless-stopped`, CPU/memory limits, per-service networks. |
@@ -233,7 +233,7 @@ Only `mpc-signer/docs/runbooks/{dkg-ceremony,key-rotation,node-restore,incident-
 | notifier | TS | 19 | 13 | 0.68 | OK |
 | audit-logger | Go | 24 | 23 | 0.96 | OK |
 
-Unit coverage is healthy. The systemic gap is **integration**: there is no end-to-end suite that exercises a real saga across real partner services. Hurl suites are happy-path only and depend on `kafka-rest` + `postgrest-*` services that are commented out in compose — so even the existing E2E tests cannot run.
+Unit coverage is healthy. The systemic gap is **integration**: there is no end-to-end suite that exercises a real saga across real partner services. Hurl suites are happy-path only and depend on `audit-logger + service-native endpoints` + `postgrest-*` services that are commented out in compose — so even the existing E2E tests cannot run.
 
 ---
 
@@ -310,7 +310,7 @@ Unit coverage is healthy. The systemic gap is **integration**: there is no end-t
 - **W3C `traceparent` propagation** as a shared interceptor across all services.
 - **Standardize migrations tooling** (`golang-migrate` for Go, Alembic for Python, `refinery`/`sqlx` for Rust); run as a separate `migrate up` step before startup.
 - **Kafka production-hardening**: 3-broker cluster, RF=3, explicit topic provisioning, longer retention for audit; single-Postgres HA + backups + PITR.
-- **Add CI integration of Hurl suites** (boot stack + `make test`); uncomment `kafka-rest` + `postgrest-*` or rewrite assertions.
+- **Add CI integration of Hurl suites** (boot stack + `make test`); uncomment `audit-logger + service-native endpoints` + `postgrest-*` or rewrite assertions.
 - **Compose hardening**: `restart: unless-stopped`, CPU/memory limits, per-service networks; externalize all secrets.
 
 ---
