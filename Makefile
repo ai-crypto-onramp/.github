@@ -4,10 +4,9 @@
 # pg-data volume (so the next `make up` boots an empty cluster and each
 # service re-runs its migrations). 
 #
-# To preserve Postgres across down/up
-# cycles (e.g. iterating on a single service without wiping data), use
-# `make down KEEP_DB=1`. For an in-place data reset against a live stack,
-# `make reset-db` truncates every service database without bouncing it.
+# To preserve Postgres across down/up cycles, use `make down KEEP_DB=1`. 
+# For an in-place data reset against a live stack, `make reset-db` 
+# truncates every service database without bouncing it.
 #
 # Usage:
 #
