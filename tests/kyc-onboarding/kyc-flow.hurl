@@ -67,7 +67,7 @@ Content-Type: application/json
 }
 HTTP 201
 [Asserts]
-jsonpath "$.type" == "id_front"
+jsonpath "$.type" == "ID_FRONT"
 
 POST http://localhost:8093/v1/kyc/applications/{{app_id}}/documents
 Content-Type: application/json
@@ -77,7 +77,7 @@ Content-Type: application/json
 }
 HTTP 201
 [Asserts]
-jsonpath "$.type" == "selfie"
+jsonpath "$.type" == "SELFIE"
 
 # invalid document types are rejected
 POST http://localhost:8093/v1/kyc/applications/{{app_id}}/documents
@@ -111,12 +111,12 @@ jsonpath "$.documents" count == 2
 POST http://localhost:8093/v1/kyc/applications/{{app_id}}/liveness
 HTTP 201
 [Asserts]
-jsonpath "$.result" == "pass"
+jsonpath "$.result" == "PASS"
 
 GET http://localhost:8093/v1/kyc/applications/{{app_id}}/liveness
 HTTP 200
 [Asserts]
-jsonpath "$.result" == "pass"
+jsonpath "$.result" == "PASS"
 
 GET http://localhost:8093/v1/kyc/status/{{kyc_user_id}}
 HTTP 200

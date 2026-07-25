@@ -23,7 +23,7 @@ This document captures a proposed (not yet implemented) plan to replace the
 `SELECT ... FOR UPDATE` + multi-statement transaction patterns across the
 codebase with single-statement, atomic-update patterns. It is a hardening
 pass motivated by concurrency correctness and simplicity, **not** by the
-`make reset-db` hang — see `fixtures/reset.sql` for the skip-and-continue
+`make reset-db` hang — see `scripts/reset.sql` for the skip-and-continue
 mitigation that ships today.
 
 ## Background: why this came up
@@ -36,7 +36,7 @@ transaction. As long as a service keeps a transaction open (e.g. the
 `orchestrator-tx` outbox relay ticks every 100 ms and opens a
 serializable transaction each tick), `TRUNCATE` waits indefinitely.
 
-The shipped fix (`fixtures/reset.sql`) wraps each database's truncate loop
+The shipped fix (`scripts/reset.sql`) wraps each database's truncate loop
 in a `DO $$ ... EXCEPTION WHEN lock_timeout THEN ... END $$` block with
 `SET lock_timeout = '5s'`, so a locked database is skipped atomically (the
 block rolls back, leaving that database untouched) and `reset-db` continues
@@ -249,7 +249,7 @@ drop the outer tx, run autocommit, use the `version` column as a CAS guard
 To be explicit: this migration does **not** eliminate the `make reset-db`
 window. A single autocommit statement still holds a lock for one
 round-trip, and `TRUNCATE` can still collide with it. The shipped
-`fixtures/reset.sql` (skip-and-continue with `lock_timeout = '5s'`) is
+`scripts/reset.sql` (skip-and-continue with `lock_timeout = '5s'`) is
 the correct dev-tooling fix; the lock-free migration is a separate
 hardening pass with its own justification. Do not conflate the two when
 reviewing PRs.
