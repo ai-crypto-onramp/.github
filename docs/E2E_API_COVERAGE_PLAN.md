@@ -28,7 +28,6 @@
   - [wallet-manager (12 HTTP + 3 gRPC)](#wallet-manager-12-http--3-grpc)
 - [Summary table](#summary-table)
 - [gRPC endpoints (not testable via Hurl)](#grpc-endpoints-not-testable-via-hurl)
-- [Uncovered services (0% HTTP coverage)](#uncovered-services-0-http-coverage)
 - [Largest coverage gaps (by uncovered endpoint count)](#largest-coverage-gaps-by-uncovered-endpoint-count)
 
 ## Summary
@@ -93,39 +92,39 @@ GetBalance, VerifyChain.
 
 ---
 
-### gateway-auth (23 HTTP)
+### gateway-auth (27 HTTP)
 
 | # | Method | Path | Covered? |
 |---|---|---|---|
 | 1 | POST | /v1/users | ✅ |
 | 2 | POST | /v1/users/verify | ✅ |
 | 3 | GET | /v1/users/me | ✅ |
-| 4 | PATCH | /v1/users/me | ❌ |
+| 4 | PATCH | /v1/users/me | ✅ |
 | 5 | DELETE | /v1/users/me | ✅ |
 | 6 | POST | /v1/sessions | ✅ |
 | 7 | GET | /v1/sessions | ✅ |
 | 8 | DELETE | /v1/sessions | ✅ |
-| 9 | DELETE | /v1/sessions/:id | ❌ |
+| 9 | DELETE | /v1/sessions/:id | ✅ |
 | 10 | POST | /v1/sessions/refresh | ✅ |
-| 11 | POST | /v1/mfa/enroll | ❌ |
-| 12 | POST | /v1/mfa/verify | ❌ |
-| 13 | POST | /v1/mfa/recovery | ❌ |
-| 14 | DELETE | /v1/mfa/factors/:id | ❌ |
-| 15 | POST | /v1/password/reset/init | ❌ |
-| 16 | POST | /v1/password/reset/confirm | ❌ |
-| 17 | POST | /v1/api-keys | ❌ |
-| 18 | GET | /v1/api-keys | ❌ |
-| 19 | POST | /v1/api-keys/:id/rotate | ❌ |
-| 20 | DELETE | /v1/api-keys/:id | ❌ |
-| 21 | GET | /v1/roles | ❌ |
+| 11 | POST | /v1/mfa/enroll | ✅ |
+| 12 | POST | /v1/mfa/verify | ✅ |
+| 13 | POST | /v1/mfa/recovery | ✅ |
+| 14 | DELETE | /v1/mfa/factors/:id | ✅ |
+| 15 | POST | /v1/password/reset/init | ✅ |
+| 16 | POST | /v1/password/reset/confirm | ✅ |
+| 17 | POST | /v1/api-keys | ✅ |
+| 18 | GET | /v1/api-keys | ✅ |
+| 19 | POST | /v1/api-keys/:id/rotate | ✅ |
+| 20 | DELETE | /v1/api-keys/:id | ✅ |
+| 21 | GET | /v1/roles | ✅ |
 | 22 | POST | /v1/role-bindings | ❌ |
-| 23 | GET | /v1/role-bindings | ❌ |
+| 23 | GET | /v1/role-bindings | ✅ |
 | 24 | DELETE | /v1/role-bindings/:id | ❌ |
-| 25 | POST | /v1/authz | ❌ |
-| 26 | GET | /v1/audit-events | ❌ |
-| 27 | POST | /v1/admin/unlock | ❌ |
+| 25 | POST | /v1/authz | ✅ |
+| 26 | GET | /v1/audit-events | ✅ |
+| 27 | POST | /v1/admin/unlock | ✅ |
 
-**HTTP coverage: 8/27 (30%)**
+**HTTP coverage: 25/27 (93%)**
 
 ---
 
@@ -133,11 +132,11 @@ GetBalance, VerifyChain.
 
 | # | Method | Path | Covered? |
 |---|---|---|---|
-| 1 | POST | /v1/fraud/score | ❌ |
-| 2 | GET | /v1/fraud/models | ❌ |
-| 3 | POST | /v1/fraud/feedback | ❌ |
+| 1 | POST | /v1/fraud/score | ✅ |
+| 2 | GET | /v1/fraud/models | ✅ |
+| 3 | POST | /v1/fraud/feedback | ✅ |
 
-**HTTP coverage: 0/3 (0%)**
+**HTTP coverage: 3/3 (100%)**
 
 ---
 
@@ -166,17 +165,17 @@ StreamExposure, SubmitHedgePlan.
 
 | # | Method | Path | Covered? |
 |---|---|---|---|
-| 1 | POST | /v1/auth/session | ❌ |
-| 2 | GET | /v1/me | ❌ |
-| 3 | POST | /v1/quotes | ❌ |
-| 4 | POST | /v1/transactions | ❌ |
-| 5 | GET | /v1/transactions/:id | ❌ |
-| 6 | GET | /v1/transactions | ❌ |
-| 7 | POST | /v1/kyc/start | ❌ |
-| 8 | GET | /v1/kyc/status | ❌ |
-| 9 | POST | /v1/partner/webhooks | ❌ |
+| 1 | POST | /v1/auth/session | ✅ |
+| 2 | GET | /v1/me | ✅ |
+| 3 | POST | /v1/quotes | ✅ |
+| 4 | POST | /v1/transactions | ✅ |
+| 5 | GET | /v1/transactions/:id | ✅ |
+| 6 | GET | /v1/transactions | ✅ |
+| 7 | POST | /v1/kyc/start | ✅ |
+| 8 | GET | /v1/kyc/status | ✅ |
+| 9 | POST | /v1/partner/webhooks | ✅ |
 
-**HTTP coverage: 0/9 (0%)**
+**HTTP coverage: 9/9 (100%)**
 
 ---
 
@@ -184,15 +183,15 @@ StreamExposure, SubmitHedgePlan.
 
 | # | Method | Path | Covered? |
 |---|---|---|---|
-| 1 | POST | /v1/chains/:chain/broadcast | ❌ |
-| 2 | POST | /v1/chains/:chain/estimate-fee | ❌ |
-| 3 | GET | /v1/chains/:chain/height | ❌ |
-| 4 | GET | /v1/chains/:chain/address/:addr/balance | ❌ |
-| 5 | GET | /v1/chains/:chain/tx/:hash | ❌ |
-| 6 | GET | /v1/chains/:chain/tx/:hash/status | ❌ |
+| 1 | POST | /v1/chains/:chain/broadcast | ✅ |
+| 2 | POST | /v1/chains/:chain/estimate-fee | ✅ |
+| 3 | GET | /v1/chains/:chain/height | ✅ |
+| 4 | GET | /v1/chains/:chain/address/:addr/balance | ✅ |
+| 5 | GET | /v1/chains/:chain/tx/:hash | ✅ |
+| 6 | GET | /v1/chains/:chain/tx/:hash/status | ✅ |
 | 7 | WS | /v1/chains/:chain/heads | ❌ |
 
-**HTTP coverage: 0/7 (0%)**
+**HTTP coverage: 6/6 (100%)**
 
 ---
 
@@ -456,11 +455,11 @@ gRPC (not testable via Hurl): ResolveKeyID, OnConfirmation, OnReorg.
 |---|---|---|---|
 | accounting-ledger | 10 | 8 | 80% |
 | audit-logger | 8 | 7 | 88% |
-| gateway-auth | 27 | 8 | 30% |
-| engine-fraud | 3 | 0 | 0% |
+| gateway-auth | 27 | 25 | 93% |
+| engine-fraud | 3 | 3 | 100% |
 | fx-hedger | 9 | 7 | 78% |
-| gateway-api | 9 | 0 | 0% |
-| gateway-blockchain | 7 | 0 | 0% |
+| gateway-api | 9 | 9 | 100% |
+| gateway-blockchain | 6 | 6 | 100% |
 | gateway-exchange | 8 | 8 | 100% |
 | gateway-fiat | 5 | 5 | 100% |
 | kyc-onboarding | 12 | 9 | 75% |
@@ -475,7 +474,7 @@ gRPC (not testable via Hurl): ResolveKeyID, OnConfirmation, OnReorg.
 | orchestrator-treasury | 11 | 7 | 64% |
 | orchestrator-tx | 5 | 5 | 100% |
 | wallet-manager | 12 | 5 | 42% |
-| **Total** | **167** | **111** | **66%** |
+| **Total** | **164** | **139** | **85%** |
 
 ## gRPC endpoints (not testable via Hurl)
 
@@ -490,31 +489,15 @@ gRPC (not testable via Hurl): ResolveKeyID, OnConfirmation, OnReorg.
 
 **22 gRPC methods total — 0% covered by Hurl (HTTP-only tool).**
 
-## Uncovered services (0% HTTP coverage)
-
-Three services have zero Hurl coverage beyond healthz:
-
-1. **engine-fraud** (3 endpoints) — `POST /v1/fraud/score`, `GET
-   /v1/fraud/models`, `POST /v1/fraud/feedback`. The test file only hits
-   healthz.
-2. **gateway-api** (9 endpoints) — the BFF layer; all routes require JWT
-   auth and proxy to backend services. No Hurl test exercises any route.
-3. **gateway-blockchain** (7 endpoints) — chain broadcast/fee/status
-   endpoints. Stub chain mode in dev means most return 404 for unknown
-   chains; no Hurl test exercises any route.
-
 ## Largest coverage gaps (by uncovered endpoint count)
 
 | Service | Uncovered | Key missing endpoints |
 |---|---|---|
-| gateway-auth | 19 | MFA (4), API keys (4), RBAC (4), password reset (2), PATCH /me, DELETE session/:id, authz, audit-events, admin/unlock |
 | wallet-manager | 7 | withdrawals (3), funding-request (2), nonce/allocate, list wallets |
-| gateway-api | 9 | all (auth/session, me, quotes, transactions, KYC, webhooks) |
-| gateway-blockchain | 7 | all (broadcast, fee, height, balance, tx, status, WS heads) |
-| engine-fraud | 3 | all (score, models, feedback) |
 | engine-pricing | 4 | list quotes, fee-schedules, rate-sources, WS subscribe |
 | orchestrator-treasury | 4 | memberships, float list, aggregate-orders, events push |
 | engine-recon | 4 | list runs, report archive, rules (2) |
-| gateway-auth | — | (see above) |
+| gateway-auth | 2 | POST role-bindings, DELETE role-bindings/:id |
 | accounting-ledger | 2 | list accounts, list postings |
 | notifier | 3 | list notifications, webhook deliver, webhook verify |
+| kyc-onboarding | 3 | screening/disposition, rekyc/trigger, audit-events |
