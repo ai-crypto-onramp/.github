@@ -8,28 +8,33 @@
 # `make reset-db` truncates every service database without bouncing it.
 #
 # Usage:
+#
 #   make up            bring the full stack up (detached; fresh Postgres)
 #   make down          stop, remove containers and volumes (fresh DB next up)
 #   make restart       restart all services
 #   make ps            list running services
-#   make logs          tail logs for all services
 #   make build         (re)build all service images
+#   make pull          pull base images
+#   make logs          tail logs for all services
+#   make dashboard     open the Gatus health dashboard in the browser
+#   make clean         cleanup Hurl HTML reports
+#   make test          run all Hurl integration suites (HTML report in `reports/`)
+#
 #   make build-go      (re)build all Go services
 #   make build-ts      (re)build all TypeScript services
 #   make build-rs      (re)build all Rust services
 #   make build-py      (re)build all Python services
-#   make pull          pull base images
-#   make dashboard     open the Gatus health dashboard in the browser
-#   make test          run all Hurl integration suites (HTML report in `reports/`)
-#   make seed-db       populate all postgres databases with dummy fixture data
-#   make reset-db      truncate all tables across all postgres databases
+#
 #   make up-<svc>      start one service:            `make up-kyc`, `make up-identity-auth`
 #   make down-<svc>    stop & remove one service:    `make down-kyc`, `make down-front-office-ui`
 #   make build-<svc>   rebuild one service image without cache
 #   make logs-<svc>    tail logs for one service:    `make logs-policy`
 #   make test-<svc>    run one service's test suite: `make test-pricing`
+#
 #   make psql          psql into the shared postgres container
 #   make redis-cli     redis-cli into the shared redis container
+#   make seed-db       populate all postgres databases with dummy fixture data
+#   make reset-db      truncate all tables across all postgres databases
 
 COMPOSE := docker compose
 REPORTS := reports
@@ -76,6 +81,17 @@ pull:
 logs:
 	$(COMPOSE) logs -f --tail=200
 
+# Open the Gatus health dashboard in the browser
+dashboard:
+	open http://localhost:8090
+
+# Run Hurl test suite
+test: clean
+	hurl --test $(HURL_TOKEN_VARS) $(HURL_TRM_VARS) --report-html $(REPORTS) tests/*/*.hurl
+
+clean:
+	rm -rf $(REPORTS)
+
 # Build only the Go services (shared module + build cache via BuildKit mounts).
 GO_SERVICES := audit-logger engine-liquidity engine-policy-risk engine-pricing \
 	fx-hedger gateway-auth gateway-blockchain gateway-exchange gateway-fiat \
@@ -102,19 +118,6 @@ PY_SERVICES := engine-fraud engine-recon ui-back-office
 
 build-py:
 	DOCKER_BUILDKIT=1 $(COMPOSE) build $(PY_SERVICES)
-
-# Open the Gatus health dashboard in the browser
-dashboard:
-	open http://localhost:8090
-
-# Integration tests (Hurl suites in tests/, one directory per service).
-# Writes an HTML report to reports/ (view with: open reports/index.html).
-# The directory is wiped first so the report always reflects the latest run.
-clean:
-	rm -rf $(REPORTS)
-
-test: clean
-	hurl --test $(HURL_TOKEN_VARS) $(HURL_TRM_VARS) --report-html $(REPORTS) tests/*/*.hurl
 
 # Short aliases for service names, used by the up-%, logs-% and test-%
 # patterns. Services without an alias (postgres, redis, gatus) are addressed
