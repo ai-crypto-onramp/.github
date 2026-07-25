@@ -7,7 +7,7 @@
 set -euo pipefail
 
 OUT="${1:-./certs}"
-SERVICES="${SERVICES:-mpc-signer transaction-orchestrator policy-risk-engine aml-kyt-screening ledger-accounting gateway-blockchain}"
+SERVICES="${SERVICES:-mpc-signer transaction-orchestrator policy-risk-engine kyt-aml-screening ledger-accounting gateway-blockchain}"
 DAYS="${DAYS:-3650}"
 
 mkdir -p "$OUT"

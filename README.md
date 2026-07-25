@@ -41,8 +41,8 @@ Minimized language sprawl. Standardized on:
 |---|---|---|
 | [**API Gateway / BFF**](https://github.com/ai-crypto-onramp/gateway-api) | TypeScript | Public edge. AuthN/Z, rate limiting, request shaping, aggregates backend calls for web/mobile SDKs. |
 | [**Identity & Auth**](https://github.com/ai-crypto-onramp/auth-identity) | Go | User accounts, sessions, MFA, API keys for B2B partners, RBAC. |
-| [**Onboarding / KYC**](https://github.com/ai-crypto-onramp/onboarding-kyc) | Go | Orchestrates identity verification via vendors (Onfido/Sumsub), document + liveness, sanctions/PEP screening at signup. |
-| [**AML / KYT Screening**](https://github.com/ai-crypto-onramp/aml-kyt-screening) | Go | Pre-settlement Know-Your-Transaction checks against destination addresses (Chainalysis/TRM); blocks tainted flows before broadcast. |
+| [**Onboarding / KYC**](https://github.com/ai-crypto-onramp/kyc-onboarding) | Go | Orchestrates identity verification via vendors (Onfido/Sumsub), document + liveness, sanctions/PEP screening at signup. |
+| [**AML / KYT Screening**](https://github.com/ai-crypto-onramp/kyt-aml-screening) | Go | Pre-settlement Know-Your-Transaction checks against destination addresses (Chainalysis/TRM); blocks tainted flows before broadcast. |
 | [**Policy / Risk Engine**](https://github.com/ai-crypto-onramp/policy-risk-engine) | Go | Per-tx caps, velocity limits, whitelisting, source auth. Auto-approves or routes to manual review. The gatekeeper before signing. |
 | [**Fraud Detection**](https://github.com/ai-crypto-onramp/fraud-detection) | Python | ML scoring on payment + behavioral signals (chargeback/velocity models); feeds the policy engine. |
 

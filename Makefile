@@ -67,8 +67,8 @@ logs:
 	$(COMPOSE) logs -f --tail=200
 
 # Build only the Go services (shared module + build cache via BuildKit mounts).
-GO_SERVICES := aml-kyt-screening audit-logger gateway-blockchain exchange-connector \
-	fx-hedger auth-identity liquidity-router onboarding-kyc payment-orchestrator \
+GO_SERVICES := kyt-aml-screening audit-logger gateway-blockchain exchange-connector \
+	fx-hedger auth-identity liquidity-router kyc-onboarding payment-orchestrator \
 	policy-risk-engine pricing-quote rail-connector transaction-orchestrator \
 	treasury-orchestrator wallet-manager
 
@@ -109,9 +109,9 @@ test: clean
 # Short aliases for service names, used by the up-%, logs-% and test-%
 # patterns. Services without an alias (postgres, redis, gatus) are addressed
 # by full name.
-kyt       := aml-kyt-screening
-gateway   := api-gateway
-audit     := audit-event-log
+kyt       := kyt-aml-screening
+gateway   := gateway-api
+audit     := audit-logger
 chain     := gateway-blockchain
 exchange  := exchange-connector
 fraud     := fraud-detection
@@ -121,7 +121,7 @@ ledger    := ledger-accounting
 liquidity := liquidity-router
 mpc       := mpc-signer
 notify    := notifier
-kyc       := onboarding-kyc
+kyc       := kyc-onboarding
 payment   := payment-orchestrator
 policy    := policy-risk-engine
 pricing   := pricing-quote

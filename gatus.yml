@@ -44,9 +44,9 @@ endpoints:
   #   conditions:
   #     - "[STATUS] == 200"
 
-  - name: aml-kyt-screening
+  - name: kyt-aml-screening
     group: core
-    url: http://aml-kyt-screening:8080/healthz
+    url: http://kyt-aml-screening:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
@@ -140,9 +140,9 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: onboarding-kyc
+  - name: kyc-onboarding
     group: core
-    url: http://onboarding-kyc:8080/healthz
+    url: http://kyc-onboarding:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"

@@ -19,7 +19,7 @@ services:
       retries: 10
 
   # Shared Redis for velocity counters (policy-risk-engine) and the
-  # address-risk cache (aml-kyt-screening).
+  # address-risk cache (kyt-aml-screening).
   redis:
     image: redis:7-alpine
     ports:
@@ -63,7 +63,7 @@ services:
         echo "All databases reset."
 
   # Shared Kafka broker for the transactional event bus, audit-logger
-  # ingestion, aml-kyt-screening audit sink, gateway-blockchain lifecycle
+  # ingestion, kyt-aml-screening audit sink, gateway-blockchain lifecycle
   # events, exchange-connector fill/balance events, and treasury-
   # orchestration tx.completed consumption. Runs in KRaft combined mode
   # (no Zookeeper) with auto-topic creation enabled.
@@ -144,9 +144,9 @@ services:
       kafka:
         condition: service_healthy
 
-  # aml-kyt-screening auto-applies migrations on startup via store.Open.
-  aml-kyt-screening:
-    build: ../aml-kyt-screening
+  # kyt-aml-screening auto-applies migrations on startup via store.Open.
+  kyt-aml-screening:
+    build: ../kyt-aml-screening
     ports:
       - "8081:8080"
     expose:
@@ -409,8 +409,8 @@ services:
       kafka-init:
         condition: service_completed_successfully
 
-  onboarding-kyc:
-    build: ../onboarding-kyc
+  kyc-onboarding:
+    build: ../kyc-onboarding
     ports:
       - "8093:8080"
     networks:
@@ -535,7 +535,7 @@ services:
       - DB_URL=postgres://postgres:postgres@postgres:5432/transaction_orchestrator?sslmode=disable
       - EVENT_BUS_URL=kafka://kafka:9092?topic=transactions
       - POLICY_URL=policy-risk-engine:9090
-      - KYT_URL=aml-kyt-screening:9090
+      - KYT_URL=kyt-aml-screening:9090
       - MPC_URL=mpc-signer:9090
       - LEDGER_URL=ledger-accounting:8081
       - PAYMENT_URL=http://payment-orchestrator:8080
@@ -562,7 +562,7 @@ services:
         condition: service_healthy
       policy-risk-engine:
         condition: service_started
-      aml-kyt-screening:
+      kyt-aml-screening:
         condition: service_started
       mpc-signer:
         condition: service_started

@@ -41,7 +41,7 @@ reports, `--verbose` to see full requests/responses on failure.
   the `{{newUuid}}` generator (auth-identity emails, KYC user ids, policy
   whitelist users, notifier event ids), and asserts on shared state are
   tolerant (`count >= 1`, alerts are assigned but never closed).
-- The aml-kyt-screening TRM webhook signature is HMAC-SHA256 over the exact
+- The kyt-aml-screening TRM webhook signature is HMAC-SHA256 over the exact
   request body with the compose secret `dev-secret-trm`. The signed bodies
   are one-line strings with precomputed signatures — if you edit a body,
   recompute with:
@@ -49,9 +49,9 @@ reports, `--verbose` to see full requests/responses on failure.
 
 ## Coverage notes
 
-- **Full flows** — aml-kyt-screening (screen, cache hit, webhooks, alerts),
+- **Full flows** — kyt-aml-screening (screen, cache hit, webhooks, alerts),
   auth-identity (register → verify → login → refresh → logout → close),
-  onboarding-kyc (application state machine, documents, liveness,
+  kyc-onboarding (application state machine, documents, liveness,
   screening), policy-risk-engine (whitelist gating, OPA decisions, review
   queue), pricing-quote (quote → claim → refresh, bulk, validation), and
   notifier (preferences, events, dedupe, partner webhooks).

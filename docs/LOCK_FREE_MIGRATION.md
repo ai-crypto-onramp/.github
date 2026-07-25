@@ -98,7 +98,7 @@ Four near-identical state-machine rewrites:
 instead of 500. Hurl tests that assert 500 on double-revoke need updating
 to 409.
 
-### 3. onboarding-kyc (`internal/db_stores.go:141,190`)
+### 3. kyc-onboarding (`internal/db_stores.go:141,190`)
 State-machine CAS on `kyc_applications.status`. Two transition sites,
 both become `UPDATE kyc_applications SET status=$2, updated_at=now()
 WHERE id=$1 AND status=$3 RETURNING ...`.
@@ -216,7 +216,7 @@ drop the outer tx, run autocommit, use the `version` column as a CAS guard
    behavior change. Validates the pattern.
 2. `auth-identity` revokes — four near-identical rewrites, exercises the
    409 contract change.
-3. `onboarding-kyc` + `gateway-blockchain` — straightforward CAS / upsert.
+3. `kyc-onboarding` + `gateway-blockchain` — straightforward CAS / upsert.
 4. `payment-orchestrator` + `treasury-orchestrator` — CAS, but verify
    multi-row invariants in treasury first.
 5. `transaction-orchestrator` outbox — biggest win, requires the reaper.
