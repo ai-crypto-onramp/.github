@@ -203,6 +203,24 @@ flowchart LR
   `audit.v1` (consumed by Audit Logger). The Orchestrator and Blockchain
   Gateway publish lifecycle events to `notification.v1` (consumed by Notifier).
 
+### Async event topics
+
+All Kafka topics in the stack, sorted alphabetically:
+
+| Topic | Description | Producers | Consumers |
+|---|---|---|---|
+| `audit.v1` | Append-only audit trail for compliance and incident forensics. Canonical envelope: `schema_version`, `id`, `ts`, `source_service`, `actor_id`, `action`, `target_type`, `target_id`, `payload_hash`, `payload`. | fraud-engine, gateway-blockchain, kyt-aml-screening, mpc-signer, notifier, payment-orchestrator, policy-risk-engine, reconciliation, tx-orchestrator | audit-logger |
+| `blockchain.events.v1` | On-chain transaction lifecycle events (broadcast, confirmation, reorg, mempool). | gateway-blockchain | notifier, reconciliation |
+| `custody.events.v1` | Custody operations (key creation, signing, key rotation) from the MPC threshold-signing service. | mpc-signer | reconciliation |
+| `exchange.events.v1` | Order placement, fills, and balance updates from exchange venue adapters. | gateway-exchange | reconciliation |
+| `fraud.scored` | Fraud risk score and risk band per transaction, emitted after scoring on payment + behavioral signals. | fraud-engine | policy-risk-engine |
+| `ledger.events.v1` | Immutable double-entry ledger postings and balance changes. | accounting-ledger | reconciliation |
+| `liquidity.fills` | Fill events from smart order routing (TWAP/VWAP slicing across venues). | liquidity-router | reconciliation |
+| `notification.v1` | Transaction lifecycle notifications (tx.created, tx.confirmed, tx.failed) for email/SMS/push/webhook delivery. | gateway-blockchain, tx-orchestrator | notifier |
+| `payment.events.v1` | Payment lifecycle events (intent created, authorized, captured, refunded, chargeback). | payment-orchestrator | reconciliation |
+| `rail.events.v1` | Rail settlement events (card, ACH, SEPA, PIX, UPI) — confirmation, rejection, settlement status. | gateway-fiat | reconciliation |
+| `transactions` | Saga state transitions (transaction.created, step.start, step.success, tx.completed, tx.failed). The outbox relay polls every 100ms and publishes to this topic. | tx-orchestrator | treasury-orchestrator |
+
 ## Dashboard
 
 All 21 services expose `GET /healthz` returning `{"status":"ok"}` on port `8080`
