@@ -66,7 +66,7 @@ reaper that periodically flips rows past a heartbeat deadline back to
 
 ## Per-site rewrite plan
 
-### 1. wallet-management — nonces (`internal/storage/postgres/postgres.go:400`)
+### 1. wallet-manager — nonces (`internal/storage/postgres/postgres.go:400`)
 The clearest win. Replace `SELECT pending_nonce ... FOR UPDATE` + `UPDATE`
 with:
 
@@ -83,7 +83,7 @@ RETURNING pending_nonce;
 Drop `sql.LevelSerializable` for this path. No behavior change visible to
 callers.
 
-### 2. identity-auth (`internal/dbstore.go:367,846,890,1077`)
+### 2. auth-identity (`internal/dbstore.go:367,846,890,1077`)
 Four near-identical state-machine rewrites:
 
 - Revoke session: `UPDATE sessions SET revoked_at=now() WHERE id=$1 AND
@@ -103,7 +103,7 @@ State-machine CAS on `kyc_applications.status`. Two transition sites,
 both become `UPDATE kyc_applications SET status=$2, updated_at=now()
 WHERE id=$1 AND status=$3 RETURNING ...`.
 
-### 4. blockchain-gateway — tx_confirmations (`internal/store/postgres/postgres.go:218`)
+### 4. gateway-blockchain — tx_confirmations (`internal/store/postgres/postgres.go:218`)
 Replace `SELECT ... FOR UPDATE` + conditional INSERT/UPDATE with one
 upsert guarded by a monotonicity check:
 
@@ -118,13 +118,13 @@ ON CONFLICT (chain_id, tx_hash) DO UPDATE
 RETURNING ...;
 ```
 
-### 5. payment-orchestration — intents / chargebacks (`internal/store/postgres/postgres.go:125,275`)
+### 5. payment-orchestrator — intents / chargebacks (`internal/store/postgres/postgres.go:125,275`)
 CAS on `intents.status` (and `intents.version` if present). Capture
 transition becomes `UPDATE intents SET status='CAPTURED', version=version+1
 WHERE id=$1 AND status='AUTHORIZED' RETURNING ...`. Chargeback claim same
 pattern. 0 rows → 409 to caller, no internal retry.
 
-### 6. treasury-orchestration — batches / float_positions (`internal/store/postgres/postgres.go:231,521`)
+### 6. treasury-orchestrator — batches / float_positions (`internal/store/postgres/postgres.go:231,521`)
 - Batches: state-machine CAS (`WHERE status='OPEN'`).
 - Float settlement: `UPDATE float_positions SET settled=true WHERE
   fiat_currency=$1 AND settled=false RETURNING id` — atomic claim of all
@@ -212,12 +212,12 @@ drop the outer tx, run autocommit, use the `version` column as a CAS guard
 
 ## Suggested order
 
-1. `wallet-management` nonces — smallest, clearest, no caller-visible
+1. `wallet-manager` nonces — smallest, clearest, no caller-visible
    behavior change. Validates the pattern.
-2. `identity-auth` revokes — four near-identical rewrites, exercises the
+2. `auth-identity` revokes — four near-identical rewrites, exercises the
    409 contract change.
-3. `onboarding-kyc` + `blockchain-gateway` — straightforward CAS / upsert.
-4. `payment-orchestration` + `treasury-orchestration` — CAS, but verify
+3. `onboarding-kyc` + `gateway-blockchain` — straightforward CAS / upsert.
+4. `payment-orchestrator` + `treasury-orchestrator` — CAS, but verify
    multi-row invariants in treasury first.
 5. `transaction-orchestrator` outbox — biggest win, requires the reaper.
 6. `transaction-orchestrator` `CreateTx` — keep the tx, add

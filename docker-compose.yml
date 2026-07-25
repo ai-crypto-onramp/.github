@@ -62,9 +62,9 @@ services:
         done
         echo "All databases reset."
 
-  # Shared Kafka broker for the transactional event bus, audit-event-log
-  # ingestion, aml-kyt-screening audit sink, blockchain-gateway lifecycle
-  # events, exchange-connectors fill/balance events, and treasury-
+  # Shared Kafka broker for the transactional event bus, audit-logger
+  # ingestion, aml-kyt-screening audit sink, gateway-blockchain lifecycle
+  # events, exchange-connector fill/balance events, and treasury-
   # orchestration tx.completed consumption. Runs in KRaft combined mode
   # (no Zookeeper) with auto-topic creation enabled.
   kafka:
@@ -171,15 +171,15 @@ services:
       kafka:
         condition: service_healthy
 
-  api-gateway:
-    build: ../api-gateway
+  gateway-api:
+    build: ../gateway-api
     ports:
       - "8080:8080"
     networks:
       - default
 
-  audit-event-log:
-    build: ../audit-event-log
+  audit-logger:
+    build: ../audit-logger
     ports:
       - "8082:8080"
     networks:
@@ -197,12 +197,12 @@ services:
       kafka:
         condition: service_healthy
 
-  # blockchain-gateway persists broadcasts, confirmations, fees, reorgs, and
+  # gateway-blockchain persists broadcasts, confirmations, fees, reorgs, and
   # outbox events to Postgres (DB_URL). Without CHAINS_SUPPORTED it boots with
   # a stub chain adapter — set it plus RPC_URLS_<CHAIN> env overrides to
   # point at a real node.
-  blockchain-gateway:
-    build: ../blockchain-gateway
+  gateway-blockchain:
+    build: ../gateway-blockchain
     ports:
       - "8083:8080"
     networks:
@@ -210,7 +210,7 @@ services:
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/blockchain_gateway?sslmode=disable
       - REDIS_URL=redis://redis:6379/0
-      - WALLET_MGMT_URL=http://wallet-management:8080
+      - WALLET_MGMT_URL=http://wallet-manager:8080
       - KAFKA_BROKERS=kafka:9092
       - DEV_MODE=1
       - EVENT_BUS_URL=kafka://kafka:9092?topic=blockchain.events.v1
@@ -222,13 +222,13 @@ services:
         condition: service_healthy
       db-reset:
         condition: service_completed_successfully
-      wallet-management:
+      wallet-manager:
         condition: service_healthy
       kafka:
         condition: service_healthy
 
-  exchange-connectors:
-    build: ../exchange-connectors
+  exchange-connector:
+    build: ../exchange-connector
     ports:
       - "8084:8080"
     networks:
@@ -268,8 +268,8 @@ services:
       kafka:
         condition: service_healthy
 
-  fx-hedging:
-    build: ../fx-hedging
+  fx-hedger:
+    build: ../fx-hedger
     ports:
       - "8086:8080"
     networks:
@@ -287,8 +287,8 @@ services:
       kafka:
         condition: service_healthy
 
-  identity-auth:
-    build: ../identity-auth
+  auth-identity:
+    build: ../auth-identity
     ports:
       - "8087:8080"
     networks:
@@ -325,8 +325,8 @@ services:
       kafka:
         condition: service_healthy
 
-  liquidity-routing:
-    build: ../liquidity-routing
+  liquidity-router:
+    build: ../liquidity-router
     ports:
       - "8089:8080"
     networks:
@@ -334,7 +334,7 @@ services:
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/liquidity?sslmode=disable
       - REDIS_URL=redis://redis:6379/0
-      - EXCHANGE_CONNECTORS_TARGET=exchange-connectors:9090
+      - EXCHANGE_CONNECTORS_TARGET=exchange-connector:9090
       - EVENT_BUS_URL=kafka://kafka:9092?topic=liquidity.fills
       - KAFKA_BROKERS=kafka:9092
       - DEV_MODE=1
@@ -355,13 +355,13 @@ services:
   # with mTLS when /certs is populated (TLS_CERT_FILE/KEY/CA); otherwise it
   # falls back to plaintext inside the network when DEV_MODE=1.
   # Operator must provision /certs via a secrets mount or
-  # `mpc-signing-service/scripts/gen-certs.sh`; the compose file does not
+  # `mpc-signer/scripts/gen-certs.sh`; the compose file does not
   # generate certs. Uncomment the TLS_* env vars and the volume mount to
   # enable mTLS.
   # For the full 3-node mTLS cluster see the service repo's
   # docker-compose.cluster.yml.
-  mpc-signing-service:
-    build: ../mpc-signing-service
+  mpc-signer:
+    build: ../mpc-signer
     ports:
       - "8091:8080"
     expose:
@@ -372,7 +372,7 @@ services:
       - CUSTODY_PROVIDER=in_house
       - THRESHOLD_T=2
       - TOTAL_N=3
-      - WALLET_MANAGEMENT_URL=http://wallet-management:9090
+      - WALLET_MANAGEMENT_URL=http://wallet-manager:9090
       - KAFKA_BROKERS=kafka:9092
       - NODE_ID=node-0
       - DEV_MODE=1
@@ -380,8 +380,8 @@ services:
       # CA + server cert/key out-of-band (e.g. scripts/gen-certs.sh or a
       # secrets mount). When all three are unset, DEV_MODE=1 allows
       # plaintext; in prod the service refuses to start without them.
-      # - TLS_CERT_FILE=/certs/mpc-signing-service.crt
-      # - TLS_KEY_FILE=/certs/mpc-signing-service.key
+      # - TLS_CERT_FILE=/certs/mpc-signer.crt
+      # - TLS_KEY_FILE=/certs/mpc-signer.key
       # - TLS_CA_FILE=/certs/internal-ca.crt
     # volumes:
     #   - internal-certs:/certs:ro
@@ -389,8 +389,8 @@ services:
       kafka:
         condition: service_healthy
 
-  notification:
-    build: ../notification
+  notifier:
+    build: ../notifier
     ports:
       - "8092:8080"
     networks:
@@ -427,15 +427,15 @@ services:
       kafka:
         condition: service_healthy
 
-  payment-orchestration:
-    build: ../payment-orchestration
+  payment-orchestrator:
+    build: ../payment-orchestrator
     ports:
       - "8094:8080"
     networks:
       - default
     environment:
       - WEBHOOK_SECRET=dev-secret
-      - RAIL_CONNECTORS_URL=http://rail-connectors:8080
+      - RAIL_CONNECTORS_URL=http://rail-connector:8080
       - KAFKA_BROKERS=kafka:9092
       - DEV_MODE=1
       # Shared HS256 secret for service-token JWT auth on internal REST
@@ -490,8 +490,8 @@ services:
       redis:
         condition: service_healthy
 
-  rail-connectors:
-    build: ../rail-connectors
+  rail-connector:
+    build: ../rail-connector
     ports:
       - "8097:8080"
     networks:
@@ -536,10 +536,10 @@ services:
       - EVENT_BUS_URL=kafka://kafka:9092?topic=transactions
       - POLICY_URL=policy-risk-engine:9090
       - KYT_URL=aml-kyt-screening:9090
-      - MPC_URL=mpc-signing-service:9090
+      - MPC_URL=mpc-signer:9090
       - LEDGER_URL=ledger-accounting:8081
-      - PAYMENT_URL=http://payment-orchestration:8080
-      - BLOCKCHAIN_URL=http://blockchain-gateway:8080
+      - PAYMENT_URL=http://payment-orchestrator:8080
+      - BLOCKCHAIN_URL=http://gateway-blockchain:8080
       - ENABLE_STUB_PARTNERS=1
       - DEV_MODE=1
       # Shared HS256 secret for service-token JWT auth on internal REST
@@ -564,17 +564,17 @@ services:
         condition: service_started
       aml-kyt-screening:
         condition: service_started
-      mpc-signing-service:
+      mpc-signer:
         condition: service_started
       ledger-accounting:
         condition: service_started
-      payment-orchestration:
+      payment-orchestrator:
         condition: service_started
-      blockchain-gateway:
+      gateway-blockchain:
         condition: service_started
 
-  treasury-orchestration:
-    build: ../treasury-orchestration
+  treasury-orchestrator:
+    build: ../treasury-orchestrator
     ports:
       - "8100:8080"
     networks:
@@ -582,9 +582,9 @@ services:
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/treasury?sslmode=disable
       - REDIS_URL=redis://redis:6379/0
-      - LIQUIDITY_ROUTING_URL=http://liquidity-routing:8080
-      - FX_HEDGING_URL=http://fx-hedging:8080
-      - WALLET_MGMT_URL=http://wallet-management:8080
+      - LIQUIDITY_ROUTING_URL=http://liquidity-router:8080
+      - FX_HEDGING_URL=http://fx-hedger:8080
+      - WALLET_MGMT_URL=http://wallet-manager:8080
       - EVENT_BUS_URL=kafka://kafka:9092?topic=transactions
       - TX_ORCH_EVENT_TOPIC=transactions
       - KAFKA_BROKERS=kafka:9092
@@ -603,16 +603,16 @@ services:
   # database itself must exist (see postgres-init.sql).
   # The XPUB values are dev-only public derivation keys (same vectors as its
   # test suite); production loads them from a secrets store.
-  wallet-management:
-    build: ../wallet-management
+  wallet-manager:
+    build: ../wallet-manager
     ports:
-      - "8101:8080"  # REST; gRPC (ResolveKeyID, gateway callbacks) is on wallet-management:9090 inside the network
+      - "8101:8080"  # REST; gRPC (ResolveKeyID, gateway callbacks) is on wallet-manager:9090 inside the network
     networks:
       - default
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/wallet_management?sslmode=disable
       - REDIS_URL=redis://redis:6379/0
-      - TREASURY_ORCHESTRATION_URL=http://treasury-orchestration:8080
+      - TREASURY_ORCHESTRATION_URL=http://treasury-orchestrator:8080
       - POLICY_RISK_ENGINE_URL=http://policy-risk-engine:8080
       - KAFKA_BROKERS=kafka:9092
       - DEV_MODE=1
@@ -630,11 +630,11 @@ services:
         condition: service_healthy
 
   # ── UIs — customer-facing and internal consoles ──
-  # front-office-ui: Next.js (standalone) on :3000; customer-facing app,
+  # ui-front-office: Next.js (standalone) on :3000; customer-facing app,
   # talks to the stack through the API Gateway BFF.
-  front-office-ui:
+  ui-front-office:
     build:
-      context: ../front-office-ui
+      context: ../ui-front-office
     ports:
       - "8102:3000"
     networks:
@@ -643,42 +643,42 @@ services:
       - NODE_ENV=production
       - PORT=3000
       - HOSTNAME=0.0.0.0
-      - NEXT_PUBLIC_API_GATEWAY_URL=http://api-gateway:8080
+      - NEXT_PUBLIC_API_GATEWAY_URL=http://gateway-api:8080
       - NEXT_PUBLIC_APP_NAME=AI Crypto On-Ramp
-      - NEXT_PUBLIC_AUTH_ISSUER=http://identity-auth:8080
+      - NEXT_PUBLIC_AUTH_ISSUER=http://auth-identity:8080
       - NEXT_PUBLIC_AUTH_CLIENT_ID=front-office
     depends_on:
-      - api-gateway
+      - gateway-api
 
-  # middle-office-ui: Vite SPA served by nginx on :3000; internal
+  # ui-middle-office: Vite SPA served by nginx on :3000; internal
   # compliance/ops console, calls backend services directly via REST.
-  middle-office-ui:
+  ui-middle-office:
     build:
-      context: ../middle-office-ui
+      context: ../ui-middle-office
     ports:
       - "8103:3000"
     networks:
       - default
 
-  # back-office-ui: Streamlit treasury/finance console on :8501.
+  # ui-back-office: Streamlit treasury/finance console on :8501.
   # Talks to backend services directly via REST.
-  back-office-ui:
+  ui-back-office:
     build:
-      context: ../back-office-ui
+      context: ../ui-back-office
     ports:
       - "8104:8501"
     networks:
       - default
     environment:
       - STREAMLIT_SERVER_PORT=8501
-      - TREASURY_URL=http://treasury-orchestration:8080
-      - LIQUIDITY_URL=http://liquidity-routing:8080
-      - FX_HEDGING_URL=http://fx-hedging:8080
+      - TREASURY_URL=http://treasury-orchestrator:8080
+      - LIQUIDITY_URL=http://liquidity-router:8080
+      - FX_HEDGING_URL=http://fx-hedger:8080
       - LEDGER_URL=http://ledger-accounting:8080
       - RECONCILIATION_URL=http://reconciliation:8080
-      - WALLET_URL=http://wallet-management:8080
-      - PAYMENT_URL=http://payment-orchestration:8080
-      - MPC_URL=http://mpc-signing-service:8080
+      - WALLET_URL=http://wallet-manager:8080
+      - PAYMENT_URL=http://payment-orchestrator:8080
+      - MPC_URL=http://mpc-signer:8080
 
   # ── Gatus — health dashboard, configured via gatus.yml ──
   gatus:
@@ -695,7 +695,7 @@ volumes:
   gatus-data:
   pg-data:
   # Internal mTLS material (CA + per-service cert/key). Populate out-of-band
-  # via a secrets mount or `mpc-signing-service/scripts/gen-certs.sh`; the
+  # via a secrets mount or `mpc-signer/scripts/gen-certs.sh`; the
   # compose file does not generate certs. Mount read-only at /certs in the
-  # services that opt into mTLS (mpc-signing-service, transaction-orchestrator).
+  # services that opt into mTLS (mpc-signer, transaction-orchestrator).
   internal-certs:

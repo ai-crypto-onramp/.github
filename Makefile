@@ -67,28 +67,28 @@ logs:
 	$(COMPOSE) logs -f --tail=200
 
 # Build only the Go services (shared module + build cache via BuildKit mounts).
-GO_SERVICES := aml-kyt-screening audit-event-log blockchain-gateway exchange-connectors \
-	fx-hedging identity-auth liquidity-routing onboarding-kyc payment-orchestration \
-	policy-risk-engine pricing-quote rail-connectors transaction-orchestrator \
-	treasury-orchestration wallet-management
+GO_SERVICES := aml-kyt-screening audit-logger gateway-blockchain exchange-connector \
+	fx-hedger auth-identity liquidity-router onboarding-kyc payment-orchestrator \
+	policy-risk-engine pricing-quote rail-connector transaction-orchestrator \
+	treasury-orchestrator wallet-manager
 
 build-go:
 	DOCKER_BUILDKIT=1 $(COMPOSE) build $(GO_SERVICES)
 
 # Build only the TypeScript services.
-TS_SERVICES := api-gateway notification front-office-ui middle-office-ui
+TS_SERVICES := gateway-api notifier ui-front-office ui-middle-office
 
 build-ts:
 	DOCKER_BUILDKIT=1 $(COMPOSE) build $(TS_SERVICES)
 
 # Build only the Rust services.
-RS_SERVICES := ledger-accounting mpc-signing-service
+RS_SERVICES := ledger-accounting mpc-signer
 
 build-rs:
 	DOCKER_BUILDKIT=1 $(COMPOSE) build $(RS_SERVICES)
 
 # Build only the Python services.
-PY_SERVICES := fraud-detection reconciliation back-office-ui
+PY_SERVICES := fraud-detection reconciliation ui-back-office
 
 build-py:
 	DOCKER_BUILDKIT=1 $(COMPOSE) build $(PY_SERVICES)
@@ -112,27 +112,27 @@ test: clean
 kyt       := aml-kyt-screening
 gateway   := api-gateway
 audit     := audit-event-log
-chain     := blockchain-gateway
-exchange  := exchange-connectors
+chain     := gateway-blockchain
+exchange  := exchange-connector
 fraud     := fraud-detection
-fx        := fx-hedging
-auth      := identity-auth
+fx        := fx-hedger
+auth      := auth-identity
 ledger    := ledger-accounting
-liquidity := liquidity-routing
-mpc       := mpc-signing-service
-notify    := notification
+liquidity := liquidity-router
+mpc       := mpc-signer
+notify    := notifier
 kyc       := onboarding-kyc
-payment   := payment-orchestration
+payment   := payment-orchestrator
 policy    := policy-risk-engine
 pricing   := pricing-quote
-rails     := rail-connectors
+rails     := rail-connector
 recon     := reconciliation
 txo       := transaction-orchestrator
-treasury  := treasury-orchestration
-wallet    := wallet-management
-front     := front-office-ui
-middle    := middle-office-ui
-back      := back-office-ui
+treasury  := treasury-orchestrator
+wallet    := wallet-manager
+front     := ui-front-office
+middle    := ui-middle-office
+back      := ui-back-office
 
 # Start an individual service: make up-<alias|service>, e.g. make up-kyc
 up-%:

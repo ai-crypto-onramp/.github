@@ -52,33 +52,33 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: api-gateway
+  - name: gateway-api
     group: edge
-    url: http://api-gateway:8080/healthz
+    url: http://gateway-api:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: audit-event-log
+  - name: audit-logger
     group: core
-    url: http://audit-event-log:8080/healthz
+    url: http://audit-logger:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: blockchain-gateway
+  - name: gateway-blockchain
     group: chain
-    url: http://blockchain-gateway:8080/healthz
+    url: http://gateway-blockchain:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: exchange-connectors
+  - name: exchange-connector
     group: liquidity
-    url: http://exchange-connectors:8080/healthz
+    url: http://exchange-connector:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
@@ -92,17 +92,17 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: fx-hedging
+  - name: fx-hedger
     group: treasury
-    url: http://fx-hedging:8080/healthz
+    url: http://fx-hedger:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: identity-auth
+  - name: auth-identity
     group: core
-    url: http://identity-auth:8080/healthz
+    url: http://auth-identity:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
@@ -116,25 +116,25 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: liquidity-routing
+  - name: liquidity-router
     group: liquidity
-    url: http://liquidity-routing:8080/healthz
+    url: http://liquidity-router:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: mpc-signing-service
+  - name: mpc-signer
     group: chain
-    url: http://mpc-signing-service:8080/healthz
+    url: http://mpc-signer:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: notification
+  - name: notifier
     group: core
-    url: http://notification:8080/healthz
+    url: http://notifier:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
@@ -148,9 +148,9 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: payment-orchestration
+  - name: payment-orchestrator
     group: fiat
-    url: http://payment-orchestration:8080/healthz
+    url: http://payment-orchestrator:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
@@ -172,9 +172,9 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: rail-connectors
+  - name: rail-connector
     group: fiat
-    url: http://rail-connectors:8080/healthz
+    url: http://rail-connector:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
@@ -196,17 +196,17 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: treasury-orchestration
+  - name: treasury-orchestrator
     group: treasury
-    url: http://treasury-orchestration:8080/healthz
+    url: http://treasury-orchestrator:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: wallet-management
+  - name: wallet-manager
     group: chain
-    url: http://wallet-management:8080/healthz
+    url: http://wallet-manager:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
@@ -214,25 +214,25 @@ endpoints:
 
   # ── UIs — customer-facing and internal consoles ──
 
-  - name: front-office-ui
+  - name: ui-front-office
     group: ui
-    url: http://front-office-ui:3000/api/healthz
+    url: http://ui-front-office:3000/api/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: middle-office-ui
+  - name: ui-middle-office
     group: ui
-    url: http://middle-office-ui:3000/healthz
+    url: http://ui-middle-office:3000/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: back-office-ui
+  - name: ui-back-office
     group: ui
-    url: http://back-office-ui:8501/_stcore/health
+    url: http://ui-back-office:8501/_stcore/health
     interval: 30s
     conditions:
       - "[STATUS] == 200"
