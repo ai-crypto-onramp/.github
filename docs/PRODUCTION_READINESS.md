@@ -25,7 +25,7 @@
   - [Stub-as-default wiring in production binaries](#stub-as-default-wiring-in-production-binaries--resolved-phase-0-item-2)
   - [No event schema versioning](#no-event-schema-versioning--partially-resolved-phase-0-item-5)
   - [Migrations tooling fragmented](#migrations-tooling-fragmented--open-phase-3)
-  - [Only 1/21 services has runbooks; no ADRs](#only-121-services-has-runbooks-no-adrs--open-phase-3-item-20)
+  - [Only 1/21 services has runbooks](#only-121-services-has-runbooks-open-phase-3-item-20)
 - [Per-Service Critical Blockers (Summary Table)](#per-service-critical-blockers-summary-table)
 - [Shared Infra (`.github/`) Blockers](#shared-infra-github-blockers)
 - [Integration Edge Matrix](#integration-edge-matrix)
@@ -57,7 +57,7 @@
 
 *Historical (pre-Phase-0):* This is a **well-scaffolded but pre-production monorepo**. Per-service code quality is reasonable (unit-test ratios 0.3–0.96 across all 21 services; Dockerfiles, healthz, CI all present), but the **inter-service fabric is broken in numerous critical places**: stub-fallback pattern pervasive, audit/notifier/recon pipelines end-to-end broken, 3 money-moving services had zero persistence, no observability backend, no mTLS, no auth on internal endpoints, no release pipeline.
 
-**Current state:** Phases 0, 1, 2 complete. The stack fails fast in prod mode, the audit pipeline produces/consumes end-to-end on `audit.v1`, all money-moving services persist to Postgres, money is `decimal.Decimal` end-to-end, custody delegates to Fireblocks/Dfns/Turnkey, withdrawals build real EVM/BTC/Solana txs, the ledger is Postgres-backed and append-only, reorgs re-broadcast, internal endpoints require service-token JWTs with mTLS dials, the observability stack (Prometheus + Grafana + Loki + Tempo + OTel collector) is deployed, notifier sends real messages, reconciliation fetches ledger entries, KYC/fraud/KYT use real providers. What remains is **Phase 3 (release & ops)**: release pipeline, CVE scanning, finishing UI services, wiring real vendor credentials (dropping DEV_MODE), runbooks/ADRs.
+**Current state:** Phases 0, 1, 2 complete. The stack fails fast in prod mode, the audit pipeline produces/consumes end-to-end on `audit.v1`, all money-moving services persist to Postgres, money is `decimal.Decimal` end-to-end, custody delegates to Fireblocks/Dfns/Turnkey, withdrawals build real EVM/BTC/Solana txs, the ledger is Postgres-backed and append-only, reorgs re-broadcast, internal endpoints require service-token JWTs with mTLS dials, the observability stack (Prometheus + Grafana + Loki + Tempo + OTel collector) is deployed, notifier sends real messages, reconciliation fetches ledger entries, KYC/fraud/KYT use real providers. What remains is **Phase 3 (release & ops)**: release pipeline, CVE scanning, finishing UI services, wiring real vendor credentials (dropping DEV_MODE), runbooks.
 
 ---
 
@@ -172,9 +172,9 @@ Audit envelope now carries `schema_version` (documented in `contracts/proto/audi
 6 different mechanisms: Go services use `embed.FS` + hand-rolled `migrations.Up()` (auth-identity, kyc-onboarding, aml-kyt, pricing-quote, fx-hedger, liquidity-router, tx-orchestrator, gateway-blockchain, treasury, audit-logger, wallet-manager); policy-risk-engine uses `golang-migrate`; Python uses Alembic (reconciliation, fraud-detection); Rust uses hand-rolled SQL (accounting-ledger). Some services run migrations on startup with warn-and-continue (wallet-manager) — failed migration = stale schema silently.
 - **Remediation:** Standardize on `golang-migrate` for Go, Alembic for Python, `refinery`/`sqlx` for Rust; run migrations as a separate `migrate up` step before startup, not embedded.
 
-### Only 1/21 services has runbooks; no ADRs ⏳ OPEN (Phase 3, item 20)
-Only `mpc-signer/docs/runbooks/{dkg-ceremony,key-rotation,node-restore,incident-response}.md`. No ADRs anywhere. Only 3/21 READMEs mention owner/team. The `.github/README.md` async-layer diagram is still inaccurate (shows notifier and audit as event-bus consumers — now accurate post-Phase-2, but the diagram has not been updated).
-- **Remediation:** Per-service runbook template (on-call, escalation, common incidents, rollback); `docs/adr/` for major decisions; fix the README async diagram.
+### Only 1/21 services has runbooks ⏳ OPEN (Phase 3, item 20)
+Only `mpc-signer/docs/runbooks/{dkg-ceremony,key-rotation,node-restore,incident-response}.md`. Only 3/21 READMEs mention owner/team.
+- **Remediation:** Per-service runbook template (on-call, escalation, common incidents, rollback)
 
 ---
 
@@ -338,7 +338,7 @@ Unit coverage is healthy. The systemic gap is **integration**: there is no end-t
     - **accounting-ledger**: `AUDIT_EVENT_LOG_URL` (currently unset in dev mode).
     - **All Go gRPC services**: `TLS_CERT_FILE`, `TLS_KEY_FILE`, `TLS_CA_FILE` for mTLS dials (currently plaintext in DEV_MODE).
     - **All services**: `OTEL_EXPORTER_OTLP_ENDPOINT` pointing at a real collector (currently unset → no-op).
-20. **Write runbooks** for the remaining 20 services; add ADRs; fix `.github/README.md` async-layer diagram.
+20. **Write runbooks** for the remaining 20 services
 
 ### Phase 3 hardening (residuals from Phases 0-2 re-evaluation)
 - **Regenerate all consumers from `.github/contracts/`** so runtime gRPC dials succeed field-by-field (closes the contract-defined-but-not-regenerated gap on 6 txo→partner edges + payment→rails/fraud + liquidity→exchange).
@@ -368,7 +368,7 @@ Unit coverage is healthy. The systemic gap is **integration**: there is no end-t
 
 **Current state (post-Phase-0/1/2):** Phases 0, 1, and 2 are complete. The stack fails fast in production mode. The audit pipeline produces and consumes end-to-end on `audit.v1` (16 producers, canonical envelope). All four money-moving services persist state to Postgres. The orchestrator dials real partner URLs with mTLS. The custody core delegates to real Fireblocks/Dfns/Turnkey APIs. Withdrawals build real EVM/BTC/Solana transactions. The ledger is Postgres-backed, salted, append-only, and SERIALIZABLE per-tx. Reorgs re-broadcast. Money is `decimal.Decimal` end-to-end. Internal endpoints require service-token JWTs. The observability stack (Prometheus + Grafana + Loki + Tempo + OTel collector) is deployed with OTel SDK in every service. Notification sends real emails/SMS/push via SES/SNS/Twilio/FCM/APNS. Reconciliation fetches ledger entries via `LedgerFetcher`. KYC uses real Onfido; fraud loads real models; KYT uses real Chainalysis/TRM.
 
-**Revised estimated time to production-readiness: 2–4 weeks** (down from 8–12), with Phases 0, 1, and 2 done. What remains is Phase 3 (release & ops: SBOM/cosign/SHA tags, CVE scanning, finishing UI services, wiring real vendor credentials / dropping DEV_MODE, runbooks/ADRs) plus the residual hardening items above. The single highest-leverage remaining fix is regenerating all consumers from `.github/contracts/` so runtime gRPC dials succeed field-by-field — that closes the contract-defined-but-not-regenerated gap on 9 of 16 integration edges.
+**Revised estimated time to production-readiness: 2–4 weeks** (down from 8–12), with Phases 0, 1, and 2 done. What remains is Phase 3 (release & ops: SBOM/cosign/SHA tags, CVE scanning, finishing UI services, wiring real vendor credentials / dropping DEV_MODE, runbooks) plus the residual hardening items above. The single highest-leverage remaining fix is regenerating all consumers from `.github/contracts/` so runtime gRPC dials succeed field-by-field — that closes the contract-defined-but-not-regenerated gap on 9 of 16 integration edges.
 
 ---
 
@@ -414,13 +414,13 @@ All 5 Phase 0 items have been implemented, committed across 22 repositories, and
 | 17 | CVE scanning in CI | ❌ Not started | No govulncheck/npm audit/pip-audit/cargo-audit/Trivy in any workflow. (mpc-signer already runs cargo-deny + cargo-audit; that pattern needs lifting to the other 20 services.) |
 | 18 | Finish UI services | ❌ Not started | ui-front-office: 51/52 tasks unchecked (stubs only). ui-middle-office: 52/53 tasks unchecked (stubs only). ui-back-office: dashboards exist but show placeholder/static data; MPC signing dashboard explicitly a placeholder. |
 | 19 | Wire real third-party vendor API keys / drop DEV_MODE | ❌ Not started | 22 services run with `DEV_MODE=1` in compose. Real provider code exists (Onfido, Chainalysis, TRM, SES, SNS, Twilio, FCM, APNS, Fireblocks/Dfns/Turnkey, exchange APIs) but all credentials are unset or dev-secrets. Per-service credential inventory listed in the Phase 3 plan above. |
-| 20 | Runbooks + ADRs | ❌ Not started | Only `mpc-signer/docs/runbooks/{dkg-ceremony,incident-response,key-rotation,node-restore}.md`. No ADRs. `.github/README.md` async diagram still inaccurate. |
+| 20 | Runbooks | ❌ Not started | Only `mpc-signer/docs/runbooks/{dkg-ceremony,incident-response,key-rotation,node-restore}.md`. |
 
 ### Revised headline verdict
 
 **Phases 0, 1, and 2 are complete.** The stack fails fast in production mode. The audit pipeline produces and consumes end-to-end on `audit.v1`. Four money-moving services persist state to Postgres. The orchestrator dials real partner URLs with mTLS. The custody core delegates to real Fireblocks/Dfns/Turnkey APIs. Withdrawals build real EVM/BTC/Solana transactions. The ledger is Postgres-backed, salted, and append-only. Reorgs re-broadcast. Money is `decimal.Decimal` end-to-end. Internal endpoints require service-token JWTs. The observability stack (Prometheus + Grafana + Loki + Tempo + OTel collector) is deployed with OTel SDK in every service. Notification sends real emails/SMS/push via SES/SNS/Twilio/FCM/APNS. Reconciliation fetches ledger entries. KYC uses real Onfido; fraud loads real models; KYT uses real Chainalysis/TRM.
 
-What remains: **Phase 3 (release & ops)** — release pipeline (SBOM/cosign/SHA tags), CVE scanning across all services, finishing the three UI services, wiring real third-party vendor credentials and dropping `DEV_MODE=1`, and runbooks/ADRs.
+What remains: **Phase 3 (release & ops)** — release pipeline (SBOM/cosign/SHA tags), CVE scanning across all services, finishing the three UI services, wiring real third-party vendor credentials and dropping `DEV_MODE=1`, and runbooks/s.
 
 **Revised estimated time to production-readiness: 1–2 weeks** (down from 3–5), with Phases 0, 1, and 2 done. Phase 3 is the final stretch.
 
