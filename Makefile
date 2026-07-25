@@ -2,7 +2,9 @@
 #
 # Postgres data is fresh on every `make up`: `make down` removes the named
 # pg-data volume (so the next `make up` boots an empty cluster and each
-# service re-runs its migrations). To preserve Postgres across down/up
+# service re-runs its migrations). 
+#
+# To preserve Postgres across down/up
 # cycles (e.g. iterating on a single service without wiping data), use
 # `make down KEEP_DB=1`. For an in-place data reset against a live stack,
 # `make reset-db` truncates every service database without bouncing it.
@@ -11,7 +13,6 @@
 #
 #   make up            bring the full stack up (detached; fresh Postgres)
 #   make down          stop, remove containers and volumes (fresh DB next up)
-#   make down KEEP_DB=1  stop and remove containers, keep the pg-data volume
 #   make restart       restart all services
 #   make ps            list running services
 #   make build         (re)build all service images
@@ -20,8 +21,6 @@
 #   make dashboard     open the Gatus health dashboard in the browser
 #   make clean         cleanup Hurl HTML reports
 #   make test          run all Hurl integration suites (HTML report in `reports/`)
-#   make seed-db       populate all postgres databases with fixture data
-#   make reset-db      truncate all tables across all postgres databases
 #
 #   make build-go      (re)build all Go services
 #   make build-py      (re)build all Python services
@@ -42,6 +41,9 @@
 #   make kafka-describe TOPIC=t  describe a Kafka topic
 #   make kafka-groups            list Kafka consumer groups
 #   make kafka-group-describe GROUP=g  describe a consumer group
+#
+#   make seed-db       populate all postgres databases with fixture data
+#   make reset-db      truncate all tables across all postgres databases
 
 COMPOSE := docker compose
 REPORTS := reports
