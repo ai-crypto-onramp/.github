@@ -76,9 +76,9 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: exchange-connector
+  - name: gateway-exchange
     group: liquidity
-    url: http://exchange-connector:8080/healthz
+    url: http://gateway-exchange:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
@@ -172,9 +172,9 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: rail-connector
+  - name: gateway-fiat
     group: fiat
-    url: http://rail-connector:8080/healthz
+    url: http://gateway-fiat:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"

@@ -67,9 +67,9 @@ logs:
 	$(COMPOSE) logs -f --tail=200
 
 # Build only the Go services (shared module + build cache via BuildKit mounts).
-GO_SERVICES := kyt-aml-screening audit-logger gateway-blockchain exchange-connector \
+GO_SERVICES := kyt-aml-screening audit-logger gateway-blockchain gateway-exchange \
 	fx-hedger auth-identity liquidity-router kyc-onboarding payment-orchestrator \
-	policy-risk-engine pricing-quote rail-connector tx-orchestrator \
+	policy-risk-engine pricing-quote gateway-fiat tx-orchestrator \
 	treasury-orchestrator wallet-manager
 
 build-go:
@@ -113,7 +113,7 @@ kyt       := kyt-aml-screening
 gateway   := gateway-api
 audit     := audit-logger
 chain     := gateway-blockchain
-exchange  := exchange-connector
+exchange  := gateway-exchange
 fraud     := fraud-engine
 fx        := fx-hedger
 auth      := auth-identity
@@ -125,7 +125,7 @@ kyc       := kyc-onboarding
 payment   := payment-orchestrator
 policy    := policy-risk-engine
 pricing   := pricing-quote
-rails     := rail-connector
+rails     := gateway-fiat
 recon     := reconciliation
 txo       := tx-orchestrator
 treasury  := treasury-orchestrator

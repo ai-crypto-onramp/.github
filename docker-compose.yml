@@ -64,7 +64,7 @@ services:
 
   # Shared Kafka broker for the transactional event bus, audit-logger
   # ingestion, kyt-aml-screening audit sink, gateway-blockchain lifecycle
-  # events, exchange-connector fill/balance events, and treasury-
+  # events, gateway-exchange fill/balance events, and treasury-
   # orchestration tx.completed consumption. Runs in KRaft combined mode
   # (no Zookeeper) with auto-topic creation enabled.
   kafka:
@@ -227,8 +227,8 @@ services:
       kafka:
         condition: service_healthy
 
-  exchange-connector:
-    build: ../exchange-connector
+  gateway-exchange:
+    build: ../gateway-exchange
     ports:
       - "8084:8080"
     networks:
@@ -334,7 +334,7 @@ services:
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/liquidity?sslmode=disable
       - REDIS_URL=redis://redis:6379/0
-      - EXCHANGE_CONNECTORS_TARGET=exchange-connector:9090
+      - EXCHANGE_CONNECTORS_TARGET=gateway-exchange:9090
       - EVENT_BUS_URL=kafka://kafka:9092?topic=liquidity.fills
       - KAFKA_BROKERS=kafka:9092
       - DEV_MODE=1
@@ -435,7 +435,7 @@ services:
       - default
     environment:
       - WEBHOOK_SECRET=dev-secret
-      - RAIL_CONNECTORS_URL=http://rail-connector:8080
+      - RAIL_CONNECTORS_URL=http://gateway-fiat:8080
       - KAFKA_BROKERS=kafka:9092
       - DEV_MODE=1
       # Shared HS256 secret for service-token JWT auth on internal REST
@@ -490,8 +490,8 @@ services:
       redis:
         condition: service_healthy
 
-  rail-connector:
-    build: ../rail-connector
+  gateway-fiat:
+    build: ../gateway-fiat
     ports:
       - "8097:8080"
     networks:
