@@ -1,5 +1,24 @@
 # Lock-Free Data-Access Migration Plan
 
+## Navigation
+
+- [Background: why this came up](#background-why-this-came-up)
+- [Why "lock-free" is the right instinct, with a caveat](#why-lock-free-is-the-right-instinct-with-a-caveat)
+- [Three primitives cover every site](#three-primitives-cover-every-site)
+- [Per-site rewrite plan](#per-site-rewrite-plan)
+  - [1. wallet-manager — nonces](#1-wallet-manager--nonces-internalstoragepostgrespostgresgo400)
+  - [2. auth-identity](#2-auth-identity-internaldbstorego3678468901077)
+  - [3. kyc-onboarding](#3-kyc-onboarding-internaldb_storesgo141190)
+  - [4. gateway-blockchain — tx_confirmations](#4-gateway-blockchain--tx_confirmations-internalstorepostgrespostgresgo218)
+  - [5. payment-orchestrator — intents / chargebacks](#5-payment-orchestrator--intents--chargebacks-internalstorepostgrespostgresgo125275)
+  - [6. treasury-orchestrator — batches / float_positions](#6-treasury-orchestrator--batches--float_positions-internalstorepostgrespostgresgo231521)
+  - [7. tx-orchestrator — outbox relay](#7-tx-orchestrator--outbox-relay-internalstorepggo323-internaloutboxrelaygo100)
+  - [8. tx-orchestrator — CreateTx](#8-tx-orchestrator--createtx-internalstorepggo182)
+- [Cross-cutting changes](#cross-cutting-changes)
+- [Risks to verify before implementation](#risks-to-verify-before-implementation)
+- [Suggested order](#suggested-order)
+- [Not a fix for the reset-db hang](#not-a-fix-for-the-reset-db-hang)
+
 This document captures a proposed (not yet implemented) plan to replace the
 `SELECT ... FOR UPDATE` + multi-statement transaction patterns across the
 codebase with single-statement, atomic-update patterns. It is a hardening

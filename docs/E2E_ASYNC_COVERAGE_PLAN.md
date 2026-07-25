@@ -1,5 +1,18 @@
 # E2E Async Event Coverage Plan
 
+## Navigation
+
+- [Summary](#summary)
+- [Async event topics (11 total)](#async-event-topics-11-total)
+- [Coverage: 3/11 (27%)](#coverage-311-27)
+- [Why 8 topics are uncovered](#why-8-topics-are-uncovered)
+  - [Group A: Triggered by the saga (6 topics)](#group-a-triggered-by-the-saga-6-topics)
+  - [Group B: Independent of the saga (2 topics)](#group-b-independent-of-the-saga-2-topics)
+- [Recommended path to full coverage](#recommended-path-to-full-coverage)
+  - [Option 1: Per-service direct triggers (practical, incremental)](#option-1-per-service-direct-triggers-practical-incremental)
+  - [Option 2: Dev-mode saga auto-advance (higher effort, higher payoff)](#option-2-dev-mode-saga-auto-advance-higher-effort-higher-payoff)
+  - [Recommended: Option 1 first, then Option 2](#recommended-option-1-first-then-option-2)
+
 ## Summary
 
 The `tests/e2e-async/` directory contains Hurl integration tests that

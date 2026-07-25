@@ -1,5 +1,36 @@
 # E2E API Coverage Plan
 
+## Navigation
+
+- [Summary](#summary)
+- [Methodology](#methodology)
+- [Coverage by service](#coverage-by-service)
+  - [accounting-ledger (10 HTTP + 5 gRPC)](#accounting-ledger-10-http--5-grpc)
+  - [audit-logger (8 HTTP)](#audit-logger-8-http)
+  - [auth-identity (23 HTTP)](#auth-identity-23-http)
+  - [fraud-engine (3 HTTP)](#fraud-engine-3-http)
+  - [fx-hedger (9 HTTP + 4 gRPC)](#fx-hedger-9-http--4-grpc)
+  - [gateway-api (9 HTTP)](#gateway-api-9-http)
+  - [gateway-blockchain (7 HTTP + 1 WS)](#gateway-blockchain-7-http--1-ws)
+  - [gateway-exchange (8 HTTP)](#gateway-exchange-8-http)
+  - [gateway-fiat (5 HTTP)](#gateway-fiat-5-http)
+  - [kyc-onboarding (11 HTTP)](#kyc-onboarding-11-http)
+  - [kyt-aml-screening (6 HTTP + 2 gRPC)](#kyt-aml-screening-6-http--2-grpc)
+  - [liquidity-router (6 HTTP)](#liquidity-router-6-http)
+  - [mpc-signer (1 HTTP + 5 gRPC)](#mpc-signer-1-http--5-grpc)
+  - [notifier (14 HTTP)](#notifier-14-http)
+  - [payment-orchestrator (8 HTTP)](#payment-orchestrator-8-http)
+  - [policy-risk-engine (9 HTTP + 1 gRPC)](#policy-risk-engine-9-http--1-grpc)
+  - [pricing-quote (10 HTTP + 1 WS)](#pricing-quote-10-http--1-ws)
+  - [reconciliation (12 HTTP)](#reconciliation-12-http)
+  - [treasury-orchestrator (11 HTTP)](#treasury-orchestrator-11-http)
+  - [tx-orchestrator (5 HTTP)](#tx-orchestrator-5-http)
+  - [wallet-manager (12 HTTP + 3 gRPC)](#wallet-manager-12-http--3-grpc)
+- [Summary table](#summary-table)
+- [gRPC endpoints (not testable via Hurl)](#grpc-endpoints-not-testable-via-hurl)
+- [Uncovered services (0% HTTP coverage)](#uncovered-services-0-http-coverage)
+- [Largest coverage gaps (by uncovered endpoint count)](#largest-coverage-gaps-by-uncovered-endpoint-count)
+
 ## Summary
 
 This document compares the total HTTP API endpoints exposed by each

@@ -1,5 +1,16 @@
 # Service Taxonomy
 
+## Navigation
+
+- [Archetypes](#archetypes)
+  - [`gateway-*` — boundary service](#gateway--boundary-service)
+  - [`engine-*` — domain computation / decision](#engine--domain-computation--decision)
+  - [`orchestrator-*` — workflow coordination](#orchestrator--workflow-coordination)
+  - [Domain-specific nouns — unique archetypes](#domain-specific-nouns--unique-archetypes)
+  - [`ui-*` — presentation layer](#ui--presentation-layer)
+- [Choosing a suffix](#choosing-a-suffix)
+- [Renamings Plan](#renamings-plan)
+
 The repo's services follow a role-based naming convention. Each suffix denotes the
 **role** the service plays in the system, not its domain. Domain is conveyed by the
 prefix. Picking the right suffix means identifying the service's **dominant** trait,
