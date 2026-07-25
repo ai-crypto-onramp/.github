@@ -146,7 +146,7 @@ consumed by Treasury for batch aggregation, (3) audit and notification events
 consumed by the Audit Log and Notifier. Topic names are shown in brackets.
 
 ```mermaid
-flowchart TD
+flowchart LR
     ORCH[🔀 TX Orchestrator]
     TREAS[💰 Treasury Orchestrator]
     LIQ[🔄 Liquidity Router]
