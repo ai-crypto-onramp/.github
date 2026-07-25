@@ -525,8 +525,8 @@ services:
       kafka:
         condition: service_healthy
 
-  transaction-orchestrator:
-    build: ../transaction-orchestrator
+  tx-orchestrator:
+    build: ../tx-orchestrator
     ports:
       - "8099:8080"
     networks:
@@ -548,8 +548,8 @@ services:
       # mTLS material for the txo→partner gRPC dials. When all three are
       # unset, the dials fall back to plaintext (allowed only with DEV_MODE=1
       # or ENABLE_STUB_PARTNERS=1). Uncomment and mount /certs to enable.
-      # - TLS_CERT_FILE=/certs/transaction-orchestrator.crt
-      # - TLS_KEY_FILE=/certs/transaction-orchestrator.key
+      # - TLS_CERT_FILE=/certs/tx-orchestrator.crt
+      # - TLS_KEY_FILE=/certs/tx-orchestrator.key
       # - TLS_CA_FILE=/certs/internal-ca.crt
     # volumes:
     #   - internal-certs:/certs:ro
@@ -697,5 +697,5 @@ volumes:
   # Internal mTLS material (CA + per-service cert/key). Populate out-of-band
   # via a secrets mount or `mpc-signer/scripts/gen-certs.sh`; the
   # compose file does not generate certs. Mount read-only at /certs in the
-  # services that opt into mTLS (mpc-signer, transaction-orchestrator).
+  # services that opt into mTLS (mpc-signer, tx-orchestrator).
   internal-certs:

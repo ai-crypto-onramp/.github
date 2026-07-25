@@ -69,7 +69,7 @@ logs:
 # Build only the Go services (shared module + build cache via BuildKit mounts).
 GO_SERVICES := kyt-aml-screening audit-logger gateway-blockchain exchange-connector \
 	fx-hedger auth-identity liquidity-router kyc-onboarding payment-orchestrator \
-	policy-risk-engine pricing-quote rail-connector transaction-orchestrator \
+	policy-risk-engine pricing-quote rail-connector tx-orchestrator \
 	treasury-orchestrator wallet-manager
 
 build-go:
@@ -127,7 +127,7 @@ policy    := policy-risk-engine
 pricing   := pricing-quote
 rails     := rail-connector
 recon     := reconciliation
-txo       := transaction-orchestrator
+txo       := tx-orchestrator
 treasury  := treasury-orchestrator
 wallet    := wallet-manager
 front     := ui-front-office

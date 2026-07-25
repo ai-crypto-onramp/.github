@@ -1,13 +1,13 @@
 #!/usr/bin/env bash
 # Generate an ephemeral internal PKI for the compose stack: a CA plus a
 # cert/key per service that opts into mTLS (mpc-signer,
-# transaction-orchestrator, and any other internal partner). The output is
+# tx-orchestrator, and any other internal partner). The output is
 # intended to be mounted at /certs in compose. DEV/STAGING ONLY — production
 # issues short-lived certs from the internal PKI, not this script.
 set -euo pipefail
 
 OUT="${1:-./certs}"
-SERVICES="${SERVICES:-mpc-signer transaction-orchestrator policy-risk-engine kyt-aml-screening accounting-ledger gateway-blockchain}"
+SERVICES="${SERVICES:-mpc-signer tx-orchestrator policy-risk-engine kyt-aml-screening accounting-ledger gateway-blockchain}"
 DAYS="${DAYS:-3650}"
 
 mkdir -p "$OUT"

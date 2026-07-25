@@ -69,7 +69,7 @@ Minimized language sprawl. Standardized on:
 
 | Service | Language | Description |
 |---|---|---|
-| [**Transaction Orchestrator**](https://github.com/ai-crypto-onramp/transaction-orchestrator) | Go | The saga engine tying payment → policy → sign → deliver into one atomic, recoverable flow with compensation. |
+| [**Transaction Orchestrator**](https://github.com/ai-crypto-onramp/tx-orchestrator) | Go | The saga engine tying payment → policy → sign → deliver into one atomic, recoverable flow with compensation. |
 | [**Ledger / Accounting**](https://github.com/ai-crypto-onramp/accounting-ledger) | Rust | Immutable double-entry ledger — the single source of financial truth. Correctness over everything. |
 | [**Treasury Orchestration**](https://github.com/ai-crypto-onramp/treasury-orchestrator) | Go | Batches user orders into aggregate buys, manages the T+0 vs T+2/3 float, funding of hot wallets. |
 | [**Reconciliation**](https://github.com/ai-crypto-onramp/reconciliation) | Python | Continuously matches internal ledger vs bank/exchange/on-chain state; flags breaks (a top-4 failure mode). |

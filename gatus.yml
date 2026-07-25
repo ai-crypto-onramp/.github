@@ -188,9 +188,9 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: transaction-orchestrator
+  - name: tx-orchestrator
     group: core
-    url: http://transaction-orchestrator:8080/healthz
+    url: http://tx-orchestrator:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"

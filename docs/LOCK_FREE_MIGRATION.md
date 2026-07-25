@@ -14,7 +14,7 @@ mitigation that ships today.
 *any* open transaction that has touched the target table — even a plain
 `SELECT` holds an `ACCESS SHARE` lock for the duration of its enclosing
 transaction. As long as a service keeps a transaction open (e.g. the
-`transaction-orchestrator` outbox relay ticks every 100 ms and opens a
+`tx-orchestrator` outbox relay ticks every 100 ms and opens a
 serializable transaction each tick), `TRUNCATE` waits indefinitely.
 
 The shipped fix (`fixtures/reset.sql`) wraps each database's truncate loop
@@ -136,7 +136,7 @@ but add `SET LOCAL lock_timeout = '2s'` and `SET LOCAL
 idle_in_transaction_session_timeout = '5s'` so a stuck tx auto-aborts
 instead of pinning `TRUNCATE`.
 
-### 7. transaction-orchestrator — outbox relay (`internal/store/pg.go:323`, `internal/outbox/relay.go:100`)
+### 7. tx-orchestrator — outbox relay (`internal/store/pg.go:323`, `internal/outbox/relay.go:100`)
 The biggest win and the most work. Replace `ClaimOutboxPending` with:
 
 ```sql
@@ -159,7 +159,7 @@ forever.
 
 Drop `RunInTx` from `drainOnce`; drop `pgx.Serializable` for these ops.
 
-### 8. transaction-orchestrator — CreateTx (`internal/store/pg.go:182`)
+### 8. tx-orchestrator — CreateTx (`internal/store/pg.go:182`)
 Legitimately multi-statement (inserts into 4 tables for atomicity). Keep
 the tx, but add at the start:
 
@@ -219,8 +219,8 @@ drop the outer tx, run autocommit, use the `version` column as a CAS guard
 3. `kyc-onboarding` + `gateway-blockchain` — straightforward CAS / upsert.
 4. `payment-orchestrator` + `treasury-orchestrator` — CAS, but verify
    multi-row invariants in treasury first.
-5. `transaction-orchestrator` outbox — biggest win, requires the reaper.
-6. `transaction-orchestrator` `CreateTx` — keep the tx, add
+5. `tx-orchestrator` outbox — biggest win, requires the reaper.
+6. `tx-orchestrator` `CreateTx` — keep the tx, add
    `SET LOCAL lock_timeout`.
 7. Cross-cutting `idle_in_transaction_session_timeout` + `lock_timeout`
    in every service's `db.Connect`.
