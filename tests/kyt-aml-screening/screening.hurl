@@ -70,14 +70,15 @@ jsonpath "$" exists
 
 # --- vendor webhooks (TRM, HMAC-signed) ---
 
-# signed reclassification is accepted. The event_id and signature are passed
-# in as variables (computed by the Makefile via scripts/gen-trm-sig.py) so
-# each run uses a fresh event_id — the webhook dedup table persists across
-# runs, so a fixed id would be deduped and no alert would be created after
-# the first run (leaving $.alerts empty).
+# signed reclassification is accepted. The event_id, address, and signature
+# are passed in as variables (computed by the Makefile via scripts/gen-trm-sig.py)
+# so each run uses a fresh event_id + address — the webhook dedup table persists
+# across runs, so a fixed id would be deduped and no alert would be created after
+# the first run. The per-run address also makes the alert unambiguous to find
+# in the alerts list (seeded alerts use different addresses).
 POST http://localhost:8081/v1/webhooks/trm
 X-Webhook-Signature: {{trm_sig_1}}
-`{"event_id":"{{trm_evt_1}}","address":"0xhurlbad1","chain":"ethereum","exposure":"sanctioned","tx_id":"hurl-tx-wh1"}`
+`{"event_id":"{{trm_evt_1}}","address":"{{trm_addr_1}}","chain":"ethereum","exposure":"sanctioned","tx_id":"hurl-tx-wh1"}`
 HTTP 200
 [Asserts]
 jsonpath "$.accepted" == true
@@ -85,7 +86,7 @@ jsonpath "$.accepted" == true
 # replaying the same event is deduplicated
 POST http://localhost:8081/v1/webhooks/trm
 X-Webhook-Signature: {{trm_sig_1}}
-`{"event_id":"{{trm_evt_1}}","address":"0xhurlbad1","chain":"ethereum","exposure":"sanctioned","tx_id":"hurl-tx-wh1"}`
+`{"event_id":"{{trm_evt_1}}","address":"{{trm_addr_1}}","chain":"ethereum","exposure":"sanctioned","tx_id":"hurl-tx-wh1"}`
 HTTP 200
 [Asserts]
 jsonpath "$.accepted" == true
@@ -119,7 +120,7 @@ jsonpath "$.error.code" == "signature_mismatch"
 GET http://localhost:8081/v1/kyt/alerts
 HTTP 200
 [Captures]
-alert_id: jsonpath "$.alerts[0].id"
+alert_id: jsonpath "$.alerts[?@.address=='{{trm_addr_1}}'].id"
 [Asserts]
 jsonpath "$.alerts" count >= 1
 

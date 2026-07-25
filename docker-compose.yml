@@ -607,6 +607,62 @@ services:
       - ./gatus.yml:/config/config.yaml:ro
       - gatus-data:/data/
 
+  # One-shot DB seeder: runs scripts/seed.py in the fastest mode (10
+  # records per table) after postgres is healthy and the DB-backed app
+  # services have started (so their migrations have created the tables).
+  # The seeder inserts only — it does not truncate, so it is safe to run
+  # against a live stack (use `make reset-db` first for a clean slate).
+  # Set SEED_MODE=100 or SEED_MODE=1000 for larger datasets. For an
+  # in-place reseed against a live stack, `make seed-db`.
+  seed:
+    image: python:3.13-slim
+    depends_on:
+      postgres:
+        condition: service_healthy
+      gateway-auth:
+        condition: service_started
+      kyc-onboarding:
+        condition: service_started
+      engine-policy-risk:
+        condition: service_started
+      engine-fraud:
+        condition: service_started
+      engine-pricing:
+        condition: service_started
+      engine-liquidity:
+        condition: service_started
+      fx-hedger:
+        condition: service_started
+      gateway-blockchain:
+        condition: service_started
+      wallet-manager:
+        condition: service_started
+      orchestrator-tx:
+        condition: service_started
+      orchestrator-treasury:
+        condition: service_started
+      audit-logger:
+        condition: service_started
+      notifier:
+        condition: service_started
+      engine-recon:
+        condition: service_started
+      accounting-ledger:
+        condition: service_started
+      kyt-aml-screening:
+        condition: service_started
+    restart: "no"
+    environment:
+      - SEED_DSN=postgresql://postgres:postgres@postgres:5432
+      - SEED_MODE=${SEED_MODE:-10}
+    volumes:
+      - ./scripts:/scripts:ro
+    entrypoint: ["/bin/sh", "-c"]
+    command:
+      - |
+        pip install -q psycopg[binary] 2>/dev/null
+        python3 /scripts/seed.py --mode "$$SEED_MODE" --dsn "$$SEED_DSN"
+
 volumes:
   gatus-data:
   pg-data:

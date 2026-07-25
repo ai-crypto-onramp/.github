@@ -27,21 +27,23 @@ import uuid
 
 DEFAULT_SECRET = "dev-secret-trm"
 BODY_TEMPLATE = (
-    '{{"event_id":"{evt}","address":"0xhurlbad1","chain":"ethereum",'
+    '{{"event_id":"{evt}","address":"{addr}","chain":"ethereum",'
     '"exposure":"sanctioned","tx_id":"hurl-tx-wh1"}}'
 )
 
 
-def sign(secret: str, event_id: str) -> str:
-    body = BODY_TEMPLATE.format(evt=event_id).encode()
+def sign(secret: str, event_id: str, address: str) -> str:
+    body = BODY_TEMPLATE.format(evt=event_id, addr=address).encode()
     return hmac.new(secret.encode(), body, hashlib.sha256).hexdigest()
 
 
 def main() -> int:
     secret = DEFAULT_SECRET
     evt = str(uuid.uuid4())
+    addr = "0x" + uuid.uuid4().hex[:40]
     print(f"trm_evt_1={evt}")
-    print(f"trm_sig_1={sign(secret, evt)}")
+    print(f"trm_addr_1={addr}")
+    print(f"trm_sig_1={sign(secret, evt, addr)}")
     return 0
 
 

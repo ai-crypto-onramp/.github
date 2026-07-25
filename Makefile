@@ -10,7 +10,6 @@
 # Usage:
 #   make up            bring the full stack up (detached; fresh Postgres)
 #   make down          stop, remove containers and volumes (fresh DB next up)
-#   make down KEEP_DB=1  stop and remove containers, keep the pg-data volume
 #   make restart       restart all services
 #   make ps            list running services
 #   make logs          tail logs for all services
@@ -174,28 +173,22 @@ psql:
 redis-cli:
 	$(COMPOSE) exec redis redis-cli
 
-# Populate all databases with dummy fixture data.
-# Requires the postgres container to be running (make up or make up-postgres).
+# Populate all databases with synthetic fixture data via scripts/seed.py.
+# Runs the seed compose service inside the network. MODE selects dataset
+# size: 10 (default), 100, or 1000 records per table. The seeder inserts
+# only (no truncate); run `make reset-db` first for a clean slate.
+#   make seed-db
+#   make seed-db MODE=100
+#   make seed-db MODE=1000
 seed-db:
-	@for f in fixtures/seed/*.sql; do \
-		$(COMPOSE) exec -T postgres psql -U postgres -v ON_ERROR_STOP=1 < "$$f" || exit 1; \
-	done
+	SEED_MODE=$(or $(MODE),10) $(COMPOSE) run --rm --no-deps seed
 
-# Truncate all data in every service database (tables and migrations preserved).
-# Requires the postgres container to be running with services migrated.
-# Use `make reset-db seed-db` to wipe and repopulate in one shot.
-#
-# reset.sql runs once per database and uses a 5s lock_timeout with an
-# EXCEPTION handler, so a database whose tables are locked by a running
-# service is aborted atomically (left untouched, not half-truncated) and
-# psql exits non-zero so the loop stops. The intended usage is `make up`
-# (which starts postgres, runs reset-db, then starts app services); to
-# reset against a live stack, stop the app services first:
-# 
-# `make down && make up postgres && make reset-db seed-db && make up`
-#
+# Truncate all data in every service database (tables and migrations
+# preserved). Pipes scripts/reset.sql through psql once per DB. Use
+# `make reset-db seed-db` to wipe and repopulate in one shot. For a
+# guaranteed-clean reset, stop the app services first:
+#   make down && make up postgres && make reset-db seed-db && make up
 reset-db:
-	@for f in fixtures/seed/*.sql; do \
-		db=$$(basename "$$f" .sql); \
-		$(COMPOSE) exec -T postgres psql -q -U postgres -d $$db -v ON_ERROR_STOP=1 < fixtures/reset.sql; \
+	@for db in $$(grep -oE 'CREATE DATABASE [a-z_]+' postgres-init.sql | awk '{print $$3}'); do \
+		$(COMPOSE) exec -T postgres psql -q -U postgres -d $$db -v ON_ERROR_STOP=1 < scripts/reset.sql; \
 	done
