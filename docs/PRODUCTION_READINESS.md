@@ -1,6 +1,23 @@
 # Production-Readiness Report v2 — AI Crypto On-Ramp Backend
 
-> **Re-audited from scratch 2026-07-25.** Every service was re-examined independently; prior report's "completed" claims were not assumed. Findings supersede the 2026-07-22 report. Prior completed items are carried forward only where the fresh audit confirms them.
+## Navigation
+
+- [Headline Verdict](#headline-verdict)
+- [Service Readiness Scores](#service-readiness-scores)
+- [Top 10 Critical (P0) Production Blockers](#top-10-critical-p0-production-blockers-current)
+- [Major (P1) Gaps](#major-p1-gaps)
+- [Integration Edge Matrix](#integration-edge-matrix)
+- [Recommended Path to Production (Priority Order)](#recommended-path-to-production-priority-order)
+  - [Phase 1 — Money safety & custody](#phase-1--money-safety--custody-re-opened-phase-1-2-residuals)
+  - [Phase 2 — Reliability & security](#phase-2--reliability--security-re-opened-phase-1-2-residuals)
+  - [Phase 3 — Hardening](#phase-3--hardening-residuals)
+  - [Phase 4 — Release & ops](#phase-4--release--ops--not-started-unchanged-from-prior-report)
+- [What Actually Works (verified)](#what-actually-works-verified)
+- [Conclusion](#conclusion)
+
+---
+
+> **Re-audited from scratch 2026-07-25.** Every service was re-examined independently; prior report's "completed" claims were not assumed. Findings supersede the 2026-07-22 report.
 
 **Scope:** 21 backend services + 3 UIs + `.github/` local-testing harness.
 **Method:** 6 parallel agents, every claim cited `file:line`. `.github/` docker-compose/gatus scored as local-testing harness (tolerant — not prod deployment).
@@ -49,35 +66,6 @@
 | `ui-front-office` | 3/10 | 1/52 tasks done; no auth, no pages, no API integration. |
 | `ui-middle-office` | 3/10 | 1/53 tasks done; no auth/RBAC, no router, no API integration. |
 | `ui-back-office` | 5/10 | 53/53 tasks done but dashboards thin; no auth; clients carry no service token; MPC dashboard placeholder. |
-
----
-
-## Completed Items Carried Forward (verified by fresh audit)
-
-These items from the prior report's Phases 0-2 are confirmed done in the codebase:
-
-**Phase 0 — Stop the bleeding (confirmed):**
-- ✅ `.github/contracts/` extracted: 13 protos + 5 AsyncAPI + `buf.yaml`/`buf.gen.yaml` + `contracts-ci.yml`. Consumers NOT yet regenerated.
-- ✅ `DEV_MODE` gating exists in most services (gateway-blockchain, orchestrator-tx, orchestrator-fiat, wallet-manager, mpc-signer, notifier, kyc-onboarding, kyt-aml-screening all have DEV_MODE branches). However several services lack a hard fatal in prod when real client is unimplemented (gateway-fiat, gateway-exchange, engine-liquidity, orchestrator-fiat rail/MPI, engine-pricing, fx-hedger).
-- ✅ Partner URLs set in compose for orchestrator-tx (`POLICY_URL`/`KYT_URL`/`MPC_URL`/`LEDGER_URL`/`PAYMENT_URL`/`BLOCKCHAIN_URL`).
-- ✅ Postgres stores added to orchestrator-fiat, gateway-fiat, gateway-exchange with `DB_URL` in compose.
-- ✅ `audit.v1` Kafka topic adopted by producers; envelope in `contracts/proto/audit/v1/events.proto`. (Note: some producers still use in-memory sinks — see service rows.)
-
-**Phase 1 — Money safety (partially confirmed):**
-- ✅ `decimal.Decimal` used in gateway-blockchain, orchestrator-treasury, engine-pricing, engine-liquidity, rail-connector/gateway-fiat, exchange-connector/gateway-exchange, wallet-manager EVM path.
-- ✅ Custody-provider adapters (Fireblocks/Dfns/Turnkey) implemented in mpc-signer — but **not the default**; in-house engine still default.
-- ✅ Real withdrawal tx construction for EVM in wallet-manager. **BTC/Solana use placeholder pubkeys/blockhash** (regressed/not actually complete).
-- ✅ Reorg re-broadcast in gateway-blockchain.
-- ✅ Ledger Postgres source of truth when `DB_URL` set; SERIALIZABLE; salt mixed into hash. **Chain extension is non-atomic** (regressed).
-- ⚠️ `float64` still on money paths in: fx-hedger (Postgres cols), engine-liquidity (book levels, slicer participation), engine-policy-risk (USD caps), gateway-fiat (ACH amount), orchestrator-treasury (config thresholds).
-
-**Phase 2 — Reliability & security (partially confirmed):**
-- ✅ Service-token JWT middleware exists on orchestrator-tx, orchestrator-fiat, accounting-ledger REST. **NOT on 12 other services** with mutating endpoints.
-- ✅ gRPC dials use `credentials.NewTLS` when TLS env set (orchestrator-tx confirmed). Many other services still default to `insecure.NewCredentials()` (wallet-manager, mpc-signer wallet client, gateway-blockchain OTLP).
-- ✅ Real notifier providers (SES/SNS/Twilio/FCM/APNS) implemented; kafkajs consumer; HMAC webhooks; Redis dedup; DLQ. Redis silently falls back to in-memory when unset.
-- ✅ `LedgerFetcher` in engine-recon; canonical topic names configurable.
-- ✅ Real Onfido/Chainalysis/TRM providers exist. Fraud `RealModel` loader exists but `StubModel` is still default.
-- ❌ **Observability stack NOT in compose.** Prior report claimed Prometheus+Grafana+Loki+Tempo+OTel collector deployed — fresh audit of `docker-compose.yml` finds **no such services and no `OTEL_*` env vars**. OTel SDK code may exist in some services but the harness doesn't wire it. This is a significant overstatement in the prior report.
 
 ---
 
@@ -142,7 +130,7 @@ These items from the prior report's Phases 0-2 are confirmed done in the codebas
 
 ## Recommended Path to Production (Priority Order)
 
-> Completed Phase 0-2 work from the prior report (contracts extraction, DEV_MODE gating, Postgres stores, audit.v1 topic, custody adapters, reorg re-broadcast, notifier providers, LedgerFetcher, service-token auth on 3 services, decimal migration in 7 services) is carried forward as the baseline; only incomplete/residual items are listed below.
+> Completed work from the prior report (contracts extraction, DEV_MODE gating, Postgres stores, audit.v1 topic, custody adapters, reorg re-broadcast, notifier providers, LedgerFetcher, service-token auth on 3 services, decimal migration in 7 services) is carried forward as the baseline; only incomplete/residual items are listed below.
 
 ### Phase 1 — Money safety & custody (re-opened Phase 1-2 residuals)
 > Items the prior report marked complete but the fresh audit found incomplete or regressed.
@@ -172,31 +160,31 @@ These items from the prior report's Phases 0-2 are confirmed done in the codebas
 15. **Fix mpc-signer + wallet-manager gRPC TLS.** mpc `GrpcWalletClient` must use HTTPS + TLS (not `http://`); wallet-manager gRPC clients must use `credentials.NewTLS` (not `insecure.NewCredentials()` default). (src/wallet.rs:72, internal/clients/clients.go:38)
 16. **Fix dockerfiles running as root.** gateway-fiat, gateway-exchange, fx-hedger, engine-recon, audit-logger → distroless nonroot or add `USER`.
 
-### Phase 3 — Release & ops ⏳ NOT STARTED (unchanged from prior report)
-17. **Reusable release workflow** (SBOM via syft + cosign image signing + SHA-tagged images); branch protection + CODEOWNERS.
-18. **CVE scanning** (`govulncheck`, `npm audit --audit-level=high`, `pip-audit`, `bandit`, `cargo-audit`, Trivy) in all CI workflows.
-19. **Finish UI services**:
+### Phase 3 — Hardening (residuals)
+17. **Regenerate all consumers from `.github/contracts/`** so runtime gRPC dials succeed field-by-field.
+18. **Fix treasury→liquidity path mismatch** (`/v1/aggregate-orders` vs `/v1/parent-orders`).
+19. **Wire Redis velocity counter** in engine-policy-risk; add KYC/fraud/KYT ingest endpoints once contracts regenerated.
+20. **Wire gateway-blockchain mempool + real chain adapters** (not poll-based scaffolds).
+21. **Wallet-manager balance int64 → decimal** migration.
+22. **Ledger notary posting + SIEM sink** in audit-logger; real S3/KMS creds in prod.
+23. **W3C `traceparent` propagation** as shared interceptor.
+24. **Standardize migrations tooling** (`golang-migrate` for Go, Alembic for Python, `refinery`/`sqlx` for Rust); run as separate `migrate up` step.
+25. **Kafka prod hardening** (3-broker, RF=3, explicit topic provisioning, longer audit retention); Postgres HA + PITR.
+26. **Add Hurl E2E suites to CI.**
+27. **Extract `platform-go` shared module** (logging, tracing, mtls, errors, kafka client) consumed by all Go services.
+28. **Compose app healthchecks** (only postgres/redis/kafka have them today); `restart: unless-stopped`; resource limits; per-service networks.
+29. **Schema versioning** on all non-audit event topics; schema registry.
+30. **KYC document encryption at rest** (currently base64 in `object_key` column).
+
+### Phase 4 — Release & ops ⏳ NOT STARTED (unchanged from prior report)
+31. **Reusable release workflow** (SBOM via syft + cosign image signing + SHA-tagged images); branch protection + CODEOWNERS.
+32. **CVE scanning** (`govulncheck`, `npm audit --audit-level=high`, `pip-audit`, `bandit`, `cargo-audit`, Trivy) in all CI workflows.
+33. **Finish UI services**:
     - ui-front-office: 51/52 tasks — signup, KYC wizard, quoting/checkout, dashboard, wallets, notifications, auth/session, error boundaries.
     - ui-middle-office: 52/53 tasks — KYC review queue, AML desk, policy dashboard, user mgmt, audit explorer, TanStack Query/Router, BFF proxy.
     - ui-back-office: dashboards thin, MPC monitor placeholder, no auth, clients carry no service token.
-20. **Wire real third-party vendor API keys and drop `DEV_MODE=1`.** Per-service credential inventory (unchanged from prior report): kyt (`CHAINALYSIS/TRM_API_KEY`), kyc (`ONFIDO_API_TOKEN`), fraud (`MODEL_PATH`), notifier (SES/SNS/Twilio/FCM/APNS creds), orchestrator-fiat (rail/MPI provider keys), fx-hedger (FX provider key), engine-pricing (oracle key), gateway-exchange (venue API keys/secrets), gateway-blockchain (RPC URLs), mpc-signer (`CUSTODY_PROVIDER` + custody creds), wallet-manager (real xpubs), all gRPC services (`TLS_*_FILE` for mTLS).
-21. **Runbooks** for 20 services.
-
-### Phase 4 — Hardening (residuals)
-22. **Regenerate all consumers from `.github/contracts/`** so runtime gRPC dials succeed field-by-field.
-23. **Fix treasury→liquidity path mismatch** (`/v1/aggregate-orders` vs `/v1/parent-orders`).
-24. **Wire Redis velocity counter** in engine-policy-risk; add KYC/fraud/KYT ingest endpoints once contracts regenerated.
-25. **Wire gateway-blockchain mempool + real chain adapters** (not poll-based scaffolds).
-26. **Wallet-manager balance int64 → decimal** migration.
-27. **Ledger notary posting + SIEM sink** in audit-logger; real S3/KMS creds in prod.
-28. **W3C `traceparent` propagation** as shared interceptor.
-29. **Standardize migrations tooling** (`golang-migrate` for Go, Alembic for Python, `refinery`/`sqlx` for Rust); run as separate `migrate up` step.
-30. **Kafka prod hardening** (3-broker, RF=3, explicit topic provisioning, longer audit retention); Postgres HA + PITR.
-31. **Add Hurl E2E suites to CI.**
-32. **Extract `platform-go` shared module** (logging, tracing, mtls, errors, kafka client) consumed by all Go services.
-33. **Compose app healthchecks** (only postgres/redis/kafka have them today); `restart: unless-stopped`; resource limits; per-service networks.
-34. **Schema versioning** on all non-audit event topics; schema registry.
-35. **KYC document encryption at rest** (currently base64 in `object_key` column).
+34. **Wire real third-party vendor API keys and drop `DEV_MODE=1`.** Per-service credential inventory (unchanged from prior report): kyt (`CHAINALYSIS/TRM_API_KEY`), kyc (`ONFIDO_API_TOKEN`), fraud (`MODEL_PATH`), notifier (SES/SNS/Twilio/FCM/APNS creds), orchestrator-fiat (rail/MPI provider keys), fx-hedger (FX provider key), engine-pricing (oracle key), gateway-exchange (venue API keys/secrets), gateway-blockchain (RPC URLs), mpc-signer (`CUSTODY_PROVIDER` + custody creds), wallet-manager (real xpubs), all gRPC services (`TLS_*_FILE` for mTLS).
+35. **Runbooks** for 20 services.
 
 ---
 
