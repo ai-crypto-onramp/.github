@@ -67,10 +67,10 @@ logs:
 	$(COMPOSE) logs -f --tail=200
 
 # Build only the Go services (shared module + build cache via BuildKit mounts).
-GO_SERVICES := kyt-aml-screening audit-logger gateway-blockchain gateway-exchange \
-	fx-hedger gateway-auth engine-liquidity kyc-onboarding orchestrator-fiat \
-	engine-policy-risk engine-pricing gateway-fiat orchestrator-tx \
-	orchestrator-treasury wallet-manager
+GO_SERVICES := audit-logger engine-liquidity engine-policy-risk engine-pricing \
+	fx-hedger gateway-auth gateway-blockchain gateway-exchange gateway-fiat \
+	kyc-onboarding kyt-aml-screening orchestrator-fiat orchestrator-treasury \
+	orchestrator-tx wallet-manager
 
 build-go:
 	DOCKER_BUILDKIT=1 $(COMPOSE) build $(GO_SERVICES)
@@ -109,30 +109,30 @@ test: clean
 # Short aliases for service names, used by the up-%, logs-% and test-%
 # patterns. Services without an alias (postgres, redis, gatus) are addressed
 # by full name.
-kyt       := kyt-aml-screening
-gateway   := gateway-api
 audit     := audit-logger
+auth      := gateway-auth
+back      := ui-back-office
 chain     := gateway-blockchain
 exchange  := gateway-exchange
 fraud     := engine-fraud
+front     := ui-front-office
 fx        := fx-hedger
-auth      := gateway-auth
+gateway   := gateway-api
+kyc       := kyc-onboarding
+kyt       := kyt-aml-screening
 ledger    := accounting-ledger
 liquidity := engine-liquidity
+middle    := ui-middle-office
 mpc       := mpc-signer
 notify    := notifier
-kyc       := kyc-onboarding
 payment   := orchestrator-fiat
 policy    := engine-policy-risk
 pricing   := engine-pricing
 rails     := gateway-fiat
 recon     := engine-recon
-txo       := orchestrator-tx
 treasury  := orchestrator-treasury
+txo       := orchestrator-tx
 wallet    := wallet-manager
-front     := ui-front-office
-middle    := ui-middle-office
-back      := ui-back-office
 
 # Start an individual service: make up-<alias|service>, e.g. make up-kyc
 up-%:

@@ -134,22 +134,22 @@ useful discriminator, not a pure classification.
 
 | Name | Lang | Description |
 |---|---|---|
-| [gateway-auth](https://github.com/ai-crypto-onramp/gateway-auth) | Go | User accounts, sessions, MFA, API keys for B2B partners, RBAC. |
 | [engine-fraud](https://github.com/ai-crypto-onramp/engine-fraud) | Python | ML scoring on payment + behavioral signals (chargeback/velocity models); feeds the policy engine. |
+| [engine-policy-risk](https://github.com/ai-crypto-onramp/engine-policy-risk) | Go | Per-tx caps, velocity limits, whitelisting, source auth. Auto-approves or routes to manual review. The gatekeeper before signing. |
 | [gateway-api](https://github.com/ai-crypto-onramp/gateway-api) | TS | Public edge. AuthN/Z, rate limiting, request shaping, aggregates backend calls for web/mobile SDKs. |
+| [gateway-auth](https://github.com/ai-crypto-onramp/gateway-auth) | Go | User accounts, sessions, MFA, API keys for B2B partners, RBAC. |
 | [kyc-onboarding](https://github.com/ai-crypto-onramp/kyc-onboarding) | Go | Orchestrates identity verification via vendors (Onfido/Sumsub), document + liveness, sanctions/PEP screening at signup. |
 | [kyt-aml-screening](https://github.com/ai-crypto-onramp/kyt-aml-screening) | Go | Pre-settlement Know-Your-Transaction checks against destination addresses (Chainalysis/TRM); blocks tainted flows before broadcast. |
-| [engine-policy-risk](https://github.com/ai-crypto-onramp/engine-policy-risk) | Go | Per-tx caps, velocity limits, whitelisting, source auth. Auto-approves or routes to manual review. The gatekeeper before signing. |
 
 ### Fiat, Pricing & Liquidity
 
 | Name | Lang | Description |
 |---|---|---|
+| [engine-liquidity](https://github.com/ai-crypto-onramp/engine-liquidity) | Go | Smart order routing + TWAP execution across exchanges/OTC desks; splits large orders. |
+| [engine-pricing](https://github.com/ai-crypto-onramp/engine-pricing) | Go | Real-time rate quotes with the ~30s rate-lock window; sources spreads and marks up fees. |
 | [fx-hedger](https://github.com/ai-crypto-onramp/fx-hedger) | Go | Manages currency exposure across daily flows, executes hedges, tracks slippage. |
 | [gateway-exchange](https://github.com/ai-crypto-onramp/gateway-exchange) | Go | Venue-specific adapters (Binance, Kraken, OTC) — order placement, fills, balances. |
 | [gateway-fiat](https://github.com/ai-crypto-onramp/gateway-fiat) | Go | Adapter services per rail (card networks, ACH/SEPA/PIX/UPI). One deployable per rail family, common interface. |
-| [engine-liquidity](https://github.com/ai-crypto-onramp/engine-liquidity) | Go | Smart order routing + TWAP execution across exchanges/OTC desks; splits large orders. |
-| [engine-pricing](https://github.com/ai-crypto-onramp/engine-pricing) | Go | Real-time rate quotes with the ~30s rate-lock window; sources spreads and marks up fees. |
 | [orchestrator-fiat](https://github.com/ai-crypto-onramp/orchestrator-fiat) | Go | Fiat ingress. Normalizes across rails; manages 3DS, auth/capture, settlement webhooks, chargebacks. |
 
 ### Custody & On-Chain
@@ -166,8 +166,8 @@ useful discriminator, not a pure classification.
 |---|---|---|
 | [accounting-ledger](https://github.com/ai-crypto-onramp/accounting-ledger) | Rust | Immutable double-entry ledger — the single source of financial truth. Correctness over everything. |
 | [audit-logger](https://github.com/ai-crypto-onramp/audit-logger) | Go | Append-only audit trail for compliance and incident forensics; consumes the event bus. |
-| [notifier](https://github.com/ai-crypto-onramp/notifier) | TS | Email/SMS/push + partner webhooks for tx status. |
 | [engine-recon](https://github.com/ai-crypto-onramp/engine-recon) | Python | Continuously matches internal ledger vs bank/exchange/on-chain state; flags breaks (a top-4 failure mode). |
+| [notifier](https://github.com/ai-crypto-onramp/notifier) | TS | Email/SMS/push + partner webhooks for tx status. |
 | [orchestrator-treasury](https://github.com/ai-crypto-onramp/orchestrator-treasury) | Go | Batches user orders into aggregate buys, manages the T+0 vs T+2/3 float, funding of hot wallets. |
 | [orchestrator-tx](https://github.com/ai-crypto-onramp/orchestrator-tx) | Go | The saga engine tying payment → policy → sign → deliver into one atomic, recoverable flow with compensation. |
 
