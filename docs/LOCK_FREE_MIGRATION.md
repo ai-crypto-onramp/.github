@@ -17,46 +17,30 @@
 - [Cross-cutting changes](#cross-cutting-changes)
 - [Risks to verify before implementation](#risks-to-verify-before-implementation)
 - [Suggested order](#suggested-order)
-- [Not a fix for the reset-db hang](#not-a-fix-for-the-reset-db-hang)
 
 This document captures a proposed (not yet implemented) plan to replace the
 `SELECT ... FOR UPDATE` + multi-statement transaction patterns across the
 codebase with single-statement, atomic-update patterns. It is a hardening
-pass motivated by concurrency correctness and simplicity, **not** by the
-`make reset-db` hang — see `scripts/reset.sql` for the skip-and-continue
-mitigation that ships today.
+pass motivated by concurrency correctness and simplicity.
 
 ## Background: why this came up
 
-`make reset-db seed-db` hangs when run against a live stack. `TRUNCATE TABLE
-... CASCADE` acquires an `ACCESS EXCLUSIVE` table lock, which conflicts with
-*any* open transaction that has touched the target table — even a plain
-`SELECT` holds an `ACCESS SHARE` lock for the duration of its enclosing
-transaction. As long as a service keeps a transaction open (e.g. the
-`orchestrator-tx` outbox relay ticks every 100 ms and opens a
-serializable transaction each tick), `TRUNCATE` waits indefinitely.
-
-The shipped fix (`scripts/reset.sql`) wraps each database's truncate loop
-in a `DO $$ ... EXCEPTION WHEN lock_timeout THEN ... END $$` block with
-`SET lock_timeout = '5s'`, so a locked database is skipped atomically (the
-block rolls back, leaving that database untouched) and `reset-db` continues
-to the next database. This is a dev-tooling fix, not a service-logic fix.
-
-The plan below addresses the broader pattern that made the hang possible:
-services holding transactions open across network calls and multi-statement
-reads. Flattening those patterns to single-statement atomic updates shrinks
-the window to a single round-trip, which is the correct concurrency posture
-regardless of the reset tooling.
+The codebase has several places where services hold transactions open across
+network calls and multi-statement reads. This creates contention windows
+that are wider than necessary. Flattening those patterns to single-statement
+atomic updates shrinks the window to a single round-trip, which is the
+correct concurrency posture.
 
 ## Why "lock-free" is the right instinct, with a caveat
 
-`FOR UPDATE` row locks are *not* what blocks `TRUNCATE` — table-level
-`ACCESS EXCLUSIVE` is. So "lock-free" alone does not eliminate the reset
-window; a single autocommit `INSERT` still holds an `ACCESS SHARE` lock for
-the round-trip. The real win is **single-statement transactions**: no
-transaction is open long enough to stall a `TRUNCATE` except by sheer bad
-luck, and the per-connection `idle_in_transaction_session_timeout` /
-`lock_timeout` settings cap the worst case.
+`FOR UPDATE` row locks are *not* the only source of contention — table-level
+`ACCESS EXCLUSIVE` (from `TRUNCATE`) conflicts with any `ACCESS SHARE` held
+by an open transaction. So "lock-free" alone does not eliminate every
+contention window; a single autocommit `INSERT` still holds an `ACCESS SHARE`
+lock for the round-trip. The real win is **single-statement transactions**: no
+transaction is open long enough to cause contention except by sheer bad luck,
+and the per-connection `idle_in_transaction_session_timeout` / `lock_timeout`
+settings cap the worst case.
 
 The rewrites are worth doing on their own merits:
 
@@ -241,15 +225,5 @@ drop the outer tx, run autocommit, use the `version` column as a CAS guard
 5. `orchestrator-tx` outbox — biggest win, requires the reaper.
 6. `orchestrator-tx` `CreateTx` — keep the tx, add
    `SET LOCAL lock_timeout`.
-7. Cross-cutting `idle_in_transaction_session_timeout` + `lock_timeout`
-   in every service's `db.Connect`.
-
-## Not a fix for the reset-db hang
-
-To be explicit: this migration does **not** eliminate the `make reset-db`
-window. A single autocommit statement still holds a lock for one
-round-trip, and `TRUNCATE` can still collide with it. The shipped
-`scripts/reset.sql` (skip-and-continue with `lock_timeout = '5s'`) is
-the correct dev-tooling fix; the lock-free migration is a separate
-hardening pass with its own justification. Do not conflate the two when
-reviewing PRs.
+ 7. Cross-cutting `idle_in_transaction_session_timeout` + `lock_timeout`
+    in every service's `db.Connect`.

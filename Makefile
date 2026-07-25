@@ -181,14 +181,13 @@ redis-cli:
 #   make seed-db MODE=100
 #   make seed-db MODE=1000
 seed-db:
-	SEED_MODE=$(or $(MODE),10) $(COMPOSE) run --rm --no-deps seed
+	SEED_MODE=$(or $(MODE),100) $(COMPOSE) run --rm --no-deps seed
 
 # Truncate all data in every service database (tables and migrations
 # preserved). Pipes scripts/reset.sql through psql once per DB. Use
-# `make reset-db seed-db` to wipe and repopulate in one shot. For a
-# guaranteed-clean reset, stop the app services first:
-#   make down && make up postgres && make reset-db seed-db && make up
+# `make reset-db seed-db` to wipe and repopulate in one shot.
 reset-db:
-	@for db in $$(grep -oE 'CREATE DATABASE [a-z_]+' postgres-init.sql | awk '{print $$3}'); do \
+	@set -e; for db in $$(grep -oE 'CREATE DATABASE [a-z_]+' postgres-init.sql | awk '{print $$3}'); do \
+		echo "  resetting $$db..."; \
 		$(COMPOSE) exec -T postgres psql -q -U postgres -d $$db -v ON_ERROR_STOP=1 < scripts/reset.sql; \
 	done
