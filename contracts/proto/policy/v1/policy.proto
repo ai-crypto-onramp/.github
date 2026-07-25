@@ -9,7 +9,7 @@ import "common/v1/money.proto";
 // Version: v1
 // Breaking-change policy: minor field additions only; bump to v2 for removals/renames.
 
-// PolicyService is served by policy-risk-engine. The transaction-orchestrator
+// PolicyService is served by engine-policy-risk. The transaction-orchestrator
 // is the primary consumer on the synchronous saga path; the api-gateway may
 // also call Evaluate for pre-flight checks.
 service PolicyService {

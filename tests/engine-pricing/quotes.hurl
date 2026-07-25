@@ -1,4 +1,4 @@
-# pricing-quote (port 8096): quote issuance against seeded spot rates
+# engine-pricing (port 8096): quote issuance against seeded spot rates
 # and fee schedules, the 30s rate lock, atomic claim, refresh, bulk
 # quotes, and validation errors. Quotes are created fresh every run,
 # so the suite is idempotent.

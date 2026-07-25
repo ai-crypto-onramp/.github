@@ -77,9 +77,9 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: fraud-engine
+  - name: engine-fraud
     group: risk
-    url: http://fraud-engine:8080/healthz
+    url: http://engine-fraud:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
@@ -93,9 +93,9 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: auth-identity
+  - name: gateway-auth
     group: core
-    url: http://auth-identity:8080/healthz
+    url: http://gateway-auth:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
@@ -109,9 +109,9 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: liquidity-router
+  - name: engine-liquidity
     group: liquidity
-    url: http://liquidity-router:8080/healthz
+    url: http://engine-liquidity:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
@@ -141,25 +141,25 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: payment-orchestrator
+  - name: orchestrator-fiat
     group: fiat
-    url: http://payment-orchestrator:8080/healthz
+    url: http://orchestrator-fiat:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: policy-risk-engine
+  - name: engine-policy-risk
     group: risk
-    url: http://policy-risk-engine:8080/healthz
+    url: http://engine-policy-risk:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: pricing-quote
+  - name: engine-pricing
     group: core
-    url: http://pricing-quote:8080/healthz
+    url: http://engine-pricing:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
@@ -173,25 +173,25 @@ endpoints:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: reconciliation
+  - name: engine-recon
     group: core
-    url: http://reconciliation:8080/healthz
+    url: http://engine-recon:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: tx-orchestrator
+  - name: orchestrator-tx
     group: core
-    url: http://tx-orchestrator:8080/healthz
+    url: http://orchestrator-tx:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"
       - "[BODY].status == ok"
 
-  - name: treasury-orchestrator
+  - name: orchestrator-treasury
     group: treasury
-    url: http://treasury-orchestrator:8080/healthz
+    url: http://orchestrator-treasury:8080/healthz
     interval: 30s
     conditions:
       - "[STATUS] == 200"

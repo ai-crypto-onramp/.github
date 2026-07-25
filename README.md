@@ -11,6 +11,8 @@ Service breakdown of an experimental end-to-end crypto on-ramp, mapped to the fi
 ## Table of Contents
 
 - [Language philosophy](#language-philosophy)
+- [Service Taxonomy](#service-taxonomy)
+  - [Archetypes](#archetypes)
 - [Service Groups](#service-groups)
   - [Core Microservices](#core-microservices)
   - [Fiat, Pricing & Liquidity](#fiat-pricing--liquidity)
@@ -33,18 +35,111 @@ Minimized language sprawl. Standardized on:
 - **TypeScript** — edge / BFF
 - **Python** — where ML/data genuinely wins (fraud, risk)
 
+## Service Taxonomy
+
+The services follow a role-based naming convention. Each suffix denotes the
+**role** the service plays in the system, not its domain. Domain is conveyed by
+the prefix. Picking the right suffix means identifying the service's **dominant**
+trait, since most real services are hybrids of several roles.
+
+### Archetypes
+
+#### `gateway-*` — boundary service
+
+Services that sit on a **boundary** between two zones and translate between them.
+Two flavors:
+
+- **External-system boundary** — I/O translators between the platform and an
+  outside system. They speak some external protocol (REST / FIX / RPC / chain
+  RPC) and emit or consume a canonical internal representation. They do **not**
+  make business decisions.
+  - `gateway-api` — public REST / BFF entry point
+  - `gateway-blockchain` — chain RPC adapter
+  - `gateway-exchange` — exchange / OTC venue adapter
+  - `gateway-fiat` — bank / rail adapter
+- **Trust boundary** — the control plane that separates untrusted callers from
+  the trusted internal estate. They authenticate, authorize, and credential
+  callers before any internal service will accept their requests.
+  - `gateway-auth` — user accounts, sessions, MFA, API keys, RBAC; the boundary
+    every inbound caller crosses before reaching `gateway-api` and downstream
+    services.
+
+**Rule:** if the service's job is "translate between us and the outside world"
+**or** "gate who is allowed into the inside", it is a gateway. The `gateway-`
+prefix means *boundary*; the boundary may be a protocol boundary or a trust
+boundary.
+
+#### `engine-*` — domain computation / decision
+
+Stateless or stateful services that take inputs and produce a **decision,
+transform, or computation**. The business algorithm lives here.
+
+- `engine-fraud` — fraud scoring
+- `engine-policy-risk` — policy / risk evaluation
+- `engine-pricing` — quote computation
+- `engine-liquidity` — smart order routing + TWAP / VWAP execution
+- `engine-recon` — reconciliation matching and break detection
+
+**Rule:** if the service's value is "the algorithm", it is an engine.
+
+#### `orchestrator-*` — workflow coordination
+
+Saga / state-machine coordinators that **sequence calls** across multiple
+services, own transactional flow, and handle compensation. They do not compute
+the domain answer themselves — they direct who does.
+
+- `orchestrator-tx` — transaction (buy) lifecycle
+- `orchestrator-fiat` — fiat payment / capture lifecycle
+- `orchestrator-treasury` — aggregate funding / hedging workflow
+
+**Rule:** if the service's value is "the workflow", it is an orchestrator.
+
+#### Domain-specific nouns — unique archetypes
+
+Services whose role is singular enough that a generic suffix would obscure
+rather than clarify. Kept as domain nouns.
+
+- `accounting-ledger` — append-only ledger is its own archetype.
+- `audit-logger` — event sink.
+- `notifier` — fan-out sink.
+- `wallet-manager` — custody inventory: hot / warm / cold wallets, address
+  derivation, UTXO and nonce management, MPC key mapping. The `wallet-manager`
+  name is established industry vocabulary; treated as a domain noun rather than
+  an instance of a generic `-manager` archetype.
+- `fx-hedger` — domain noun (FX hedging desk role).
+- `kyc-onboarding`, `kyt-aml-screening` — process nouns.
+
+#### `ui-*` — presentation layer
+
+Separate axis entirely; not subject to the backend taxonomy.
+
+- `ui-front-office`, `ui-middle-office`, `ui-back-office`
+
+### Choosing a suffix
+
+1. Is it a protocol boundary to an external system, or a trust boundary that
+   gates callers into the inside? -> `gateway-*`
+2. Is its value the algorithm / decision? -> `engine-*`
+3. Is its value coordinating a multi-service workflow? -> `orchestrator-*`
+4. Is its role singular enough that a generic suffix would obscure it? ->
+   domain noun
+5. Is it presentation? -> `ui-*`
+
+Most real services are hybrids. Pick the **dominant** trait; the taxonomy is a
+useful discriminator, not a pure classification.
+
 ## Service Groups
 
 ### Core Microservices
 
 | Name | Lang | Description |
 |---|---|---|
-| [auth-identity](https://github.com/ai-crypto-onramp/auth-identity) | Go | User accounts, sessions, MFA, API keys for B2B partners, RBAC. |
-| [fraud-engine](https://github.com/ai-crypto-onramp/fraud-engine) | Python | ML scoring on payment + behavioral signals (chargeback/velocity models); feeds the policy engine. |
+| [gateway-auth](https://github.com/ai-crypto-onramp/gateway-auth) | Go | User accounts, sessions, MFA, API keys for B2B partners, RBAC. |
+| [engine-fraud](https://github.com/ai-crypto-onramp/engine-fraud) | Python | ML scoring on payment + behavioral signals (chargeback/velocity models); feeds the policy engine. |
 | [gateway-api](https://github.com/ai-crypto-onramp/gateway-api) | TS | Public edge. AuthN/Z, rate limiting, request shaping, aggregates backend calls for web/mobile SDKs. |
 | [kyc-onboarding](https://github.com/ai-crypto-onramp/kyc-onboarding) | Go | Orchestrates identity verification via vendors (Onfido/Sumsub), document + liveness, sanctions/PEP screening at signup. |
 | [kyt-aml-screening](https://github.com/ai-crypto-onramp/kyt-aml-screening) | Go | Pre-settlement Know-Your-Transaction checks against destination addresses (Chainalysis/TRM); blocks tainted flows before broadcast. |
-| [policy-risk-engine](https://github.com/ai-crypto-onramp/policy-risk-engine) | Go | Per-tx caps, velocity limits, whitelisting, source auth. Auto-approves or routes to manual review. The gatekeeper before signing. |
+| [engine-policy-risk](https://github.com/ai-crypto-onramp/engine-policy-risk) | Go | Per-tx caps, velocity limits, whitelisting, source auth. Auto-approves or routes to manual review. The gatekeeper before signing. |
 
 ### Fiat, Pricing & Liquidity
 
@@ -53,9 +148,9 @@ Minimized language sprawl. Standardized on:
 | [fx-hedger](https://github.com/ai-crypto-onramp/fx-hedger) | Go | Manages currency exposure across daily flows, executes hedges, tracks slippage. |
 | [gateway-exchange](https://github.com/ai-crypto-onramp/gateway-exchange) | Go | Venue-specific adapters (Binance, Kraken, OTC) — order placement, fills, balances. |
 | [gateway-fiat](https://github.com/ai-crypto-onramp/gateway-fiat) | Go | Adapter services per rail (card networks, ACH/SEPA/PIX/UPI). One deployable per rail family, common interface. |
-| [liquidity-router](https://github.com/ai-crypto-onramp/liquidity-router) | Go | Smart order routing + TWAP execution across exchanges/OTC desks; splits large orders. |
-| [pricing-quote](https://github.com/ai-crypto-onramp/pricing-quote) | Go | Real-time rate quotes with the ~30s rate-lock window; sources spreads and marks up fees. |
-| [payment-orchestrator](https://github.com/ai-crypto-onramp/payment-orchestrator) | Go | Fiat ingress. Normalizes across rails; manages 3DS, auth/capture, settlement webhooks, chargebacks. |
+| [engine-liquidity](https://github.com/ai-crypto-onramp/engine-liquidity) | Go | Smart order routing + TWAP execution across exchanges/OTC desks; splits large orders. |
+| [engine-pricing](https://github.com/ai-crypto-onramp/engine-pricing) | Go | Real-time rate quotes with the ~30s rate-lock window; sources spreads and marks up fees. |
+| [orchestrator-fiat](https://github.com/ai-crypto-onramp/orchestrator-fiat) | Go | Fiat ingress. Normalizes across rails; manages 3DS, auth/capture, settlement webhooks, chargebacks. |
 
 ### Custody & On-Chain
 
@@ -72,9 +167,9 @@ Minimized language sprawl. Standardized on:
 | [accounting-ledger](https://github.com/ai-crypto-onramp/accounting-ledger) | Rust | Immutable double-entry ledger — the single source of financial truth. Correctness over everything. |
 | [audit-logger](https://github.com/ai-crypto-onramp/audit-logger) | Go | Append-only audit trail for compliance and incident forensics; consumes the event bus. |
 | [notifier](https://github.com/ai-crypto-onramp/notifier) | TS | Email/SMS/push + partner webhooks for tx status. |
-| [reconciliation](https://github.com/ai-crypto-onramp/reconciliation) | Python | Continuously matches internal ledger vs bank/exchange/on-chain state; flags breaks (a top-4 failure mode). |
-| [treasury-orchestrator](https://github.com/ai-crypto-onramp/treasury-orchestrator) | Go | Batches user orders into aggregate buys, manages the T+0 vs T+2/3 float, funding of hot wallets. |
-| [tx-orchestrator](https://github.com/ai-crypto-onramp/tx-orchestrator) | Go | The saga engine tying payment → policy → sign → deliver into one atomic, recoverable flow with compensation. |
+| [engine-recon](https://github.com/ai-crypto-onramp/engine-recon) | Python | Continuously matches internal ledger vs bank/exchange/on-chain state; flags breaks (a top-4 failure mode). |
+| [orchestrator-treasury](https://github.com/ai-crypto-onramp/orchestrator-treasury) | Go | Batches user orders into aggregate buys, manages the T+0 vs T+2/3 float, funding of hot wallets. |
+| [orchestrator-tx](https://github.com/ai-crypto-onramp/orchestrator-tx) | Go | The saga engine tying payment → policy → sign → deliver into one atomic, recoverable flow with compensation. |
 
 ### UI Systems
 
@@ -210,17 +305,17 @@ All Kafka topics in the stack, sorted alphabetically:
 
 | Topic | Description | Producers | Consumers |
 |---|---|---|---|
-| `audit.v1` | Append-only audit trail for compliance and incident forensics. Canonical envelope: `schema_version`, `id`, `ts`, `source_service`, `actor_id`, `action`, `target_type`, `target_id`, `payload_hash`, `payload`. | fraud-engine, gateway-blockchain, kyt-aml-screening, mpc-signer, notifier, payment-orchestrator, policy-risk-engine, reconciliation, tx-orchestrator | audit-logger |
-| `blockchain.events.v1` | On-chain transaction lifecycle events (broadcast, confirmation, reorg, mempool). | gateway-blockchain | notifier, reconciliation |
-| `custody.events.v1` | Custody operations (key creation, signing, key rotation) from the MPC threshold-signing service. | mpc-signer | reconciliation |
-| `exchange.events.v1` | Order placement, fills, and balance updates from exchange venue adapters. | gateway-exchange | reconciliation |
-| `fraud.scored` | Fraud risk score and risk band per transaction, emitted after scoring on payment + behavioral signals. | fraud-engine | policy-risk-engine |
-| `ledger.events.v1` | Immutable double-entry ledger postings and balance changes. | accounting-ledger | reconciliation |
-| `liquidity.fills` | Fill events from smart order routing (TWAP/VWAP slicing across venues). | liquidity-router | reconciliation |
-| `notification.v1` | Transaction lifecycle notifications (tx.created, tx.confirmed, tx.failed) for email/SMS/push/webhook delivery. | gateway-blockchain, tx-orchestrator | notifier |
-| `payment.events.v1` | Payment lifecycle events (intent created, authorized, captured, refunded, chargeback). | payment-orchestrator | reconciliation |
-| `rail.events.v1` | Rail settlement events (card, ACH, SEPA, PIX, UPI) — confirmation, rejection, settlement status. | gateway-fiat | reconciliation |
-| `transactions` | Saga state transitions (transaction.created, step.start, step.success, tx.completed, tx.failed). The outbox relay polls every 100ms and publishes to this topic. | tx-orchestrator | treasury-orchestrator |
+| `audit.v1` | Append-only audit trail for compliance and incident forensics. Canonical envelope: `schema_version`, `id`, `ts`, `source_service`, `actor_id`, `action`, `target_type`, `target_id`, `payload_hash`, `payload`. | engine-fraud, gateway-blockchain, kyt-aml-screening, mpc-signer, notifier, orchestrator-fiat, engine-policy-risk, engine-recon, orchestrator-tx | audit-logger |
+| `blockchain.events.v1` | On-chain transaction lifecycle events (broadcast, confirmation, reorg, mempool). | gateway-blockchain | notifier, engine-recon |
+| `custody.events.v1` | Custody operations (key creation, signing, key rotation) from the MPC threshold-signing service. | mpc-signer | engine-recon |
+| `exchange.events.v1` | Order placement, fills, and balance updates from exchange venue adapters. | gateway-exchange | engine-recon |
+| `fraud.scored` | Fraud risk score and risk band per transaction, emitted after scoring on payment + behavioral signals. | engine-fraud | engine-policy-risk |
+| `ledger.events.v1` | Immutable double-entry ledger postings and balance changes. | accounting-ledger | engine-recon |
+| `liquidity.fills` | Fill events from smart order routing (TWAP/VWAP slicing across venues). | engine-liquidity | engine-recon |
+| `notification.v1` | Transaction lifecycle notifications (tx.created, tx.confirmed, tx.failed) for email/SMS/push/webhook delivery. | gateway-blockchain, orchestrator-tx | notifier |
+| `payment.events.v1` | Payment lifecycle events (intent created, authorized, captured, refunded, chargeback). | orchestrator-fiat | engine-recon |
+| `rail.events.v1` | Rail settlement events (card, ACH, SEPA, PIX, UPI) — confirmation, rejection, settlement status. | gateway-fiat | engine-recon |
+| `transactions` | Saga state transitions (transaction.created, step.start, step.success, tx.completed, tx.failed). The outbox relay polls every 100ms and publishes to this topic. | orchestrator-tx | orchestrator-treasury |
 
 ## Dashboard
 

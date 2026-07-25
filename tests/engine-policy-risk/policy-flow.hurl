@@ -1,4 +1,4 @@
-# policy-risk-engine (port 8095): evaluate path with whitelist gating,
+# engine-policy-risk (port 8095): evaluate path with whitelist gating,
 # OPA decisions (allow / deny / manual_review by fraud score), and the
 # review-queue lifecycle. Each run uses a fresh user ({{newUuid}}), so
 # whitelist entries and velocity counters never collide across runs.

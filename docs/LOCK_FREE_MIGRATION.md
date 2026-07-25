@@ -7,13 +7,13 @@
 - [Three primitives cover every site](#three-primitives-cover-every-site)
 - [Per-site rewrite plan](#per-site-rewrite-plan)
   - [1. wallet-manager — nonces](#1-wallet-manager--nonces-internalstoragepostgrespostgresgo400)
-  - [2. auth-identity](#2-auth-identity-internaldbstorego3678468901077)
+  - [2. gateway-auth](#2-gateway-auth-internaldbstorego3678468901077)
   - [3. kyc-onboarding](#3-kyc-onboarding-internaldb_storesgo141190)
   - [4. gateway-blockchain — tx_confirmations](#4-gateway-blockchain--tx_confirmations-internalstorepostgrespostgresgo218)
-  - [5. payment-orchestrator — intents / chargebacks](#5-payment-orchestrator--intents--chargebacks-internalstorepostgrespostgresgo125275)
-  - [6. treasury-orchestrator — batches / float_positions](#6-treasury-orchestrator--batches--float_positions-internalstorepostgrespostgresgo231521)
-  - [7. tx-orchestrator — outbox relay](#7-tx-orchestrator--outbox-relay-internalstorepggo323-internaloutboxrelaygo100)
-  - [8. tx-orchestrator — CreateTx](#8-tx-orchestrator--createtx-internalstorepggo182)
+  - [5. orchestrator-fiat — intents / chargebacks](#5-orchestrator-fiat--intents--chargebacks-internalstorepostgrespostgresgo125275)
+  - [6. orchestrator-treasury — batches / float_positions](#6-orchestrator-treasury--batches--float_positions-internalstorepostgrespostgresgo231521)
+  - [7. orchestrator-tx — outbox relay](#7-orchestrator-tx--outbox-relay-internalstorepggo323-internaloutboxrelaygo100)
+  - [8. orchestrator-tx — CreateTx](#8-orchestrator-tx--createtx-internalstorepggo182)
 - [Cross-cutting changes](#cross-cutting-changes)
 - [Risks to verify before implementation](#risks-to-verify-before-implementation)
 - [Suggested order](#suggested-order)
@@ -33,7 +33,7 @@ mitigation that ships today.
 *any* open transaction that has touched the target table — even a plain
 `SELECT` holds an `ACCESS SHARE` lock for the duration of its enclosing
 transaction. As long as a service keeps a transaction open (e.g. the
-`tx-orchestrator` outbox relay ticks every 100 ms and opens a
+`orchestrator-tx` outbox relay ticks every 100 ms and opens a
 serializable transaction each tick), `TRUNCATE` waits indefinitely.
 
 The shipped fix (`fixtures/reset.sql`) wraps each database's truncate loop
@@ -102,7 +102,7 @@ RETURNING pending_nonce;
 Drop `sql.LevelSerializable` for this path. No behavior change visible to
 callers.
 
-### 2. auth-identity (`internal/dbstore.go:367,846,890,1077`)
+### 2. gateway-auth (`internal/dbstore.go:367,846,890,1077`)
 Four near-identical state-machine rewrites:
 
 - Revoke session: `UPDATE sessions SET revoked_at=now() WHERE id=$1 AND
@@ -137,13 +137,13 @@ ON CONFLICT (chain_id, tx_hash) DO UPDATE
 RETURNING ...;
 ```
 
-### 5. payment-orchestrator — intents / chargebacks (`internal/store/postgres/postgres.go:125,275`)
+### 5. orchestrator-fiat — intents / chargebacks (`internal/store/postgres/postgres.go:125,275`)
 CAS on `intents.status` (and `intents.version` if present). Capture
 transition becomes `UPDATE intents SET status='CAPTURED', version=version+1
 WHERE id=$1 AND status='AUTHORIZED' RETURNING ...`. Chargeback claim same
 pattern. 0 rows → 409 to caller, no internal retry.
 
-### 6. treasury-orchestrator — batches / float_positions (`internal/store/postgres/postgres.go:231,521`)
+### 6. orchestrator-treasury — batches / float_positions (`internal/store/postgres/postgres.go:231,521`)
 - Batches: state-machine CAS (`WHERE status='OPEN'`).
 - Float settlement: `UPDATE float_positions SET settled=true WHERE
   fiat_currency=$1 AND settled=false RETURNING id` — atomic claim of all
@@ -155,7 +155,7 @@ but add `SET LOCAL lock_timeout = '2s'` and `SET LOCAL
 idle_in_transaction_session_timeout = '5s'` so a stuck tx auto-aborts
 instead of pinning `TRUNCATE`.
 
-### 7. tx-orchestrator — outbox relay (`internal/store/pg.go:323`, `internal/outbox/relay.go:100`)
+### 7. orchestrator-tx — outbox relay (`internal/store/pg.go:323`, `internal/outbox/relay.go:100`)
 The biggest win and the most work. Replace `ClaimOutboxPending` with:
 
 ```sql
@@ -178,7 +178,7 @@ forever.
 
 Drop `RunInTx` from `drainOnce`; drop `pgx.Serializable` for these ops.
 
-### 8. tx-orchestrator — CreateTx (`internal/store/pg.go:182`)
+### 8. orchestrator-tx — CreateTx (`internal/store/pg.go:182`)
 Legitimately multi-statement (inserts into 4 tables for atomicity). Keep
 the tx, but add at the start:
 
@@ -193,7 +193,7 @@ drop the outer tx, run autocommit, use the `version` column as a CAS guard
 
 ## Cross-cutting changes
 
-- **`db.Connect` in each service** (e.g. `policy-risk-engine/internal/db/db.go:35`):
+- **`db.Connect` in each service** (e.g. `engine-policy-risk/internal/db/db.go:35`):
   set `SET idle_in_transaction_session_timeout = '5s'` and `SET
   lock_timeout = '5s'` on each pooled connection (via `?options=...` in the
   DSN or a connection hook). This caps the worst case at 5 s even if a
@@ -223,7 +223,7 @@ drop the outer tx, run autocommit, use the `version` column as a CAS guard
 - **API contracts**: handlers that currently rely on `SELECT FOR UPDATE`
   returning the row even when the update would later fail will need to
   return 409/410 instead of 500. Update Hurl tests accordingly.
-- **Connection-pool settings**: `policy-risk-engine/internal/db/db.go:40`
+- **Connection-pool settings**: `engine-policy-risk/internal/db/db.go:40`
   sets `SetMaxOpenConns(25)` and `SetMaxIdleConns(5)` but no
   `SetConnMaxLifetime` / `SetConnMaxIdleTime`. Add these so the new
   per-connection `idle_in_transaction_session_timeout` actually takes
@@ -233,13 +233,13 @@ drop the outer tx, run autocommit, use the `version` column as a CAS guard
 
 1. `wallet-manager` nonces — smallest, clearest, no caller-visible
    behavior change. Validates the pattern.
-2. `auth-identity` revokes — four near-identical rewrites, exercises the
+2. `gateway-auth` revokes — four near-identical rewrites, exercises the
    409 contract change.
 3. `kyc-onboarding` + `gateway-blockchain` — straightforward CAS / upsert.
-4. `payment-orchestrator` + `treasury-orchestrator` — CAS, but verify
+4. `orchestrator-fiat` + `orchestrator-treasury` — CAS, but verify
    multi-row invariants in treasury first.
-5. `tx-orchestrator` outbox — biggest win, requires the reaper.
-6. `tx-orchestrator` `CreateTx` — keep the tx, add
+5. `orchestrator-tx` outbox — biggest win, requires the reaper.
+6. `orchestrator-tx` `CreateTx` — keep the tx, add
    `SET LOCAL lock_timeout`.
 7. Cross-cutting `idle_in_transaction_session_timeout` + `lock_timeout`
    in every service's `db.Connect`.

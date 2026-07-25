@@ -68,9 +68,9 @@ logs:
 
 # Build only the Go services (shared module + build cache via BuildKit mounts).
 GO_SERVICES := kyt-aml-screening audit-logger gateway-blockchain gateway-exchange \
-	fx-hedger auth-identity liquidity-router kyc-onboarding payment-orchestrator \
-	policy-risk-engine pricing-quote gateway-fiat tx-orchestrator \
-	treasury-orchestrator wallet-manager
+	fx-hedger gateway-auth engine-liquidity kyc-onboarding orchestrator-fiat \
+	engine-policy-risk engine-pricing gateway-fiat orchestrator-tx \
+	orchestrator-treasury wallet-manager
 
 build-go:
 	DOCKER_BUILDKIT=1 $(COMPOSE) build $(GO_SERVICES)
@@ -88,7 +88,7 @@ build-rs:
 	DOCKER_BUILDKIT=1 $(COMPOSE) build $(RS_SERVICES)
 
 # Build only the Python services.
-PY_SERVICES := fraud-engine reconciliation ui-back-office
+PY_SERVICES := engine-fraud engine-recon ui-back-office
 
 build-py:
 	DOCKER_BUILDKIT=1 $(COMPOSE) build $(PY_SERVICES)
@@ -114,21 +114,21 @@ gateway   := gateway-api
 audit     := audit-logger
 chain     := gateway-blockchain
 exchange  := gateway-exchange
-fraud     := fraud-engine
+fraud     := engine-fraud
 fx        := fx-hedger
-auth      := auth-identity
+auth      := gateway-auth
 ledger    := accounting-ledger
-liquidity := liquidity-router
+liquidity := engine-liquidity
 mpc       := mpc-signer
 notify    := notifier
 kyc       := kyc-onboarding
-payment   := payment-orchestrator
-policy    := policy-risk-engine
-pricing   := pricing-quote
+payment   := orchestrator-fiat
+policy    := engine-policy-risk
+pricing   := engine-pricing
 rails     := gateway-fiat
-recon     := reconciliation
-txo       := tx-orchestrator
-treasury  := treasury-orchestrator
+recon     := engine-recon
+txo       := orchestrator-tx
+treasury  := orchestrator-treasury
 wallet    := wallet-manager
 front     := ui-front-office
 middle    := ui-middle-office
@@ -152,7 +152,7 @@ logs-%:
 	$(COMPOSE) logs -f --tail=200 $(or $($*),$*)
 
 # Run one service's integration test suite: make test-<alias|service>,
-# e.g. make test-policy or make test-policy-risk-engine
+# e.g. make test-policy or make test-engine-policy-risk
 test-%:
 	hurl --test $(HURL_TOKEN_VARS) $(HURL_TRM_VARS) tests/$(or $($*),$*)/*.hurl
 

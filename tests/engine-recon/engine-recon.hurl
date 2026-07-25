@@ -1,4 +1,4 @@
-# reconciliation (port 8098): ledger-vs-external matching, break detection
+# engine-recon (port 8098): ledger-vs-external matching, break detection
 # & escalation, recon runs, and CSV/JSON export. The service auto-creates
 # its schema on first request, so the suite can run against a fresh stack.
 # Runs and breaks are created fresh each invocation, so the suite is

@@ -25,11 +25,11 @@ GET endpoints (no kafka-rest or postgrest dependencies).
 | Topic | Covered? | Test | How |
 |---|---|---|---|
 | `audit.v1` | ✅ | `e2e-async/kyt-audit.hurl` | Triggers a KYT screen, verifies audit-logger has ingested events via `GET /v1/events`. |
-| `transactions` | ✅ | `e2e-async/tx-orchestrator.hurl` | Creates a transaction, verifies saga state + steps persisted via `GET /v1/transactions/{id}` and `GET /v1/transactions/{id}/steps`. The outbox relay publishes `transaction.created` to this topic. |
+| `transactions` | ✅ | `e2e-async/orchestrator-tx.hurl` | Creates a transaction, verifies saga state + steps persisted via `GET /v1/transactions/{id}` and `GET /v1/transactions/{id}/steps`. The outbox relay publishes `transaction.created` to this topic. |
 | `exchange.events.v1` | ✅ | `e2e-async/exchange-fills.hurl` | Places a market order, verifies fill persisted via `GET /v1/orders/{id}/fills` and order status via `GET /v1/orders/{id}`. |
 | `blockchain.events.v1` | ❌ | — | Requires a real chain adapter; stub mode doesn't broadcast. No service-native endpoint to verify broadcast events without a node. |
 | `custody.events.v1` | ❌ | — | Requires the saga to reach the MPC sign step; in dev mode the saga stalls at POLICY. No direct REST trigger for MPC signing. |
-| `fraud.scored` | ❌ | — | The fraud-engine publishes to this topic asynchronously; the policy-risk-engine consumes it. The fraud Kafka producer may not be wired in dev mode (StubModel returns fixed scores). |
+| `fraud.scored` | ❌ | — | The engine-fraud publishes to this topic asynchronously; the engine-policy-risk consumes it. The fraud Kafka producer may not be wired in dev mode (StubModel returns fixed scores). |
 | `ledger.events.v1` | ❌ | — | Requires a ledger posting to trigger the event emitter. The accounting-ledger has `POST /v1/postings` which could trigger this, but the event emission path needs verification. |
 | `liquidity.fills` | ❌ | — | Requires a parent order to be sliced and filled; only treasury drives slicing, and treasury only acts on `tx.completed` (never fires in dev mode). |
 | `notification.v1` | ❌ | — | Requires a saga step to emit a notification event; the saga stalls at POLICY in dev mode. The notifier's `POST /v1/notifications/send` can trigger delivery directly, but that bypasses the Kafka consumer path. |
@@ -46,13 +46,13 @@ saga forward, so `tx.completed` is never published. Every downstream
 async event that depends on saga progression never fires:
 
 ```
-tx-orchestrator (stuck at POLICY)
+orchestrator-tx (stuck at POLICY)
     ↓ tx.completed (never published)
     ↓
-treasury-orchestrator (never receives)
+orchestrator-treasury (never receives)
     ↓ aggregate fill (never triggers)
     ↓
-liquidity-router (never slices)
+engine-liquidity (never slices)
     ↓ fills (never produced)
     ↓
 gateway-blockchain (never broadcasts)
@@ -85,7 +85,7 @@ either:
 `fraud.scored` and `ledger.events.v1` — these can be triggered
 independently of the saga:
 
-- **`fraud.scored`**: the fraud-engine can be triggered via its Kafka
+- **`fraud.scored`**: the engine-fraud can be triggered via its Kafka
   consumer (payment events) or directly via its scoring endpoint. The
   fraud Kafka producer wiring needs verification — the StubModel may
   not publish to Kafka.
@@ -103,13 +103,13 @@ service's GET endpoint:
 
 | Topic | Trigger | Verify via |
 |---|---|---|
-| `ledger.events.v1` | `POST /v1/postings` on accounting-ledger | `GET /v1/recon-runs/{id}` on reconciliation (run after posting) |
-| `fraud.scored` | `POST /v1/fraud/score` on fraud-engine (if endpoint exists) or send a payment event via Kafka | `GET /v1/policy/review` on policy-risk-engine (score feeds into review) |
-| `payment.events.v1` | `POST /v1/payments/intents` + `POST /v1/payments/{id}/capture` on payment-orchestrator | `GET /v1/payments/{id}` (status = captured) |
-| `rail.events.v1` | `POST /v1/payments/{id}/capture` triggers rail settlement | `GET /v1/recon-runs/{id}` on reconciliation |
-| `blockchain.events.v1` | Configure a stub chain adapter that emits on broadcast | `GET /v1/recon-runs/{id}` on reconciliation |
-| `custody.events.v1` | Direct gRPC `SignTx` call to mpc-signer (requires a key + policy token) | `GET /v1/recon-runs/{id}` on reconciliation |
-| `liquidity.fills` | `POST /v1/parent-orders` on liquidity-router (slicing produces fills) | `GET /v1/parent-orders/{id}/fills` on liquidity-router |
+| `ledger.events.v1` | `POST /v1/postings` on accounting-ledger | `GET /v1/recon-runs/{id}` on engine-recon (run after posting) |
+| `fraud.scored` | `POST /v1/fraud/score` on engine-fraud (if endpoint exists) or send a payment event via Kafka | `GET /v1/policy/review` on engine-policy-risk (score feeds into review) |
+| `payment.events.v1` | `POST /v1/payments/intents` + `POST /v1/payments/{id}/capture` on orchestrator-fiat | `GET /v1/payments/{id}` (status = captured) |
+| `rail.events.v1` | `POST /v1/payments/{id}/capture` triggers rail settlement | `GET /v1/recon-runs/{id}` on engine-recon |
+| `blockchain.events.v1` | Configure a stub chain adapter that emits on broadcast | `GET /v1/recon-runs/{id}` on engine-recon |
+| `custody.events.v1` | Direct gRPC `SignTx` call to mpc-signer (requires a key + policy token) | `GET /v1/recon-runs/{id}` on engine-recon |
+| `liquidity.fills` | `POST /v1/parent-orders` on engine-liquidity (slicing produces fills) | `GET /v1/parent-orders/{id}/fills` on engine-liquidity |
 | `notification.v1` | `POST /v1/notifications/send` on notifier | `GET /v1/notifications/{id}` on notifier (status = delivered/pending) |
 
 ### Option 2: Dev-mode saga auto-advance (higher effort, higher payoff)

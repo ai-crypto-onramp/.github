@@ -7,8 +7,8 @@
 - [Coverage by service](#coverage-by-service)
   - [accounting-ledger (10 HTTP + 5 gRPC)](#accounting-ledger-10-http--5-grpc)
   - [audit-logger (8 HTTP)](#audit-logger-8-http)
-  - [auth-identity (23 HTTP)](#auth-identity-23-http)
-  - [fraud-engine (3 HTTP)](#fraud-engine-3-http)
+  - [gateway-auth (23 HTTP)](#gateway-auth-23-http)
+  - [engine-fraud (3 HTTP)](#engine-fraud-3-http)
   - [fx-hedger (9 HTTP + 4 gRPC)](#fx-hedger-9-http--4-grpc)
   - [gateway-api (9 HTTP)](#gateway-api-9-http)
   - [gateway-blockchain (7 HTTP + 1 WS)](#gateway-blockchain-7-http--1-ws)
@@ -16,15 +16,15 @@
   - [gateway-fiat (5 HTTP)](#gateway-fiat-5-http)
   - [kyc-onboarding (11 HTTP)](#kyc-onboarding-11-http)
   - [kyt-aml-screening (6 HTTP + 2 gRPC)](#kyt-aml-screening-6-http--2-grpc)
-  - [liquidity-router (6 HTTP)](#liquidity-router-6-http)
+  - [engine-liquidity (6 HTTP)](#engine-liquidity-6-http)
   - [mpc-signer (1 HTTP + 5 gRPC)](#mpc-signer-1-http--5-grpc)
   - [notifier (14 HTTP)](#notifier-14-http)
-  - [payment-orchestrator (8 HTTP)](#payment-orchestrator-8-http)
-  - [policy-risk-engine (9 HTTP + 1 gRPC)](#policy-risk-engine-9-http--1-grpc)
-  - [pricing-quote (10 HTTP + 1 WS)](#pricing-quote-10-http--1-ws)
-  - [reconciliation (12 HTTP)](#reconciliation-12-http)
-  - [treasury-orchestrator (11 HTTP)](#treasury-orchestrator-11-http)
-  - [tx-orchestrator (5 HTTP)](#tx-orchestrator-5-http)
+  - [orchestrator-fiat (8 HTTP)](#orchestrator-fiat-8-http)
+  - [engine-policy-risk (9 HTTP + 1 gRPC)](#engine-policy-risk-9-http--1-grpc)
+  - [engine-pricing (10 HTTP + 1 WS)](#engine-pricing-10-http--1-ws)
+  - [engine-recon (12 HTTP)](#engine-recon-12-http)
+  - [orchestrator-treasury (11 HTTP)](#orchestrator-treasury-11-http)
+  - [orchestrator-tx (5 HTTP)](#orchestrator-tx-5-http)
   - [wallet-manager (12 HTTP + 3 gRPC)](#wallet-manager-12-http--3-grpc)
 - [Summary table](#summary-table)
 - [gRPC endpoints (not testable via Hurl)](#grpc-endpoints-not-testable-via-hurl)
@@ -93,7 +93,7 @@ GetBalance, VerifyChain.
 
 ---
 
-### auth-identity (23 HTTP)
+### gateway-auth (23 HTTP)
 
 | # | Method | Path | Covered? |
 |---|---|---|---|
@@ -129,7 +129,7 @@ GetBalance, VerifyChain.
 
 ---
 
-### fraud-engine (3 HTTP)
+### engine-fraud (3 HTTP)
 
 | # | Method | Path | Covered? |
 |---|---|---|---|
@@ -265,7 +265,7 @@ gRPC (not testable via Hurl): Screen, GetAlert.
 
 ---
 
-### liquidity-router (6 HTTP)
+### engine-liquidity (6 HTTP)
 
 | # | Method | Path | Covered? |
 |---|---|---|---|
@@ -316,7 +316,7 @@ RestoreShare.
 
 ---
 
-### payment-orchestrator (8 HTTP)
+### orchestrator-fiat (8 HTTP)
 
 | # | Method | Path | Covered? |
 |---|---|---|---|
@@ -333,7 +333,7 @@ RestoreShare.
 
 ---
 
-### policy-risk-engine (9 HTTP + 1 gRPC)
+### engine-policy-risk (9 HTTP + 1 gRPC)
 
 | # | Method | Path | Covered? |
 |---|---|---|---|
@@ -353,7 +353,7 @@ gRPC (not testable via Hurl): Evaluate.
 
 ---
 
-### pricing-quote (10 HTTP + 1 WS)
+### engine-pricing (10 HTTP + 1 WS)
 
 | # | Method | Path | Covered? |
 |---|---|---|---|
@@ -372,7 +372,7 @@ gRPC (not testable via Hurl): Evaluate.
 
 ---
 
-### reconciliation (12 HTTP)
+### engine-recon (12 HTTP)
 
 | # | Method | Path | Covered? |
 |---|---|---|---|
@@ -393,7 +393,7 @@ gRPC (not testable via Hurl): Evaluate.
 
 ---
 
-### treasury-orchestrator (11 HTTP)
+### orchestrator-treasury (11 HTTP)
 
 | # | Method | Path | Covered? |
 |---|---|---|---|
@@ -413,7 +413,7 @@ gRPC (not testable via Hurl): Evaluate.
 
 ---
 
-### tx-orchestrator (5 HTTP)
+### orchestrator-tx (5 HTTP)
 
 | # | Method | Path | Covered? |
 |---|---|---|---|
@@ -456,8 +456,8 @@ gRPC (not testable via Hurl): ResolveKeyID, OnConfirmation, OnReorg.
 |---|---|---|---|
 | accounting-ledger | 10 | 8 | 80% |
 | audit-logger | 8 | 7 | 88% |
-| auth-identity | 27 | 8 | 30% |
-| fraud-engine | 3 | 0 | 0% |
+| gateway-auth | 27 | 8 | 30% |
+| engine-fraud | 3 | 0 | 0% |
 | fx-hedger | 9 | 7 | 78% |
 | gateway-api | 9 | 0 | 0% |
 | gateway-blockchain | 7 | 0 | 0% |
@@ -465,15 +465,15 @@ gRPC (not testable via Hurl): ResolveKeyID, OnConfirmation, OnReorg.
 | gateway-fiat | 5 | 5 | 100% |
 | kyc-onboarding | 12 | 9 | 75% |
 | kyt-aml-screening | 6 | 6 | 100% |
-| liquidity-router | 6 | 4 | 67% |
+| engine-liquidity | 6 | 4 | 67% |
 | mpc-signer | 1 | 1 | 100% |
 | notifier | 14 | 11 | 79% |
-| payment-orchestrator | 8 | 7 | 88% |
-| policy-risk-engine | 9 | 9 | 100% |
-| pricing-quote | 10 | 6 | 60% |
-| reconciliation | 12 | 8 | 67% |
-| treasury-orchestrator | 11 | 7 | 64% |
-| tx-orchestrator | 5 | 5 | 100% |
+| orchestrator-fiat | 8 | 7 | 88% |
+| engine-policy-risk | 9 | 9 | 100% |
+| engine-pricing | 10 | 6 | 60% |
+| engine-recon | 12 | 8 | 67% |
+| orchestrator-treasury | 11 | 7 | 64% |
+| orchestrator-tx | 5 | 5 | 100% |
 | wallet-manager | 12 | 5 | 42% |
 | **Total** | **167** | **111** | **66%** |
 
@@ -485,7 +485,7 @@ gRPC (not testable via Hurl): ResolveKeyID, OnConfirmation, OnReorg.
 | fx-hedger | GetLiveRate, GetNetExposure, StreamExposure, SubmitHedgePlan |
 | kyt-aml-screening | Screen, GetAlert |
 | mpc-signer | SignTx, Dkg, RotateKey, GetKeyMetadata, RestoreShare |
-| policy-risk-engine | Evaluate |
+| engine-policy-risk | Evaluate |
 | wallet-manager | ResolveKeyID, OnConfirmation, OnReorg |
 
 **22 gRPC methods total — 0% covered by Hurl (HTTP-only tool).**
@@ -494,7 +494,7 @@ gRPC (not testable via Hurl): ResolveKeyID, OnConfirmation, OnReorg.
 
 Three services have zero Hurl coverage beyond healthz:
 
-1. **fraud-engine** (3 endpoints) — `POST /v1/fraud/score`, `GET
+1. **engine-fraud** (3 endpoints) — `POST /v1/fraud/score`, `GET
    /v1/fraud/models`, `POST /v1/fraud/feedback`. The test file only hits
    healthz.
 2. **gateway-api** (9 endpoints) — the BFF layer; all routes require JWT
@@ -507,14 +507,14 @@ Three services have zero Hurl coverage beyond healthz:
 
 | Service | Uncovered | Key missing endpoints |
 |---|---|---|
-| auth-identity | 19 | MFA (4), API keys (4), RBAC (4), password reset (2), PATCH /me, DELETE session/:id, authz, audit-events, admin/unlock |
+| gateway-auth | 19 | MFA (4), API keys (4), RBAC (4), password reset (2), PATCH /me, DELETE session/:id, authz, audit-events, admin/unlock |
 | wallet-manager | 7 | withdrawals (3), funding-request (2), nonce/allocate, list wallets |
 | gateway-api | 9 | all (auth/session, me, quotes, transactions, KYC, webhooks) |
 | gateway-blockchain | 7 | all (broadcast, fee, height, balance, tx, status, WS heads) |
-| fraud-engine | 3 | all (score, models, feedback) |
-| pricing-quote | 4 | list quotes, fee-schedules, rate-sources, WS subscribe |
-| treasury-orchestrator | 4 | memberships, float list, aggregate-orders, events push |
-| reconciliation | 4 | list runs, report archive, rules (2) |
-| auth-identity | — | (see above) |
+| engine-fraud | 3 | all (score, models, feedback) |
+| engine-pricing | 4 | list quotes, fee-schedules, rate-sources, WS subscribe |
+| orchestrator-treasury | 4 | memberships, float list, aggregate-orders, events push |
+| engine-recon | 4 | list runs, report archive, rules (2) |
+| gateway-auth | — | (see above) |
 | accounting-ledger | 2 | list accounts, list postings |
 | notifier | 3 | list notifications, webhook deliver, webhook verify |

@@ -15,7 +15,7 @@ brew install hurl   # single binary, no runtime dependencies
 ```bash
 make up                  # start the stack (wait for healthchecks to go green)
 make test                # run all suites; writes an HTML report to reports/
-make test-auth-identity  # run one service's suite (test-<alias|service>)
+make test-gateway-auth  # run one service's suite (test-<alias|service>)
 make test-policy         # aliases work too (see Makefile)
 ```
 
@@ -23,7 +23,7 @@ Or directly, without make:
 
 ```bash
 hurl --test tests/*/*.hurl
-hurl --test tests/pricing-quote/*.hurl
+hurl --test tests/engine-pricing/*.hurl
 ```
 
 Useful flags: `--report-html <dir>` or `--report-junit <file>` for CI
@@ -38,7 +38,7 @@ reports, `--verbose` to see full requests/responses on failure.
   in order, and captures (`[Captures]`) carry values between steps.
 - Suites are written to be idempotent against accumulated state (Postgres
   and Redis persist across runs): flows create fresh identities per run via
-  the `{{newUuid}}` generator (auth-identity emails, KYC user ids, policy
+  the `{{newUuid}}` generator (gateway-auth emails, KYC user ids, policy
   whitelist users, notifier event ids), and asserts on shared state are
   tolerant (`count >= 1`, alerts are assigned but never closed).
 - The kyt-aml-screening TRM webhook signature is HMAC-SHA256 over the exact
@@ -50,10 +50,10 @@ reports, `--verbose` to see full requests/responses on failure.
 ## Coverage notes
 
 - **Full flows** — kyt-aml-screening (screen, cache hit, webhooks, alerts),
-  auth-identity (register → verify → login → refresh → logout → close),
+  gateway-auth (register → verify → login → refresh → logout → close),
   kyc-onboarding (application state machine, documents, liveness,
-  screening), policy-risk-engine (whitelist gating, OPA decisions, review
-  queue), pricing-quote (quote → claim → refresh, bulk, validation), and
+  screening), engine-policy-risk (whitelist gating, OPA decisions, review
+  queue), engine-pricing (quote → claim → refresh, bulk, validation), and
   notifier (preferences, events, dedupe, partner webhooks).
 - **Health only** — the remaining 15 services are scaffolds that expose
   just `GET /healthz`; their suites pin that contract until real endpoints

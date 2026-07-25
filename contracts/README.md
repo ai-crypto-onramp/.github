@@ -91,7 +91,7 @@ the owner service's team.
 
 | contract                         | owner (producer)          | consumer(s)                                  | transport |
 |---------------------------------|---------------------------|----------------------------------------------|-----------|
-| `policy/v1/policy.proto`        | policy-risk-engine        | transaction-orchestrator, api-gateway        | gRPC      |
+| `policy/v1/policy.proto`        | engine-policy-risk        | transaction-orchestrator, api-gateway        | gRPC      |
 | `kyt/v1/kyt.proto`              | aml-kyt-screening         | transaction-orchestrator                      | gRPC      |
 | `mpc/v1/mpc.proto`              | mpc-signing-service       | transaction-orchestrator, wallet-management   | gRPC      |
 | `payment/v1/payment.proto`      | payment-orchestration     | transaction-orchestrator                      | gRPC¹     |
@@ -99,9 +99,9 @@ the owner service's team.
 | `ledger/v1/ledger.proto`        | ledger-accounting        | transaction-orchestrator, treasury-orchestration | gRPC   |
 | `audit/v1/events.proto`         | every service (producer) | audit-event-log                               | Kafka     |
 | `notification/v1/events.proto`  | transaction-orchestrator, payment-orchestration, blockchain-gateway | notification | Kafka |
-| `ledger/v1/events.proto`        | ledger-accounting        | reconciliation                                | Kafka²    |
-| `blockchain/v1/events.proto`    | blockchain-gateway        | reconciliation, notification                  | Kafka     |
-| `liquidity/v1/events.proto`     | liquidity-routing        | reconciliation                                | Kafka     |
+| `ledger/v1/events.proto`        | ledger-accounting        | engine-recon                                | Kafka²    |
+| `blockchain/v1/events.proto`    | blockchain-gateway        | engine-recon, notification                  | Kafka     |
+| `liquidity/v1/events.proto`     | liquidity-routing        | engine-recon                                | Kafka     |
 
 ¹ The producer currently exposes REST only; the gRPC contract is canonical
   and the producer is expected to add a gRPC server. See the proto header.
@@ -145,9 +145,9 @@ All topics follow `<source>.<event>.v<n>`:
 
 - `audit.v1` — every service → audit-event-log
 - `notification.v1` — lifecycle producers → notification
-- `ledger.events.v1` — ledger-accounting → reconciliation
-- `blockchain.events.v1` — blockchain-gateway → reconciliation, notification
-- `liquidity.fills` — liquidity-routing → reconciliation (legacy name kept
+- `ledger.events.v1` — ledger-accounting → engine-recon
+- `blockchain.events.v1` — blockchain-gateway → engine-recon, notification
+- `liquidity.fills` — liquidity-routing → engine-recon (legacy name kept
   for continuity; a future v2 rename to `liquidity.fills.v1` is tracked
   separately)
 
