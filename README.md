@@ -87,8 +87,9 @@ Minimized language sprawl. Standardized on:
 ## Architecture
 
 End-to-end service topology, split into two diagrams for readability:
-**Transaction path** (synchronous request/response) and **Async layer**
-(events, webhooks, reconciliation).
+
+- **Transaction path** (synchronous request/response)
+- **Async layer** (events, webhooks, reconciliation).
 
 ### Transaction path
 
