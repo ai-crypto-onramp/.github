@@ -2,11 +2,10 @@
 """Mint an HS256 service-token JWT for the Hurl integration tests.
 
 Reads SERVICE_TOKEN_SECRET (default: the dev secret committed in
-docker-compose.yml) and prints a JWT with sub=hurl-test and a 24h exp,
-matching what transaction-orchestrator/internal/authtoken.Issue() produces.
-Invoked from the Makefile `test` and `test-%` targets via command substitution:
-
-    SERVICE_TOKEN=$$(python3 scripts/gen-token.py) hurl --test ...
+docker-compose.yml) and prints `service_token=<jwt>` with sub=hurl-test
+and a 24h exp, matching what transaction-orchestrator/internal/authtoken.Issue()
+produces. The Makefile prepends `--variable ` to each output line and
+inlines the result into the hurl invocation.
 
 DEV/STAGING ONLY — the dev secret is not a real secret; production issues
 short-lived tokens from a proper auth service.
@@ -43,7 +42,7 @@ def sign(secret: str, sub: str, ttl: int) -> str:
 
 def main() -> int:
     secret = os.environ.get("SERVICE_TOKEN_SECRET", DEFAULT_SECRET)
-    print(sign(secret, SUB, TTL_SECONDS))
+    print(f"service_token={sign(secret, SUB, TTL_SECONDS)}")
     return 0
 
 

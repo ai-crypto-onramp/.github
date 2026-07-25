@@ -27,7 +27,16 @@
 COMPOSE := docker compose
 REPORTS := reports
 
-.PHONY: all clean up down restart ps logs build build-go build-ts build-rs build-py pull test seed-db reset-db dashboard psql redis-cli up-% down-% build-% logs-% test-% test-kyt
+# Hurl test variables generated per run. gen-token.py mints the HS256
+# service-token JWT; gen-trm-sig.py mints a fresh TRM webhook event_id +
+# HMAC signature so the aml-kyt dedup table doesn't suppress alert creation
+# on re-runs. Each script prints `name=value` token lines; the sed here
+# prepends `--variable ` to each line and tr joins them into a single
+# space-separated string inlined into the hurl call.
+HURL_TOKEN_VARS := $(shell python3 scripts/gen-token.py | sed 's/^/--variable /' | tr '\n' ' ')
+HURL_TRM_VARS   := $(shell python3 scripts/gen-trm-sig.py | sed 's/^/--variable /' | tr '\n' ' ')
+
+.PHONY: all clean up down restart ps logs build build-go build-ts build-rs build-py pull test seed-db reset-db dashboard psql redis-cli up-% down-% build-% logs-% test-%
 
 # Default target: start the whole stack.
 # DB reset ordering is handled in docker-compose.yml via the db-reset
@@ -95,7 +104,7 @@ clean:
 	rm -rf $(REPORTS)
 
 test: clean
-	hurl --test --variable service_token=$$(python3 scripts/gen-token.py) --report-html $(REPORTS) tests/*/*.hurl
+	hurl --test $(HURL_TOKEN_VARS) $(HURL_TRM_VARS) --report-html $(REPORTS) tests/*/*.hurl
 
 # Short aliases for service names, used by the up-%, logs-% and test-%
 # patterns. Services without an alias (postgres, redis, gatus) are addressed
@@ -145,18 +154,7 @@ logs-%:
 # Run one service's integration test suite: make test-<alias|service>,
 # e.g. make test-policy or make test-policy-risk-engine
 test-%:
-	hurl --test --variable service_token=$$(python3 scripts/gen-token.py) tests/$(or $($*),$*)/*.hurl
-
-# aml-kyt-screening webhooks require an HMAC-SHA256 signature over the exact
-# body, and the body embeds an event_id used for dedup. A fixed event_id would
-# be deduped across runs (no alert created after the first run), so generate a
-# fresh event_id + signature pair per run and pass both as hurl variables.
-# The explicit target shadows the test-% pattern.
-test-kyt: kyt := aml-kyt-screening
-test-kyt:
-	hurl --test --variable service_token=$$(python3 scripts/gen-token.py) \
-		$$(python3 scripts/gen-trm-sig.py | sed 's/^/--variable /') \
-		tests/$(kyt)/*.hurl
+	hurl --test $(HURL_TOKEN_VARS) $(HURL_TRM_VARS) tests/$(or $($*),$*)/*.hurl
 
 # One-shot / interactive tools
 psql:

@@ -9,12 +9,13 @@ across test runs and no alert would be created after the first run. This
 script generates a fresh event_id and computes the matching signature so
 each run gets a fresh alert.
 
-Outputs two lines on stdout:
+Outputs `name=value` token lines on stdout:
     trm_evt_1=<uuid>
     trm_sig_1=<hexsig>
 
-The Makefile passes these to hurl via --variable. The .hurl file references
-them as {{trm_evt_1}} and {{trm_sig_1}}.
+The Makefile prepends `--variable ` to each line and inlines the result
+into the hurl invocation. The .hurl file references them as
+{{trm_evt_1}} and {{trm_sig_1}}.
 
 DEV/STAGING ONLY — the dev secret is not a real secret.
 """
