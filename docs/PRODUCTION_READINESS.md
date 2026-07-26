@@ -162,11 +162,11 @@
 15. ~~**Fix dockerfiles running as root.** gateway-fiat, gateway-exchange, fx-hedger, engine-recon, audit-logger → distroless nonroot or add `USER`.~~ ✅ Done 2026-07-26 (4 Go services: alpine + `adduser -D -u 10001 app` + `USER 10001:10001`; engine-recon: python:3.11-slim + `useradd --uid 10001 --no-create-home app` + `USER app`; runtime verified `uid=10001(app)`; `docker build` green for all 5).
 
 ### Phase 3 — Hardening (residuals)
-17. **Regenerate all consumers from `.github/contracts/`** so runtime gRPC dials succeed field-by-field.
-18. **Fix treasury→liquidity path mismatch** (`/v1/aggregate-orders` vs `/v1/parent-orders`).
-19. **Wire Redis velocity counter** in engine-policy-risk; add KYC/fraud/KYT ingest endpoints once contracts regenerated.
-20. **Wire gateway-blockchain mempool + real chain adapters** (not poll-based scaffolds).
-21. **Wallet-manager balance int64 → decimal** migration.
+17. ~~**Regenerate all consumers from `.github/contracts/`** so runtime gRPC dials succeed field-by-field.~~ ✅ Done 2026-07-26 (buf generate on 5 services: orchestrator-tx — massive divergence fixed, all 6 edges now use canonical versioned protos with `common.v1.Money`; engine-policy-risk — `amount` string→`Money`, added `tx_id`/`quote_id`; kyt-aml-screening — package `kyt`→`kyt.v1`, `Money`; accounting-ledger — added `PostDoubleEntry` RPC, removed `optional`; mpc-signer — comments-only alignment). All build/test green.
+18. ~~**Fix treasury→liquidity path mismatch** (`/v1/aggregate-orders` vs `/v1/parent-orders`).~~ ✅ Done 2026-07-26 (treasury outbound client `/v1/aggregate-orders`→`/v1/parent-orders`, matching engine-liquidity server route + AsyncAPI/contracts).
+19. ~~**Wire Redis velocity counter** in engine-policy-risk; add KYC/fraud/KYT ingest endpoints once contracts regenerated.~~ ✅ Done 2026-07-26 (Redis counter with count+sum sliding windows 1m/1h/24h integrated into Evaluate with deny/review thresholds + OPA input; REST ingest endpoints `/v1/policy/ingest/{kyc,fraud,kyt}` with signal store overriding request values; DEV_MODE in-memory, prod-fatal on missing REDIS_URL).
+20. ~~**Wire gateway-blockchain mempool + real chain adapters** (not poll-based scaffolds).~~ ✅ Done 2026-07-26 (EVM: `eth_subscribe newPendingTransactions`/`newHeads` WS + polling fallback; Bitcoin: `getrawmempool` verbose polling with enter/exit events; real `GetTx`/`GetTxStatus` via `getrawtransaction`; `mempool.Watcher` wired into `startFollowers`; prod-fatal on missing `RPC_URLS_<CHAIN>`).
+21. ~~**Wallet-manager balance int64 → decimal** migration.~~ ✅ Done 2026-07-26 (UTXO selection + withdrawal amount parsing migrated to `shopspring/decimal`; satoshis via `.IntPart()` for btcd wire; DB schema already `NUMERIC(38,18)` — no migration needed).
 22. **Ledger notary posting + SIEM sink** in audit-logger; real S3/KMS creds in prod.
 23. **W3C `traceparent` propagation** as shared interceptor.
 24. **Standardize migrations tooling** (`golang-migrate` for Go, Alembic for Python, `refinery`/`sqlx` for Rust); run as separate `migrate up` step.
