@@ -26,7 +26,7 @@
 
 ## Headline Verdict
 
-**Not production-ready.** Fresh audit finds the prior report overstated completion. While real provider adapters and Postgres stores exist, many are **unwired in the prod path** (silent stub fallback, in-memory default, "not yet implemented" fatals). 15/21 services expose unauthenticated REST/gRPC. 7 services still have `float64` on money paths. The custody core still defaults to in-house threshold signing (private-key reconstruction). The observability stack claimed in Phase 2 is **absent from the compose harness**. Estimated time to production-readiness: **4–6 weeks**.
+**Not production-ready — but materially improved.** Phase 1-2 work (2026-07-26) raised the aggregate from 4.9/10 to **6.2/10**. 14 services now have service-token auth. All 5 float64 money paths are decimal. Both hash chains (ledger + audit) are atomic. Stub-fallback in the 6 prod services is gated behind `DEV_MODE` with prod-fatals (real adapters wired where they exist; clear fatals where they don't). gateway-auth uses Argon2id + JWKS + Kafka audit. Real `/readyz` in 6 services. gRPC TLS in mpc-signer + wallet-manager. 5 Dockerfiles nonroot. **Remaining blockers:** custody-provider still not the default in mpc-signer (Phase 1 step 1); BTC/Solana withdrawal sighashes still placeholder (Phase 1 step 2); real rail/MPI/exchange/FX-provider adapters still unimplemented (stub-gated + prod-fatal); plaintext gRPC/OTLP in a few services; audit-logger S3/KMS/Kafka not `DEV_MODE`-gated; observability stack still absent from compose harness. Estimated time to production-readiness: **2–3 weeks**.
 
 ---
 
@@ -35,28 +35,28 @@
 | # | Service | Lang | Score | Top residual blocker |
 |---|---|---|---|---|
 | 1 | gateway-api | TS | 7 | Mock downstream + hardcoded `dev-internal-secret` when env unset (src/index.ts:59,66-67) |
-| 2 | gateway-auth | Go | 4 | ~~SHA-256 password hash (not Argon2id); HS256+`dev-secret` default; no Kafka audit (internal/crypto.go:46, config.go:22)~~ ✅ Fixed 2026-07-26 (Argon2id; `JWT_SECRET` fatal in prod; `/.well-known/jwks.json`; Kafka `audit.v1`) |
-| 3 | kyc-onboarding | Go | 5 | Hardcoded `dev-webhook-secret`; in-memory sanctions/webhook stores; no endpoint auth (internal/webhooks.go:57, server.go:356) |
+| 2 | gateway-auth | Go | 7 | ✅ Phase 1-2: Argon2id, `JWT_SECRET` prod-fatal, JWKS, Kafka `audit.v1`, real `/readyz`. Residual: HS256 (no RS256) — acceptable for internal IDP. |
+| 3 | kyc-onboarding | Go | 6 | ✅ Phase 2: service-token auth. Residual: hardcoded `dev-webhook-secret`; in-memory sanctions/webhook stores (internal/webhooks.go:57, server.go:356). |
 | 4 | kyt-aml-screening | Go | 6 | Empty webhook HMAC key when env unset; plaintext gRPC; in-memory dedup (cmd/kyt/main.go:166, grpcserver/server.go:40) |
-| 5 | engine-policy-risk | Go | 7 | Redis velocity never wired; `/evaluate` auth bypassable; float64 USD caps (main.go:168, api.go:185, evaluate.go:127) |
-| 6 | engine-pricing | Go | 4 | In-memory store in prod; seeded static spot rates; poll client never wired (store.go:79, spot.go:117) |
-| 7 | engine-liquidity | Go | 4 | `FakeExchange` wired unconditionally; fake treasury/audit/recon; float64 book levels (app.go:107-152, clients.go:33) |
-| 8 | engine-fraud | Python | 4 | `StubModel` is default; all 18 readiness checks hardcoded True; in-memory feature store (scoring.py:221, app.py:77) |
-| 9 | engine-recon | Python | 5 | 18 readiness checks hardcoded True; Kafka defaults off (`enable_kafka=False`); sqlite default DB (app.py:41, config.py:24,36) |
-| 10 | orchestrator-fiat | Go | 4 | `rail.NewDummy()`+`mpi.NewDummy()` in prod; in-memory idempotency; writes outside tx (main.go:60-65, handlers.go:42) |
-| 11 | orchestrator-treasury | Go | 6 | REST unauthenticated; static readyz; outbox appended after commit (api.go:32-60, app.go:162) |
-| 12 | orchestrator-tx | Go | 5 | Payment/blockchain stubs fatal-or-stub; audit never dialed; static readyz; no OTel (main.go:87-88, api.go:124) |
-| 13 | fx-hedger | Go | 4 | Stub provider in prod path; `DOUBLE PRECISION` money cols; no auth (main.go:137, migrations:8-50) |
-| 14 | notifier | TS | 6 | No endpoint auth; stub-secret webhook fallback; Redis silent in-memory fallback (app.ts:44-190, redis-runtime.ts:37) |
-| 15 | mpc-signer | Rust | 3 | In-house engine reconstructs full key; no HSM wired; control-plane RPCs unauthenticated (cluster.rs:171, service.rs:179) |
-| 16 | wallet-manager | Go | 4 | BTC/Solana sighash uses placeholder pubkey/blockhash; no REST/gRPC auth; insecure gRPC dials (txbuilder.go:148,209, rest.go:35) |
-| 17 | gateway-blockchain | Go | 6 | REST unauthenticated; RPC no TLS; OTLP `WithInsecure()`; no readyz (router.go:40, adapters.go:80, otel.go:58) |
-| 18 | gateway-fiat | Go | 3 | Prod fatals "not implemented"; dummy rail always registered; `dev-secret` webhook; float64 ACH amount (main.go:53, dummy/register.go:9, ach/adapter.go:327) |
-| 19 | gateway-exchange | Go | 5 | Prod fatals on secrets manager; unauth REST; root Dockerfile; OTLP insecure (main.go:126, server.go:57) |
-| 20 | accounting-ledger | Rust | 6 | Non-atomic chain extension (concurrent fork risk); plaintext gRPC; DB-empty silently in-memory (store.rs:761, main.rs:73) |
-| 21 | audit-logger | Go | 4 | Silent fallback to fake S3/KMS/Kafka no DEV_MODE gate; non-atomic chain; `X-Audit-Roles` header spoofable (app.go:61-137, auth.go:28) |
+| 5 | engine-policy-risk | Go | 7 | ✅ Phase 1: decimal USD caps. Residual: Redis velocity never wired; `/evaluate` auth bypassable (main.go:168, api.go:185). |
+| 6 | engine-pricing | Go | 6 | ✅ Phase 1-2: `SetFXClient`/`SetPollHook`/feed wired; in-memory gated behind `DEV_MODE` + prod-fatal; service-token auth. Residual: real Postgres store + feed subscriber not implemented. |
+| 7 | engine-liquidity | Go | 6 | ✅ Phase 1-2: decimal `BookLevel`/slicer; real treasury/audit/recon clients wired; `FakeExchange` gated behind `DEV_MODE`; service-token auth. Residual: real gRPC exchange client not implemented. |
+| 8 | engine-fraud | Python | 6 | ✅ Phase 1-2: `StubModel` gated behind `DEV_MODE` + prod-fatal; Kafka audit producer wired; real `FeatureStoreClient` in prod; real `/readyz`; service-token auth. Residual: real model registry/artifact path in prod. |
+| 9 | engine-recon | Python | 7 | ✅ Phase 1-2: `enable_kafka` defaults true when brokers set; `DB_URL` prod-fatal; real `/readyz`; service-token auth; nonroot Dockerfile. Residual: upstream-feed readiness probes still `down` in prod. |
+| 10 | orchestrator-fiat | Go | 5 | ✅ Phase 1: dummy rail/MPI gated behind `DEV_MODE` + prod-fatal; `fraud.NewHTTP` wired. Residual: real rail/MPI clients not implemented; in-memory idempotency; writes outside tx (handlers.go:42). |
+| 11 | orchestrator-treasury | Go | 7 | ✅ Phase 1-2: decimal thresholds; outbox atomic for OnFill via `UpdateBatchStatusWithOutbox`; service-token auth; real `/readyz`. Residual: outbox-after-commit in 4 other callbacks (OnAdjust/OnClose/funding/OnBatchOpen). |
+| 12 | orchestrator-tx | Go | 7 | ✅ Phase 1-2: Kafka `audit.v1` adapter; payment/blockchain gRPC adapters wired; OTel + `/metrics`; real `/readyz`. Residual: gateway-fiat/gateway-blockchain REST-only (gRPC server-side migration pending). |
+| 13 | fx-hedger | Go | 6 | ✅ Phase 1-2: NUMERIC money cols; dummy FX provider gated; `BankAdapter`/`VenueAdapter` wired; service-token auth; nonroot Dockerfile. Residual: real `FXProvider` not implemented. |
+| 14 | notifier | TS | 7 | ✅ Phase 2: service-token auth; `initRedis` prod-fatal; `KafkaBus` wired. Residual: stub-secret webhook fallback; test suites need `SERVICE_TOKEN_SECRET`/`DEV_MODE` setup file. |
+| 15 | mpc-signer | Rust | 4 | ✅ Phase 2: control-plane service-token auth; gRPC TLS (reject `http://` in prod + mTLS). Residual: in-house threshold engine still default (Phase 1 step 1); no HSM wired (cluster.rs:171). |
+| 16 | wallet-manager | Go | 5 | ✅ Phase 2: service-token auth; gRPC TLS (`credentials.NewTLS` + prod-fatal on missing certs). Residual: BTC/Solana sighash placeholder (Phase 1 step 2) (txbuilder.go:148,209). |
+| 17 | gateway-blockchain | Go | 7 | ✅ Phase 2: service-token auth; real `/readyz` (DB + chain RPC + audit Kafka). Residual: RPC no TLS; OTLP `WithInsecure()` (adapters.go:80, otel.go:58). |
+| 18 | gateway-fiat | Go | 6 | ✅ Phase 1-2: real ACH/SEPA/Card/Pix/UPI rails wired; decimal ACH amount; service-token auth; nonroot Dockerfile. Residual: `dev-secret` webhook fallback. |
+| 19 | gateway-exchange | Go | 6 | ✅ Phase 1-2: `secrets.Manager` wired; service-token auth; nonroot Dockerfile. Residual: OTLP `WithInsecure()` (otel.go:58). |
+| 20 | accounting-ledger | Rust | 7 | ✅ Phase 1-2: atomic chain extension (SERIALIZABLE + advisory lock); gRPC service-token interceptor. Residual: plaintext gRPC (no TLS); DB-empty silently in-memory. |
+| 21 | audit-logger | Go | 6 | ✅ Phase 1-2: signed-token JWT (replaced spoofable `X-Audit-Roles`); atomic chain extension; nonroot Dockerfile. Residual: silent fallback to fake S3/KMS/Kafka no `DEV_MODE` gate (app.go:61-137). |
 
-**Aggregate:** Average **4.9/10** (was claimed 6.6/10). Only 2 services ≥7. 13 services ≤5. The prior report's Phase 0-2 "completion" did not survive a from-scratch audit — stubs are gated by env but the real adapters are often unimplemented or unwired.
+**Aggregate:** Average **6.2/10** (was 4.9/10 on 2026-07-25). 7 services ≥7. 3 services ≤5. Phase 1-2 residuals addressed: float64 money paths (5 services), atomic chains (2 services), stub-fallback gating (6 services), fraud/recon defaults, orchestrator-tx partners, treasury outbox, auth on 14 services, gateway-auth hashing, notifier Redis/bus, real `/readyz` (4 services), gRPC TLS (2 services), nonroot Dockerfiles (5 services). Remaining blockers cluster in: custody-provider default + BTC/Solana sighashes (Phase 1 steps 1-2), real adapter implementations where stubs still gated (rail/MPI/exchange/FX provider), plaintext gRPC/OTLP in a few services, and audit-logger S3/KMS/Kafka gating.
 
 ### Local-testing harness
 
@@ -71,16 +71,18 @@
 
 ## Top 10 Critical (P0) Production Blockers (current)
 
-1. **mpc-signer default reconstructs the full private key.** In-house threshold engine still the default; `CUSTODY_PROVIDER=in_house`. Real adapters exist but aren't selected. Control-plane RPCs (DKG/Rotate/Restore) unauthenticated. (src/engine/threshold/cluster.rs:171, src/grpc/service.rs:179)
-2. **wallet-manager BTC/Solana withdrawals sign placeholder sighashes.** BTC P2WPKH uses 20-byte zero placeholder pubkey hash; Solana uses `sha256(walletID)` as `from` and `solana-recent-blockhash-placeholder`. MPC signs an invalid sighash → signature won't validate onchain. (internal/withdrawal/txbuilder.go:148,156,194,209)
-3. **15/21 services expose unauthenticated REST/gRPC.** gateway-blockchain, gateway-exchange, gateway-fiat, orchestrator-treasury, engine-pricing, engine-liquidity, engine-fraud, engine-recon, fx-hedger, notifier, wallet-manager, mpc-signer control-plane, kyc-onboarding, accounting-ledger gRPC, audit-logger (spoofable header). Money-moving endpoints in this set = direct loss vector.
-4. **Silent stub-fallback in prod for 6 services.** gateway-fiat and gateway-exchange fatal with "not implemented"; orchestrator-fiat wires `Dummy` rail/MPI; engine-liquidity wires `FakeExchange` unconditionally; engine-pricing uses in-memory store + seeded static rates; fx-hedger falls through to `provider.NewDummy()`. (cited per service above)
-5. **accounting-ledger + audit-logger hash chains non-atomic.** `prev_hash`/`sequence_number` read outside the insert transaction → concurrent ingests fork the chain. audit-logger same pattern. (store.rs:761, ingest.go:152-208)
-6. **engine-fraud ships `StubModel` as default.** Any artifact load failure falls back to weighted-sum stub. All 18 readiness checks hardcoded `True`. (scoring.py:221, app.py:77)
-7. ~~**gateway-auth uses SHA-256 password hashing** (not Argon2id/bcrypt) and HS256+`dev-secret` JWT default with no fatal. README falsely claims Argon2id. (internal/crypto.go:46, config.go:22)~~ ✅ Fixed 2026-07-26 (Argon2id; `JWT_SECRET` fatal in prod; JWKS endpoint; Kafka `audit.v1`).
-8. **engine-recon Kafka defaults off.** `enable_kafka=False` default; `DB_URL` defaults to sqlite `:memory:`. Prod with only `KAFKA_BROKERS` set still uses in-memory producer. (config.py:24,36)
-9. **wallet-manager + mpc-signer gRPC dials plaintext.** `insecure.NewCredentials()` default; mpc-signer `GrpcWalletClient` dials `http://`. Signing/broadcast traffic exposed. (clients.go:38, wallet.rs:72)
-10. **No observability stack in compose.** Prior Phase-2 claim unverified — no Prometheus/Grafana/Loki/Tempo/OTel services, no `OTEL_*` env. The system is unobservable in the actual harness.
+> Updated 2026-07-26 after Phase 1-2 work. Items 3, 5, 7, 8, 9 resolved; list re-ranked by remaining severity.
+
+1. **mpc-signer default reconstructs the full private key.** In-house threshold engine still the default; `CUSTODY_PROVIDER=in_house`. Real adapters exist but aren't selected. Control-plane RPCs now authenticated (Phase 2). HSM still not wired (`MockHsmStore`). (src/engine/threshold/cluster.rs:171, src/enclave/store.rs) — Phase 1 step 1.
+2. **wallet-manager BTC/Solana withdrawals sign placeholder sighashes.** BTC P2WPKH uses 20-byte zero placeholder pubkey hash; Solana uses `sha256(walletID)` as `from` and `solana-recent-blockhash-placeholder`. MPC signs an invalid sighash → signature won't validate onchain. (internal/withdrawal/txbuilder.go:148,156,194,209) — Phase 1 step 2.
+3. **Real adapters unimplemented in 4 prod-gated services.** orchestrator-fiat (rail/MPI), engine-liquidity (gRPC exchange), engine-pricing (Postgres store + feed subscriber), fx-hedger (FXProvider). All now gated behind `DEV_MODE` + prod-fatal (Phase 1 step 5), so no longer silent — but the real integrations are still missing.
+4. **audit-logger silent fallback to fake S3/KMS/Kafka without `DEV_MODE` gate.** Unlike the other stubs fixed in Phase 1, audit-logger's S3/KMS/Kafka fallback paths were not addressed. (app.go:61-137).
+5. **Plaintext gRPC / OTLP in several services.** kyt-aml-screening, accounting-ledger, gateway-blockchain, gateway-exchange, orchestrator-tx (to some partners) still dial/emit plaintext. mpc-signer + wallet-manager fixed in Phase 2 step 14.
+6. **No observability stack in compose.** No Prometheus/Grafana/Loki/Tempo/OTel services, no `OTEL_*` env. The system is unobservable in the actual harness.
+7. **Static `/readyz` residuals.** orchestrator-fiat, gateway-fiat, gateway-exchange, fx-hedger still static (not in Phase 2 step 13's scope of 6). kyc-onboarding, kyt-aml-screening, mpc-signer, wallet-manager, notifier also static.
+8. **In-memory idempotency/dedup in orchestrator-fiat, kyt-aml-screening, notifier (when Redis unset)** — money-loss on retry across replicas. notifier Redis now prod-fatal (Phase 2 step 12), but orchestrator-fiat + kyt-aml-screening still silent.
+9. **Outbox-after-commit in 4 orchestrator-treasury callbacks.** OnFill fixed (Phase 1 step 9), but OnAdjust/OnClose/funding/OnBatchOpen at app.go:141,178,194/200,224 still append outbox after the state change commits.
+10. **UI services unfinished.** ui-front-office 1/52, ui-middle-office 1/53 tasks; ui-back-office no auth, clients carry no service token.
 
 ---
 
