@@ -139,6 +139,8 @@ services:
       - KAFKA_BROKERS=kafka:9092
       - KAFKA_TOPIC=audit.v1
       - PAYLOAD_BUCKET=
+      - DEV_MODE=1
+      - SERVICE_TOKEN_SECRET=dev-internal-shared-secret
     depends_on:
       postgres:
         condition: service_healthy
@@ -236,6 +238,7 @@ services:
     environment:
       - DB_URL=postgres://postgres:postgres@postgres:5432/identity_auth?sslmode=disable
       - DEV_MODE=1
+      - JWT_SECRET=dev-internal-shared-secret
     depends_on:
       postgres:
         condition: service_healthy
