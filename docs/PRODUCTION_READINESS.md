@@ -153,12 +153,11 @@
 
 ### Phase 2 — Reliability & security (re-opened Phase 1-2 residuals)
 10. **Add auth to 12+ unauthenticated services.** Service-token JWT middleware (reuse the orchestrator-tx pattern) on: gateway-blockchain, gateway-exchange, gateway-fiat, orchestrator-treasury, engine-pricing, engine-liquidity, engine-fraud, engine-recon, fx-hedger, notifier, wallet-manager, kyc-onboarding. mpc-signer control-plane RPCs. accounting-ledger gRPC. audit-logger: replace `X-Audit-Roles` header with signed token. (cited per service above)
-11. **Wire observability stack in compose.** Add Prometheus + Grafana + Loki + Tempo + OTel collector services; set `OTEL_EXPORTER_OTLP_ENDPOINT` + `OTEL_SERVICE_NAME` on every service. Prior report claimed this was done — it is not. (`.github/docker-compose.yml` — no such services present)
-12. **Fix gateway-auth password hashing.** Replace SHA-256 with Argon2id (or bcrypt). Make `JWT_SECRET` unset = fatal in prod. Add JWKS endpoint or migrate to RS256. Wire Kafka audit (currently in-memory only). (internal/crypto.go:46, config.go:22)
-13. **Fix notifier Redis fallback.** Fatal in prod when `REDIS_URL` unset (not silent in-memory). Wire `EVENT_BUS_URL`/Kafka bus when `KAFKA_BROKERS` set (currently logs "not yet wired" and continues). (src/redis-runtime.ts:37, src/index.ts:47)
-14. **Fix static `/readyz` in 6 services.** Add real dependency checks (DB/Redis/Kafka/vendor): orchestrator-treasury, orchestrator-tx, engine-fraud, engine-recon, gateway-auth, gateway-blockchain. (cited per service above)
-15. **Fix mpc-signer + wallet-manager gRPC TLS.** mpc `GrpcWalletClient` must use HTTPS + TLS (not `http://`); wallet-manager gRPC clients must use `credentials.NewTLS` (not `insecure.NewCredentials()` default). (src/wallet.rs:72, internal/clients/clients.go:38)
-16. **Fix dockerfiles running as root.** gateway-fiat, gateway-exchange, fx-hedger, engine-recon, audit-logger → distroless nonroot or add `USER`.
+11. **Fix gateway-auth password hashing.** Replace SHA-256 with Argon2id (or bcrypt). Make `JWT_SECRET` unset = fatal in prod. Add JWKS endpoint or migrate to RS256. Wire Kafka audit (currently in-memory only). (internal/crypto.go:46, config.go:22)
+12. **Fix notifier Redis fallback.** Fatal in prod when `REDIS_URL` unset (not silent in-memory). Wire `EVENT_BUS_URL`/Kafka bus when `KAFKA_BROKERS` set (currently logs "not yet wired" and continues). (src/redis-runtime.ts:37, src/index.ts:47)
+13. **Fix static `/readyz` in 6 services.** Add real dependency checks (DB/Redis/Kafka/vendor): orchestrator-treasury, orchestrator-tx, engine-fraud, engine-recon, gateway-auth, gateway-blockchain. (cited per service above)
+14. **Fix mpc-signer + wallet-manager gRPC TLS.** mpc `GrpcWalletClient` must use HTTPS + TLS (not `http://`); wallet-manager gRPC clients must use `credentials.NewTLS` (not `insecure.NewCredentials()` default). (src/wallet.rs:72, internal/clients/clients.go:38)
+15. **Fix dockerfiles running as root.** gateway-fiat, gateway-exchange, fx-hedger, engine-recon, audit-logger → distroless nonroot or add `USER`.
 
 ### Phase 3 — Hardening (residuals)
 17. **Regenerate all consumers from `.github/contracts/`** so runtime gRPC dials succeed field-by-field.
