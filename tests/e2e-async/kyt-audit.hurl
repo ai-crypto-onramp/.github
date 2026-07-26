@@ -35,7 +35,7 @@ jsonpath "$.exposure" == "CLEAN"
 # --- verify: audit-logger is running and has ingested events ---
 
 GET http://localhost:8082/v1/events?limit=5
-X-Audit-Roles: audit-reader
+Authorization: Bearer {{service_token}}
 HTTP 200
 [Asserts]
 jsonpath "$.events" exists

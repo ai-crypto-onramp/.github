@@ -21,6 +21,7 @@ import time
 
 DEFAULT_SECRET = "dev-internal-shared-secret"
 SUB = "hurl-test"
+ADMIN_SUB = "audit-admin"
 TTL_SECONDS = 24 * 60 * 60
 
 
@@ -43,6 +44,7 @@ def sign(secret: str, sub: str, ttl: int) -> str:
 def main() -> int:
     secret = os.environ.get("SERVICE_TOKEN_SECRET", DEFAULT_SECRET)
     print(f"service_token={sign(secret, SUB, TTL_SECONDS)}")
+    print(f"audit_admin_token={sign(secret, ADMIN_SUB, TTL_SECONDS)}")
     return 0
 
 

@@ -141,6 +141,7 @@ services:
       - PAYLOAD_BUCKET=
       - DEV_MODE=1
       - SERVICE_TOKEN_SECRET=dev-internal-shared-secret
+      - AUDIT_ADMIN_SERVICES=audit-admin
     depends_on:
       postgres:
         condition: service_healthy
