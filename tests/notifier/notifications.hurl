@@ -126,7 +126,8 @@ POST http://localhost:8092/v1/webhooks/partners
 Content-Type: application/json
 {
   "url": "https://partner.example.com/hooks/tx",
-  "secret": "hurl-partner-secret"
+  "secret": "hurl-partner-secret",
+  "retry_policy": {"max_attempts": 1, "backoff_ms": [0]}
 }
 HTTP 201
 [Captures]
@@ -163,3 +164,59 @@ GET http://localhost:8092/v1/audit-events
 HTTP 200
 [Asserts]
 jsonpath "$.events" count >= 1
+
+# --- list notifications ---
+
+GET http://localhost:8092/v1/notifications
+HTTP 200
+[Asserts]
+jsonpath "$.notifications" count >= 1
+jsonpath "$.notifications[?@.id=='{{notification_id}}'].id" exists
+
+# --- manual webhook delivery + signature verification ---
+
+# manual delivery against the registered partner webhook. Uses
+# simulate_failure to skip the real HTTP POST to the unreachable partner URL
+# (otherwise the 10s fetch timeout × retry backoff hangs the suite); the
+# endpoint still returns 200 with the backoff/delivery result, exercising the
+# handler + retry accounting path.
+POST http://localhost:8092/v1/webhooks/partners/{{webhook_id}}/deliver
+Content-Type: application/json
+{
+  "payload": {"event": "tx.created", "notification_id": "{{notification_id}}"},
+  "simulate_failure": true
+}
+HTTP 200
+[Asserts]
+jsonpath "$.delivered" == false
+jsonpath "$.attempts" exists
+
+# webhook signature verifier (HMAC-SHA256 over "<ts>.<raw_body>"). The
+# timestamp + signature pair is minted per run by scripts/gen-webhook-sig.py
+# using the same secret as the partner webhook registered above, so the
+# verifier accepts it on every run.
+POST http://localhost:8092/v1/webhooks/verify
+Content-Type: application/json
+{
+  "secret": "hurl-partner-secret",
+  "raw_body": "{\"event\":\"tx.created\",\"id\":\"hurl-verify\"}",
+  "timestamp": "{{webhook_ts}}",
+  "signature": "{{webhook_sig}}"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.valid" == true
+
+# a wrong secret is rejected (valid:false, still 200 — the endpoint only
+# reports the verification result, it never errors out).
+POST http://localhost:8092/v1/webhooks/verify
+Content-Type: application/json
+{
+  "secret": "wrong-secret",
+  "raw_body": "{\"event\":\"tx.created\",\"id\":\"hurl-verify\"}",
+  "timestamp": "{{webhook_ts}}",
+  "signature": "{{webhook_sig}}"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.valid" == false

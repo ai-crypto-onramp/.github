@@ -112,3 +112,49 @@ GET http://localhost:8098/v1/breaks-export?source=ledger&fmt=csv
 HTTP 200
 [Asserts]
 header "Content-Type" contains "text/csv"
+
+# --- recon runs: list (with optional source filter) ---
+
+GET http://localhost:8098/v1/recon-runs?source=ledger
+HTTP 200
+[Asserts]
+jsonpath "$.recon_runs" exists
+jsonpath "$.total" >= 0
+
+# --- report archive for the run we created earlier ---
+
+POST http://localhost:8098/v1/recon-runs/{{run_id}}/report/archive
+HTTP 200
+[Asserts]
+jsonpath "$.bucket" exists
+jsonpath "$.key" exists
+jsonpath "$.signed_url" exists
+
+# --- recon rules: list ---
+
+GET http://localhost:8098/v1/recon-rules
+HTTP 200
+[Asserts]
+jsonpath "$.recon_rules" exists
+jsonpath "$.total" >= 0
+
+# --- recon rules: create one for the ledger source ---
+
+POST http://localhost:8098/v1/recon-rules
+Content-Type: application/json
+{
+  "source": "ledger",
+  "asset": "USD",
+  "match_strategy": "EXACT",
+  "tolerance_seconds": 300,
+  "escalation_age_minutes": 60,
+  "auto_resolve_timing": true,
+  "config": {}
+}
+HTTP 200
+[Captures]
+rule_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.id" exists
+jsonpath "$.source" == "ledger"
+jsonpath "$.match_strategy" == "EXACT"

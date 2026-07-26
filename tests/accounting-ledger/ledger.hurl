@@ -175,3 +175,33 @@ GET http://localhost:8088/v1/reconciliation/user-custodial-sum
 HTTP 200
 [Asserts]
 jsonpath "$.user_custodial_sum" exists
+
+# --- list accounts ---
+
+GET http://localhost:8088/v1/accounts
+HTTP 200
+[Asserts]
+jsonpath "$.accounts" exists
+jsonpath "$.accounts[0].account_id" exists
+
+# filtered by account type
+GET http://localhost:8088/v1/accounts?type=user_custodial
+HTTP 200
+[Asserts]
+jsonpath "$.accounts" exists
+jsonpath "$.accounts[0].type" == "user_custodial"
+
+# --- list postings ---
+
+GET http://localhost:8088/v1/postings
+HTTP 200
+[Asserts]
+jsonpath "$.postings" exists
+jsonpath "$.postings[0].posting_id" exists
+
+# limited
+GET http://localhost:8088/v1/postings?limit=2
+HTTP 200
+[Asserts]
+jsonpath "$.postings" exists
+jsonpath "$.postings" count == 2

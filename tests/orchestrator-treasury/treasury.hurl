@@ -94,3 +94,59 @@ GET http://localhost:8100/v1/rebalancing-jobs?status=pending
 HTTP 200
 [Asserts]
 jsonpath "$.rebalancing_jobs" exists
+
+# --- batch memberships: ListMemberships returns 200 with an empty array
+# for any valid uuid (the store filters by batch_id, no batch existence
+# check), so exercise the endpoint with a fixed uuid and assert shape.
+# An invalid id (not a uuid) is rejected earlier by handleBatchByID.
+
+GET http://localhost:8100/v1/batches/00000000-0000-0000-0000-000000000000/memberships
+HTTP 200
+[Asserts]
+jsonpath "$.memberships" exists
+
+# invalid batch id (not a uuid) -> 400 from the batch-id parser
+GET http://localhost:8100/v1/batches/not-a-uuid/memberships
+HTTP 400
+[Asserts]
+jsonpath "$.error" exists
+
+# --- float list (all currencies) ---
+
+GET http://localhost:8100/v1/float
+HTTP 200
+[Asserts]
+jsonpath "$.float_positions" exists
+
+# --- aggregate orders ---
+
+GET http://localhost:8100/v1/aggregate-orders
+HTTP 200
+[Asserts]
+jsonpath "$.aggregate_orders" exists
+
+GET http://localhost:8100/v1/aggregate-orders?status=settled
+HTTP 200
+[Asserts]
+jsonpath "$.aggregate_orders" exists
+
+# --- events: POST a tx.completed event to the HTTP-push endpoint ---
+
+POST http://localhost:8100/v1/events/tx.completed
+Content-Type: application/json
+{
+  "tx_id": "hurl-tx-{{newUuid}}",
+  "amount": "0.5",
+  "asset": "BTC",
+  "fiat_currency": "USD",
+  "notional_usd": "500.00",
+  "user_id": "hurl-user-{{newUuid}}",
+  "completed_at": "2026-01-01T00:00:00Z"
+}
+HTTP 202
+
+# missing topic -> 400
+POST http://localhost:8100/v1/events/
+Content-Type: application/json
+{}
+HTTP 400

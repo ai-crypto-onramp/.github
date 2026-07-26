@@ -148,6 +148,31 @@ Content-Type: application/json
 HTTP 201
 [Captures]
 bad_app_id: jsonpath "$.id"
+bad_user_id: jsonpath "$.user_id"
+
+# drive the bad-actor app through documents + liveness so it reaches
+# LIVENESS_PASSED — the screening handler can only transition into
+# MANUAL_REVIEW from LIVENESS_PASSED/SCREENING/VENDOR_DECISION.
+POST http://localhost:8093/v1/kyc/applications/{{bad_app_id}}/documents
+Content-Type: application/json
+{
+  "type": "id_front",
+  "content": "aHVybC1pZC1mcm9udA=="
+}
+HTTP 201
+
+POST http://localhost:8093/v1/kyc/applications/{{bad_app_id}}/documents
+Content-Type: application/json
+{
+  "type": "selfie",
+  "content": "aHVybC1zZWxmaWU="
+}
+HTTP 201
+
+POST http://localhost:8093/v1/kyc/applications/{{bad_app_id}}/liveness
+HTTP 201
+[Asserts]
+jsonpath "$.result" == "PASS"
 
 POST http://localhost:8093/v1/kyc/applications/{{bad_app_id}}/screening
 Content-Type: application/json
@@ -175,3 +200,40 @@ Content-Type: application/json
 HTTP 401
 [Asserts]
 jsonpath "$.error.code" == "webhook_rejected"
+
+# bad_app_id is in manual_review after the "Bad Actor" screening — clear it.
+POST http://localhost:8093/v1/kyc/applications/{{bad_app_id}}/screening/disposition
+Content-Type: application/json
+{
+  "disposition": "CLEAR",
+  "reviewed_by": "analyst1"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "ok"
+
+GET http://localhost:8093/v1/kyc/applications/{{bad_app_id}}
+HTTP 200
+[Asserts]
+jsonpath "$.state" == "PASS"
+
+# trigger re-KYC on the now-terminal application
+POST http://localhost:8093/internal/v1/rekyc/trigger
+Content-Type: application/json
+{
+  "user_id": "{{bad_user_id}}"
+}
+HTTP 200
+[Asserts]
+jsonpath "$.status" == "reopened"
+
+GET http://localhost:8093/v1/kyc/applications/{{bad_app_id}}
+HTTP 200
+[Asserts]
+jsonpath "$.state" == "STARTED"
+
+# audit events emitted for the transitions above
+GET http://localhost:8093/v1/audit-events
+HTTP 200
+[Asserts]
+jsonpath "$.events" count >= 1

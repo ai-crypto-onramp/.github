@@ -245,6 +245,30 @@ GET http://localhost:8087/v1/role-bindings
 Authorization: Bearer {{access_token}}
 HTTP 200
 
+# grant the user a scoped role (role names are lowercase, matching the
+# canonical Go constants in internal/rbac.go and the roles table seed).
+POST http://localhost:8087/v1/role-bindings
+Authorization: Bearer {{access_token}}
+Content-Type: application/json
+{
+  "subject_type": "USER",
+  "subject_id": "{{user_id}}",
+  "role": "partner_admin",
+  "scope_type": "partner",
+  "scope_id": "partner-hurl"
+}
+HTTP 201
+[Captures]
+role_binding_id: jsonpath "$.id"
+[Asserts]
+jsonpath "$.role" == "partner_admin"
+jsonpath "$.subject_id" == "{{user_id}}"
+
+# revoke the binding
+DELETE http://localhost:8087/v1/role-bindings/{{role_binding_id}}
+Authorization: Bearer {{access_token}}
+HTTP 204
+
 # authz check for an action without a binding -> denied
 POST http://localhost:8087/v1/authz
 Authorization: Bearer {{access_token}}

@@ -156,3 +156,33 @@ GET http://localhost:8096/v1/audit-events
 HTTP 200
 [Asserts]
 jsonpath "$.events" count >= 1
+
+# --- list / registry endpoints ---
+
+# GET /v1/quotes: list all issued quotes (newest first). Quotes issued
+# earlier in this run must be present.
+GET http://localhost:8096/v1/quotes
+HTTP 200
+[Asserts]
+jsonpath "$.quotes" count >= 1
+jsonpath "$.quotes[0].quote_id" exists
+jsonpath "$.quotes[0].from" exists
+jsonpath "$.quotes[0].to" exists
+jsonpath "$.quotes[0].status" exists
+
+# GET /v1/fee-schedules: in-effect spread/fee schedules, seeded at boot.
+GET http://localhost:8096/v1/fee-schedules
+HTTP 200
+[Asserts]
+jsonpath "$.fee_schedules" count >= 1
+jsonpath "$.fee_schedules[0].id" exists
+jsonpath "$.fee_schedules[0].user_tier" exists
+jsonpath "$.fee_schedules[0].asset" exists
+jsonpath "$.fee_schedules[0].spread_bps" exists
+jsonpath "$.fee_schedules[0].enabled" isBoolean
+
+# GET /v1/rate-sources: enabled upstream venues, ordered by priority.
+GET http://localhost:8096/v1/rate-sources
+HTTP 200
+[Asserts]
+jsonpath "$.rate_sources" exists

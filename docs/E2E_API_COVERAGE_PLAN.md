@@ -7,7 +7,7 @@
 - [Coverage by service](#coverage-by-service)
   - [accounting-ledger (10 HTTP + 5 gRPC)](#accounting-ledger-10-http--5-grpc)
   - [audit-logger (8 HTTP)](#audit-logger-8-http)
-  - [gateway-auth (23 HTTP)](#gateway-auth-23-http)
+  - [gateway-auth (27 HTTP)](#gateway-auth-27-http)
   - [engine-fraud (3 HTTP)](#engine-fraud-3-http)
   - [fx-hedger (9 HTTP + 4 gRPC)](#fx-hedger-9-http--4-grpc)
   - [gateway-api (9 HTTP)](#gateway-api-9-http)
@@ -58,17 +58,17 @@ endpoints exercised by the existing Hurl integration test suites in
 | # | Method | Path | Covered? |
 |---|---|---|---|
 | 1 | GET | /v1/chart-of-accounts | ✅ |
-| 2 | GET | /v1/accounts | ❌ |
+| 2 | GET | /v1/accounts | ✅ |
 | 3 | POST | /v1/accounts | ✅ |
 | 4 | GET | /v1/accounts/:id/balance | ✅ |
 | 5 | GET | /v1/accounts/:id/ledger | ✅ |
-| 6 | GET | /v1/postings | ❌ |
+| 6 | GET | /v1/postings | ✅ |
 | 7 | POST | /v1/postings | ✅ |
 | 8 | GET | /v1/postings/:id | ✅ |
 | 9 | GET | /v1/reconciliation/user-custodial-sum | ✅ |
 | 10 | GET | /v1/chain/verify | ✅ |
 
-**HTTP coverage: 8/10 (80%)**
+**HTTP coverage: 10/10 (100%)**
 
 gRPC (not testable via Hurl): CreateAccount, PostPosting, GetPosting,
 GetBalance, VerifyChain.
@@ -117,14 +117,14 @@ GetBalance, VerifyChain.
 | 19 | POST | /v1/api-keys/:id/rotate | ✅ |
 | 20 | DELETE | /v1/api-keys/:id | ✅ |
 | 21 | GET | /v1/roles | ✅ |
-| 22 | POST | /v1/role-bindings | ❌ |
+| 22 | POST | /v1/role-bindings | ✅ |
 | 23 | GET | /v1/role-bindings | ✅ |
-| 24 | DELETE | /v1/role-bindings/:id | ❌ |
+| 24 | DELETE | /v1/role-bindings/:id | ✅ |
 | 25 | POST | /v1/authz | ✅ |
 | 26 | GET | /v1/audit-events | ✅ |
 | 27 | POST | /v1/admin/unlock | ✅ |
 
-**HTTP coverage: 25/27 (93%)**
+**HTTP coverage: 27/27 (100%)**
 
 ---
 
@@ -238,12 +238,12 @@ StreamExposure, SubmitHedgePlan.
 | 6 | POST | /v1/kyc/applications/:id/liveness | ✅ |
 | 7 | GET | /v1/kyc/applications/:id/liveness | ✅ |
 | 8 | POST | /v1/kyc/applications/:id/screening | ✅ |
-| 9 | POST | /v1/kyc/applications/:id/screening/disposition | ❌ |
+| 9 | POST | /v1/kyc/applications/:id/screening/disposition | ✅ |
 | 10 | POST | /v1/webhooks/:vendor | ✅ |
-| 11 | POST | /internal/v1/rekyc/trigger | ❌ |
-| 12 | GET | /v1/audit-events | ❌ |
+| 11 | POST | /internal/v1/rekyc/trigger | ✅ |
+| 12 | GET | /v1/audit-events | ✅ |
 
-**HTTP coverage: 9/12 (75%)**
+**HTTP coverage: 12/12 (100%)**
 
 ---
 
@@ -300,18 +300,18 @@ RestoreShare.
 | 2 | POST | /v1/preferences/:user_id | ✅ |
 | 3 | GET | /v1/preferences/:user_id | ✅ |
 | 4 | POST | /v1/events | ✅ |
-| 5 | GET | /v1/notifications | ❌ |
+| 5 | GET | /v1/notifications | ✅ |
 | 6 | POST | /v1/notifications/send | ✅ |
 | 7 | GET | /v1/notifications/:id | ✅ |
 | 8 | GET | /v1/notifications/:id/status | ✅ |
 | 9 | POST | /v1/webhooks/partners | ✅ |
 | 10 | GET | /v1/webhooks/partners | ✅ |
 | 11 | POST | /v1/webhooks/partners/:id/confirm | ✅ |
-| 12 | POST | /v1/webhooks/partners/:id/deliver | ❌ |
+| 12 | POST | /v1/webhooks/partners/:id/deliver | ✅ |
 | 13 | GET | /v1/audit-events | ✅ |
-| 14 | POST | /v1/webhooks/verify | ❌ |
+| 14 | POST | /v1/webhooks/verify | ✅ |
 
-**HTTP coverage: 11/14 (79%)**
+**HTTP coverage: 14/14 (100%)**
 
 ---
 
@@ -356,18 +356,18 @@ gRPC (not testable via Hurl): Evaluate.
 
 | # | Method | Path | Covered? |
 |---|---|---|---|
-| 1 | GET | /v1/quotes | ❌ |
+| 1 | GET | /v1/quotes | ✅ |
 | 2 | POST | /v1/quotes | ✅ |
 | 3 | GET | /v1/quotes/:id | ✅ |
 | 4 | POST | /v1/quotes/:id/refresh | ✅ |
 | 5 | POST | /internal/v1/quotes/:id/claim | ✅ |
 | 6 | POST | /internal/v1/fee-schedules/reload | ✅ |
-| 7 | GET | /v1/fee-schedules | ❌ |
-| 8 | GET | /v1/rate-sources | ❌ |
+| 7 | GET | /v1/fee-schedules | ✅ |
+| 8 | GET | /v1/rate-sources | ✅ |
 | 9 | GET | /v1/audit-events | ✅ |
 | 10 | WS | /v1/rates/subscribe | ❌ |
 
-**HTTP coverage: 6/10 (60%)**
+**HTTP coverage: 9/10 (90%)**
 
 ---
 
@@ -379,16 +379,16 @@ gRPC (not testable via Hurl): Evaluate.
 | 2 | GET | /v1/breaks/:break_id | ✅ |
 | 3 | POST | /v1/breaks/:break_id/resolve | ✅ |
 | 4 | POST | /v1/breaks/:break_id/escalate | ✅ |
-| 5 | GET | /v1/recon-runs | ❌ |
+| 5 | GET | /v1/recon-runs | ✅ |
 | 6 | GET | /v1/recon-runs/:run_id | ✅ |
 | 7 | POST | /v1/recon-runs | ✅ |
 | 8 | GET | /v1/recon-runs/:run_id/report | ✅ |
-| 9 | POST | /v1/recon-runs/:run_id/report/archive | ❌ |
-| 10 | GET | /v1/recon-rules | ❌ |
-| 11 | POST | /v1/recon-rules | ❌ |
+| 9 | POST | /v1/recon-runs/:run_id/report/archive | ✅ |
+| 10 | GET | /v1/recon-rules | ✅ |
+| 11 | POST | /v1/recon-rules | ✅ |
 | 12 | GET | /v1/breaks-export | ✅ |
 
-**HTTP coverage: 8/12 (67%)**
+**HTTP coverage: 12/12 (100%)**
 
 ---
 
@@ -399,16 +399,16 @@ gRPC (not testable via Hurl): Evaluate.
 | 1 | GET | /v1/batches | ✅ |
 | 2 | GET | /v1/batches/:id | ✅ |
 | 3 | POST | /v1/batches/:id/close | ✅ |
-| 4 | GET | /v1/batches/:id/memberships | ❌ |
-| 5 | GET | /v1/float | ❌ |
+| 4 | GET | /v1/batches/:id/memberships | ✅ |
+| 5 | GET | /v1/float | ✅ |
 | 6 | GET | /v1/float/:fiat_currency | ✅ |
 | 7 | GET | /v1/funding-requests | ✅ |
 | 8 | POST | /v1/funding-requests | ✅ |
 | 9 | GET | /v1/rebalancing-jobs | ✅ |
-| 10 | GET | /v1/aggregate-orders | ❌ |
-| 11 | POST | /v1/events/ | ❌ |
+| 10 | GET | /v1/aggregate-orders | ✅ |
+| 11 | POST | /v1/events/ | ✅ |
 
-**HTTP coverage: 7/11 (64%)**
+**HTTP coverage: 11/11 (100%)**
 
 ---
 
@@ -453,28 +453,28 @@ gRPC (not testable via Hurl): ResolveKeyID, OnConfirmation, OnReorg.
 
 | Service | Total HTTP | Covered | % |
 |---|---|---|---|
-| accounting-ledger | 10 | 8 | 80% |
+| accounting-ledger | 10 | 10 | 100% |
 | audit-logger | 8 | 7 | 88% |
-| gateway-auth | 27 | 25 | 93% |
+| gateway-auth | 27 | 27 | 100% |
 | engine-fraud | 3 | 3 | 100% |
 | fx-hedger | 9 | 7 | 78% |
 | gateway-api | 9 | 9 | 100% |
 | gateway-blockchain | 6 | 6 | 100% |
 | gateway-exchange | 8 | 8 | 100% |
 | gateway-fiat | 5 | 5 | 100% |
-| kyc-onboarding | 12 | 9 | 75% |
+| kyc-onboarding | 12 | 12 | 100% |
 | kyt-aml-screening | 6 | 6 | 100% |
 | engine-liquidity | 6 | 4 | 67% |
 | mpc-signer | 1 | 1 | 100% |
-| notifier | 14 | 11 | 79% |
+| notifier | 14 | 14 | 100% |
 | orchestrator-fiat | 8 | 7 | 88% |
 | engine-policy-risk | 9 | 9 | 100% |
-| engine-pricing | 10 | 6 | 60% |
-| engine-recon | 12 | 8 | 67% |
-| orchestrator-treasury | 11 | 7 | 64% |
+| engine-pricing | 10 | 9 | 90% |
+| engine-recon | 12 | 12 | 100% |
+| orchestrator-treasury | 11 | 11 | 100% |
 | orchestrator-tx | 5 | 5 | 100% |
 | wallet-manager | 12 | 12 | 100% |
-| **Total** | **164** | **146** | **89%** |
+| **Total** | **191** | **184** | **96%** |
 
 ## gRPC endpoints (not testable via Hurl)
 
@@ -493,10 +493,14 @@ gRPC (not testable via Hurl): ResolveKeyID, OnConfirmation, OnReorg.
 
 | Service | Uncovered | Key missing endpoints |
 |---|---|---|
-| engine-pricing | 4 | list quotes, fee-schedules, rate-sources, WS subscribe |
-| orchestrator-treasury | 4 | memberships, float list, aggregate-orders, events push |
-| engine-recon | 4 | list runs, report archive, rules (2) |
-| gateway-auth | 2 | POST role-bindings, DELETE role-bindings/:id |
-| accounting-ledger | 2 | list accounts, list postings |
-| notifier | 3 | list notifications, webhook deliver, webhook verify |
-| kyc-onboarding | 3 | screening/disposition, rekyc/trigger, audit-events |
+| fx-hedger | 2 | list exposures, list hedges |
+| engine-liquidity | 2 | list parent-orders, venue-states |
+| audit-logger | 1 | admin/redaction/reload |
+| orchestrator-fiat | 1 | list payments |
+| engine-pricing | 1 | WS /v1/rates/subscribe (Hurl is HTTP-only) |
+
+The seven largest gaps from the prior revision (engine-pricing,
+orchestrator-treasury, engine-recon, gateway-auth, accounting-ledger,
+notifier, kyc-onboarding) are now fully covered by Hurl tests in
+`.github/tests/`. The remaining gaps are small (1–2 endpoints each) and
+the engine-pricing gap is a WebSocket endpoint that Hurl cannot test.
