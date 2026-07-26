@@ -114,34 +114,23 @@
 ### Phase 1 — Custody & money safety (P0)
 
 1. **Make custody-provider the default in mpc-signer.** Set `CUSTODY_PROVIDER=fireblocks|dfns|turnkey` in compose; gate in-house threshold engine behind `DEV_MODE=1` or remove it. Wire HSM/attestation (not `MockHsmStore`). Run integration tests against real sandboxes. (src/engine/threshold/cluster.rs:171, src/enclave/store.rs)
-2. ~~**Fix wallet-manager BTC/Solana withdrawal sighashes.** BTC: derive real P2WPKH pubkey hash from the wallet's xpub + derivation path (not 20-byte zero placeholder). Solana: fetch real recent blockhash from RPC; use real `from` pubkey (not `sha256(walletID)`). (internal/withdrawal/txbuilder.go:148,156,194,209)~~ ✅ Done 2026-07-26 (BTC: real P2WPKH hash from BIP-84 xpub derivation via `BTCDeriver.PubKeyHashFor`; Solana: `getLatestBlockhash` RPC with 30s cache + real `from` pubkey from wallet's active address; placeholder only in DEV_MODE with warning).
-3. ~~**Implement real adapters for 4 prod-gated services:**~~ ✅ Done 2026-07-26.
-    - ~~orchestrator-fiat: real rail + MPI clients (not `NewDummy()`).~~ ✅ `HTTPAdapter` (gateway-fiat REST) + `HTTPClient` (3DS MPI); gated by `RAIL_*_URL`/`THREE_DS_MPI_URL`.
-    - ~~engine-liquidity: real gRPC exchange client when `EXCHANGE_CONNECTORS_TARGET` set (not `FakeExchange`).~~ ✅ `HTTPExchange` (gateway-exchange REST: PlaceOrder, CancelOrder, SubscribeBooks, SubscribeFills); gated by `EXCHANGE_CONNECTORS_TARGET`. SubscribeVolumes scaffolded (no volume endpoint).
-    - ~~engine-pricing: real Postgres store + feed subscriber (not in-memory).~~ ✅ `pgStore` (database/sql + lib/pq, reuses existing schema) + `kafkaFeed` (kafka-go on `spot.rates` topic); gated by `DATABASE_URL`/`KAFKA_BROKERS`.
-    - ~~fx-hedger: real `FXProvider` (not `provider.NewDummy()`).~~ ✅ `HTTPFXProvider` (GET `/v1/rates`, 3 response shapes, slippage sampling); gated by `FX_PROVIDER_URL`.
-4. ~~**Gate audit-logger S3/KMS/Kafka behind `DEV_MODE`.** Fatal in prod when S3/KMS/Kafka creds unset (not silent fallback to fake). (app.go:61-137)~~ ✅ Done 2026-07-26 (`buildS3`/`buildKMS`/`buildKafka` helpers: creds set+init OK→real; creds set+init fails+prod→fatal; creds unset+prod→fatal; dev→fake+warn; `testing.Testing()` treated as dev).
-5. ~~**Fix outbox-after-commit in 4 treasury callbacks.** Push outbox append into the same tx as the state change for OnAdjust/OnClose/funding/OnBatchOpen. (app.go:141,178,194/200,224)~~ ✅ Done 2026-07-26 (`AddFloatWithOutbox`, `CreateFundingWithOutbox`, `OpenBatchWithOutbox` (callback-based, appends only on new batch), `UpdateBatchStatusWithOutbox` reused for OnClose; all state change + outbox INSERT in one pgx tx; backward-compat fallback when `Unit == nil`).
-6. ~~**Wire Redis idempotency in orchestrator-fiat + kyt-aml-screening.** Fatal in prod when `REDIS_URL` unset (not silent in-memory). Money-loss on retry across replicas.~~ ✅ Done 2026-07-26 (orchestrator-fiat: `RedisStore` SETNX+TTL in `internal/idempotency`; kyt-aml-screening: `RedisResponseStore` for vendor + `RedisDedupStore` for webhook; both gated by `REDIS_URL`, in-memory in DEV_MODE, prod-fatal on missing; `testing.Testing()` bypass).
 
 ### Phase 2 — Transport security & observability
 
+6. **Fix kyc-onboarding `dev-webhook-secret` + in-memory stores.** Fatal in prod when `WEBHOOK_SECRET` unset; use Postgres for sanctions/webhook stores.
 7. **TLS all gRPC + OTLP connections.** kyt-aml-screening, accounting-ledger, gateway-blockchain, gateway-exchange, orchestrator-tx partner dials. Load certs from `TLS_*_FILE` envs; `DEV_MODE=1` keeps plaintext for harness.
-8. **Wire observability stack in compose.** Add Prometheus + Grafana + Loki + Tempo + OTel collector services; set `OTEL_EXPORTER_OTLP_ENDPOINT` on all app services.
-9. **Fix static `/readyz` in 9 services.** Add real dependency checks: orchestrator-fiat, gateway-fiat, gateway-exchange, fx-hedger, kyc-onboarding, kyt-aml-screening, mpc-signer, wallet-manager, notifier.
-10. **W3C `traceparent` propagation** as shared interceptor across all services.
-11. **Compose app healthchecks + `restart: unless-stopped` + resource limits + per-service networks.** Only postgres/redis/kafka have healthchecks today.
+8. **Fix static `/readyz` in 9 services.** Add real dependency checks: orchestrator-fiat, gateway-fiat, gateway-exchange, fx-hedger, kyc-onboarding, kyt-aml-screening, mpc-signer, wallet-manager, notifier.
+9. **Standardize migrations tooling** (`golang-migrate` for Go, Alembic for Python, `refinery`/`sqlx` for Rust); run as separate `migrate up` step.
+10. **Extract `platform-go` shared module** (logging, tracing, mtls, errors, kafka client, authtoken) consumed by all Go services — eliminates 10x vendored auth middleware.
+11. **Schema versioning** on all non-audit event topics; schema registry.
+
 
 ### Phase 3 — Hardening
 
 12. **Ledger notary posting + SIEM sink** in audit-logger; real S3/KMS creds in prod.
-13. **Standardize migrations tooling** (`golang-migrate` for Go, Alembic for Python, `refinery`/`sqlx` for Rust); run as separate `migrate up` step.
-14. **Kafka prod hardening** (3-broker, RF=3, explicit topic provisioning, longer audit retention); Postgres HA + PITR.
-15. **Add Hurl E2E suites to CI.** Run `make test` in a CI job on every PR.
-16. **Extract `platform-go` shared module** (logging, tracing, mtls, errors, kafka client, authtoken) consumed by all Go services — eliminates 10x vendored auth middleware.
-17. **Schema versioning** on all non-audit event topics; schema registry.
-18. **KYC document encryption at rest** (currently base64 in `object_key` column).
-19. **Fix kyc-onboarding `dev-webhook-secret` + in-memory stores.** Fatal in prod when `WEBHOOK_SECRET` unset; use Postgres for sanctions/webhook stores.
+13. **W3C `traceparent` propagation** as shared interceptor across all services.
+14. **Compose app healthchecks + `restart: unless-stopped` + resource limits + per-service networks.** Only postgres/redis/kafka have healthchecks today.
+17. **KYC document encryption at rest** (currently base64 in `object_key` column).
 
 ### Phase 4 — Release & ops
 
