@@ -11,7 +11,7 @@ services:
       - "5432:5432"
     volumes:
       - pg-data:/var/lib/postgresql/data
-      - ./postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
+      - ./scripts/postgres-init.sql:/docker-entrypoint-initdb.d/init.sql:ro
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 5s
@@ -518,7 +518,7 @@ services:
         condition: service_healthy
 
   # Migrations are applied automatically at startup; the wallet_management
-  # database itself must exist (see postgres-init.sql).
+  # database itself must exist (see scripts/postgres-init.sql).
   # The XPUB values are dev-only public derivation keys (same vectors as its
   # test suite); production loads them from a secrets store.
   wallet-manager:

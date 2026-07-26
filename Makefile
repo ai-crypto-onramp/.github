@@ -52,8 +52,9 @@ REPORTS := reports
 # on re-runs. Each script prints `name=value` token lines; the sed here
 # prepends `--variable ` to each line and tr joins them into a single
 # space-separated string inlined into the hurl call.
-HURL_TOKEN_VARS := $(shell python3 scripts/gen-token.py | sed 's/^/--variable /' | tr '\n' ' ')
-HURL_TRM_VARS   := $(shell python3 scripts/gen-trm-sig.py | sed 's/^/--variable /' | tr '\n' ' ')
+HURL_TOKEN_VARS   := $(shell python3 scripts/gen-token.py | sed 's/^/--variable /' | tr '\n' ' ')
+HURL_TRM_VARS     := $(shell python3 scripts/gen-trm-sig.py | sed 's/^/--variable /' | tr '\n' ' ')
+HURL_WEBHOOK_VARS := $(shell python3 scripts/gen-webhook-sig.py | sed 's/^/--variable /' | tr '\n' ' ')
 
 .PHONY: all clean up down restart ps logs build build-go build-ts build-rs build-py pull test seed-db reset-db dashboard psql redis-cli up-% down-% build-% logs-% test-%
 
@@ -94,7 +95,7 @@ dashboard:
 
 # Run Hurl test suite
 test: clean
-	hurl --test $(HURL_TOKEN_VARS) $(HURL_TRM_VARS) --report-html $(REPORTS) tests/*/*.hurl
+	hurl --test $(HURL_TOKEN_VARS) $(HURL_TRM_VARS) $(HURL_WEBHOOK_VARS) --report-html $(REPORTS) tests/*/*.hurl
 
 clean:
 	rm -rf $(REPORTS)
@@ -174,7 +175,7 @@ logs-%:
 # Run one service's integration test suite: make test-<alias|service>,
 # e.g. make test-policy or make test-engine-policy-risk
 test-%:
-	hurl --test $(HURL_TOKEN_VARS) $(HURL_TRM_VARS) tests/$(or $($*),$*)/*.hurl
+	hurl --test $(HURL_TOKEN_VARS) $(HURL_TRM_VARS) $(HURL_WEBHOOK_VARS) tests/$(or $($*),$*)/*.hurl
 
 # One-shot / interactive tools
 # Interactive Kafka console consumer: tail a topic to stdout.
@@ -222,12 +223,12 @@ redis-cli:
 	$(COMPOSE) exec redis redis-cli
 
 # Truncate all data in every service database (tables and migrations
-# preserved). Pipes scripts/reset.sql through psql once per DB. Use
+# preserved). Pipes scripts/postgres-reset.sql through psql once per DB. Use
 # `make reset-db seed-db` to wipe and repopulate in one shot.
 reset-db:
-	@set -e; for db in $$(grep -oE 'CREATE DATABASE [a-z_]+' postgres-init.sql | awk '{print $$3}'); do \
+	@set -e; for db in $$(grep -oE 'CREATE DATABASE [a-z_]+' scripts/postgres-init.sql | awk '{print $$3}'); do \
 		echo "  resetting $$db..."; \
-		$(COMPOSE) exec -T postgres psql -q -U postgres -d $$db -v ON_ERROR_STOP=1 < scripts/reset.sql; \
+		$(COMPOSE) exec -T postgres psql -q -U postgres -d $$db -v ON_ERROR_STOP=1 < scripts/postgres-reset.sql; \
 	done
 
 # Populate all databases with synthetic fixture data via scripts/seed.py.
